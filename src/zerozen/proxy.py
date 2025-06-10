@@ -1,6 +1,8 @@
 from fastmcp import FastMCP
 import typer
-from .cli import app
+
+
+app = typer.Typer()
 
 
 @app.command()
@@ -22,4 +24,3 @@ def create_proxy(remote_url: str, name: str | None = None):
     except Exception as e:
         typer.echo(f"Error creating proxy: {e}", err=True)
         raise typer.Exit(1)
-
