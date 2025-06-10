@@ -1,7 +1,15 @@
 [project]
 name = "zerozen"
 version = "0.1.0"
-description = "Add your description here"
+description = "LLMs in Zen mode"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "fastmcp>=2.7.1",
+    "rich>=14.0.0",
+    "textual[syntax]>=3.3.0",
+    "typer>=0.16.0",
+]
+
+[project.scripts]
+zen="zerozen:app"
