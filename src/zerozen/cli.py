@@ -18,6 +18,7 @@ def main(ctx: typer.Context):
         LLMs in
         ZEN mode
 """)
+        typer.echo(ctx.get_help())
 
 
 if __name__ == "__main__":

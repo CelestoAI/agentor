@@ -20,7 +20,8 @@ def create_proxy(remote_url: str, name: str | None = None):
         FastMCP: The proxy server.
     """
     try:
-        FastMCP.as_proxy(remote_url, name=name).run()
+        mcp_server = FastMCP.as_proxy(remote_url, name=name)
+        mcp_server.run()
     except Exception as e:
         typer.echo(f"Error creating proxy: {e}", err=True)
         raise typer.Exit(1)
