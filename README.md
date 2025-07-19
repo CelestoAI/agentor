@@ -1,12 +1,18 @@
 <center>
 
+<div align="center">
+
 <img src="/assets/zerozen-min.png" alt="zerozen" width="200" />
 
 <br>
 
 # LLMs in Zen Mode
 
+Dedicated to the [creators of Zero](https://www.open.ac.uk/blogs/MathEd/index.php/2022/08/25/the-men-who-invented-zero/) - Aryabhatta and Bhaskara ✨
+
 <img src="/assets/cli.png" alt="zerozen" width="500" />
+
+</div>
 
 </center>
 
