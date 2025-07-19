@@ -193,3 +193,4 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 uv.lock
+.DS_Store

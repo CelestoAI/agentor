@@ -1,6 +1,14 @@
-# zerozen
+<center>
 
-![zerozen.png](zerozen.png)
+<img src="/assets/zerozen-min.png" alt="zerozen" width="200" />
+
+<br>
+
+# LLMs in Zen Mode
+
+<img src="/assets/cli.png" alt="zerozen" width="500" />
+
+</center>
 
 # Installation
 
@@ -37,3 +45,5 @@ print(xml_string)
 ```bash
 zerozen chat
 ```
+
+## Coming up - Claude code like agents
