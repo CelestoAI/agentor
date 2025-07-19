@@ -31,3 +31,9 @@ print(xml_string)
 ```xml
 <User><name>John</name><age>30</age></User>
 ```
+
+## Chat
+
+```bash
+zerozen chat
+```
