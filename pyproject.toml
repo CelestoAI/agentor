@@ -11,9 +11,10 @@ requires-python = ">=3.10"
 dependencies = [
     "fastmcp>=2.7.1",
     "rich>=14.0.0",
-    "textual[syntax]>=3.3.0",
     "typer>=0.16.0",
     "python-dotenv>=1.0.0",
+    "openai>=1.97.0",
+    "openai-agents>=0.2.2",
 ]
 
 [project.scripts]
@@ -21,3 +22,10 @@ zen="zerozen.cli:app"
 
 [tool.uv]
 package = true
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "pytest>=8.4.1",
+    "ruff>=0.12.4",
+]
