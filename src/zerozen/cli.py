@@ -1,9 +1,11 @@
 import typer
 from rich import print
 from zerozen import proxy
+from zerozen import chat
 
 app = typer.Typer()
 app.add_typer(proxy.app)
+app.add_typer(chat.app)
 
 
 @app.callback(invoke_without_command=True)
