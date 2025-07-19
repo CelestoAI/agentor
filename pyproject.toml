@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zerozen"
-version = "0.1.0"
+version = "0.0.1.dev1"
 description = "LLMs in Zen mode"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,6 +13,7 @@ dependencies = [
     "rich>=14.0.0",
     "textual[syntax]>=3.3.0",
     "typer>=0.16.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.scripts]
