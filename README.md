@@ -8,6 +8,8 @@
 
 # LLMs in Zen Mode
 
+Your hyper-personal, always-on, open-source AI companion.
+
 Dedicated to the [creators of Zero](https://www.open.ac.uk/blogs/MathEd/index.php/2022/08/25/the-men-who-invented-zero/) — Aryabhatta and Bhaskara ✨
 
 <img src="/assets/cli.png" alt="zerozen CLI" width="500" />
