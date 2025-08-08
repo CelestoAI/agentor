@@ -31,7 +31,9 @@ def _metadata_headers() -> list[str]:
 
 def _normalize_metadata(msg: dict) -> MessageSummary:
     payload = msg.get("payload") or {}
-    headers = {h["name"].lower(): h.get("value", "") for h in payload.get("headers", [])}
+    headers = {
+        h["name"].lower(): h.get("value", "") for h in payload.get("headers", [])
+    }
     return {
         "id": msg["id"],
         "threadId": msg.get("threadId"),
@@ -91,7 +93,7 @@ class GmailTool:
         user_id: str,
         query: str,
         label_ids: list[str] | None = None,
-        after: str | None = None,   # 'YYYY-MM-DD' or ISO8601
+        after: str | None = None,  # 'YYYY-MM-DD' or ISO8601
         before: str | None = None,  # 'YYYY-MM-DD' or ISO8601
         limit: int = 20,
     ) -> dict:
@@ -102,15 +104,25 @@ class GmailTool:
         q = _build_query(query, after, before)
         svc = self._svc(user_id)
 
-        @backoff.on_exception(backoff.expo, Exception, max_time=20, jitter=None,
-                              giveup=lambda e: not _is_transient(e))
+        @backoff.on_exception(
+            backoff.expo,
+            Exception,
+            max_time=20,
+            jitter=None,
+            giveup=lambda e: not _is_transient(e),
+        )
         def _list():
-            return svc.users().messages().list(
-                userId="me",
-                q=q,
-                labelIds=label_ids or [],
-                maxResults=limit,
-            ).execute()
+            return (
+                svc.users()
+                .messages()
+                .list(
+                    userId="me",
+                    q=q,
+                    labelIds=label_ids or [],
+                    maxResults=limit,
+                )
+                .execute()
+            )
 
         res = _list()
         ids = [m["id"] for m in res.get("messages", [])]
@@ -118,15 +130,26 @@ class GmailTool:
         summaries: list[MessageSummary] = []
 
         for mid in ids:
-            @backoff.on_exception(backoff.expo, Exception, max_time=20, jitter=None,
-                                  giveup=lambda e: not _is_transient(e))
+
+            @backoff.on_exception(
+                backoff.expo,
+                Exception,
+                max_time=20,
+                jitter=None,
+                giveup=lambda e: not _is_transient(e),
+            )
             def _get():
-                return svc.users().messages().get(
-                    userId="me",
-                    id=mid,
-                    format="metadata",
-                    metadataHeaders=_metadata_headers(),
-                ).execute()
+                return (
+                    svc.users()
+                    .messages()
+                    .get(
+                        userId="me",
+                        id=mid,
+                        format="metadata",
+                        metadataHeaders=_metadata_headers(),
+                    )
+                    .execute()
+                )
 
             msg = _get()
             summaries.append(_normalize_metadata(msg))
