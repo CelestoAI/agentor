@@ -4,7 +4,7 @@ import typer
 from rich.console import Console
 from rich.theme import Theme
 from rich.prompt import Prompt
-from openai.types.responses import ResponseTextDeltaEvent
+from openai.types.responses import ResponseTextDeltaEvent, ResponseOutputItemAddedEvent
 from agents import Agent, Runner, SQLiteSession
 from zerozen.agenthub import main_agent, gmail_context
 
@@ -54,8 +54,13 @@ async def run_agent_stream(input_text: str):
                 case "raw_response_event":
                     if isinstance(event.data, ResponseTextDeltaEvent):
                         console.print(event.data.delta, end="", soft_wrap=True)
+                    elif (
+                        isinstance(event.data, ResponseOutputItemAddedEvent)
+                        and event.data.item.type == "reasoning"
+                    ):
+                        console.print("\n[dim](reasoning...)[/dim]")
                     else:
-                        console.print("[dim](unexpected raw response)[/dim]", end="")
+                        continue
 
                 case "run_item_stream_event":
                     match event.item.type:
@@ -70,11 +75,11 @@ async def run_agent_stream(input_text: str):
                             )
 
                 case "error":
-                    console.print(f"\n[sassy]Drama alert:[/sassy] {event.error}")
+                    console.print(f"\n[sassy]Drama alert:[/sassy] {event}")
                     return
 
                 case _:
-                    console.print(f"\n[dim]Unhandled event type: {event.type}[/dim]")
+                    console.print(f"\n[dim]Unhandled event type: {event}[/dim]")
 
         console.print()  # newline when done
 
