@@ -8,6 +8,7 @@ from google.auth.transport.requests import Request
 # Read-only for search
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
+
 def desktop_creds_provider_factory(
     credentials_file: str = "credentials.json",
     token_file: str = "token.json",
@@ -29,7 +30,9 @@ def desktop_creds_provider_factory(
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(credentials_file, SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    credentials_file, SCOPES
+                )
                 creds = flow.run_local_server(port=0)
             with open(token_file, "w") as f:
                 f.write(creds.to_json())
