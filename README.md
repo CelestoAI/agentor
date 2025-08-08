@@ -8,26 +8,47 @@
 
 # LLMs in Zen Mode
 
-Dedicated to the [creators of Zero](https://www.open.ac.uk/blogs/MathEd/index.php/2022/08/25/the-men-who-invented-zero/) - Aryabhatta and Bhaskara ✨
+Dedicated to the [creators of Zero](https://www.open.ac.uk/blogs/MathEd/index.php/2022/08/25/the-men-who-invented-zero/) — Aryabhatta and Bhaskara ✨
 
-<img src="/assets/cli.png" alt="zerozen" width="500" />
+<img src="/assets/cli.png" alt="zerozen CLI" width="500" />
 
 </div>
 
 </center>
 
-# Installation
+______________________________________________________________________
+
+## Table of Contents
+
+- [Installation](#installation)
+
+- [Usage](#usage)
+
+  - [Convert Pydantic Models to XML](#convert-pydantic-models-to-xml)
+  - [Chat Interface](#chat-interface)
+  - [Gmail Search Tool](#gmail-search-tool)
+
+- [Roadmap](#roadmap)
+
+- [Contributing](#contributing)
+
+______________________________________________________________________
+
+## Installation
 
 ```bash
-uv pip install git+https://github.com/aniketmaurya/zerozen.git
+pip install git+https://github.com/aniketmaurya/zerozen.git
 ```
 
-# Usage
+______________________________________________________________________
 
-## Convert Pydantic models to XML
+## Usage
+
+### Convert Pydantic Models to XML
 
 ```python
 from zerozen import pydantic_to_xml
+from pydantic import BaseModel
 
 
 class User(BaseModel):
@@ -35,8 +56,8 @@ class User(BaseModel):
     age: int
 
 
-user_instance = User(name="John", age=30)
-xml_string = pydantic_to_xml(user_instance)
+user = User(name="John", age=30)
+xml_string = pydantic_to_xml(user)
 print(xml_string)
 ```
 
@@ -46,10 +67,70 @@ print(xml_string)
 <User><name>John</name><age>30</age></User>
 ```
 
-## Chat
+______________________________________________________________________
+
+### Chat Interface
 
 ```bash
 zerozen chat
 ```
 
-## Coming up - Claude code like agents
+______________________________________________________________________
+
+### Gmail Search Tool
+
+Now integrated with a Gmail search feature via OpenAI Agents.
+
+#### Setup
+
+1. Place `credentials.json` (OAuth credentials) in the project root.
+1. Run this tool to set up Gmail search for your agent:
+
+```bash
+zerozen setup-gmail
+```
+
+#### Example usage in Python:
+
+```python
+from zerozen import agents
+
+prompt = "Find emails from Stripe with invoices in the last 7 days."
+
+result = agents.run(
+    prompt,
+    tools=["search_gmail"],
+    user_context={"email_user_id": "me"},
+)
+print(result)
+```
+
+- The agent uses `search_gmail` to locate matching emails and returns snippets like sender, subject, date, and snippet.
+- The search tool works out-of-the-box once authenticated and ready.
+- Perfect for building more sophisticated workflows—replying, summarization, reaction automation, and more.
+
+______________________________________________________________________
+
+## Roadmap
+
+| Feature                                      | Status     |
+| -------------------------------------------- | ---------- |
+| Pydantic-to-XML                              | ✅          |
+| CLI Chat Interface                           | ✅          |
+| Gmail Integration (search)                   | ✅          |
+| Gmail Agent: Read, Draft, Reply              | 🔳 Planned |
+| “Review & Send” workflow                     | 🔳 Planned |
+| Multi-tool Agents (email, calendar, docs...) | 🔳 Planned |
+
+______________________________________________________________________
+
+## Contributing
+
+Contributions are welcome! We recommend:
+
+- Opening an issue to suggest features or report bugs
+- Submitting pull requests with clear descriptions and tests
+
+______________________________________________________________________
+
+Enjoy the **Zen** of zero-friction AI tooling!
