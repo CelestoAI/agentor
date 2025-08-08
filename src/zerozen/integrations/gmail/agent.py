@@ -1,8 +1,8 @@
 # run_agent.py
 import asyncio
 from agents import Agent, Runner
-from gmail_tool import GmailTool
-from creds import desktop_creds_provider_factory  # from earlier
+from .gmail_tool import GmailTool
+from .creds import desktop_creds_provider_factory  # from earlier
 import json
 from typing import Optional, List
 from agents import function_tool, RunContextWrapper
@@ -56,7 +56,7 @@ Return a short, readable summary of results.
 """
 
 
-def build_agent_and_context() -> tuple[Agent, AppContext]:
+def build_gmail_agent_and_context() -> tuple[Agent, AppContext]:
     # 1) Build creds provider ONCE (desktop or DB-backed)
     creds_provider = desktop_creds_provider_factory(
         credentials_file="credentials.json",
@@ -80,7 +80,7 @@ def build_agent_and_context() -> tuple[Agent, AppContext]:
 
 
 async def main():
-    agent, ctx = build_agent_and_context()
+    agent, ctx = build_gmail_agent_and_context()
 
     result = await Runner.run(
         agent,

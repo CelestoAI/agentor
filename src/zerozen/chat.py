@@ -6,7 +6,7 @@ from rich.theme import Theme
 from rich.prompt import Prompt
 from openai.types.responses import ResponseTextDeltaEvent
 from agents import Agent, Runner, SQLiteSession
-from zerozen.agenthub import main_agent
+from zerozen.agenthub import main_agent, gmail_context
 
 app = typer.Typer()
 
@@ -39,7 +39,9 @@ async def run_agent_stream(input_text: str):
     shade = get_shade_prefix()
     console.print(f"[bold green]AI:[/bold green] {shade}", end="")
 
-    result_stream = Runner.run_streamed(agent, input=input_text, session=session)
+    result_stream = Runner.run_streamed(
+        agent, input=input_text, session=session, context=gmail_context
+    )
 
     try:
         async for event in result_stream.stream_events():
