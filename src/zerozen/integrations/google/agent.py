@@ -1,6 +1,6 @@
 # run_agent.py
 import asyncio
-from agents import Agent, Runner
+from agents import Agent, Runner, ModelSettings
 from .gmail_tool import GmailTool
 from .calendar_tool import CalendarTool
 from .creds import (
@@ -10,6 +10,7 @@ from .creds import (
 import json
 from typing import Optional, List
 from agents import function_tool, RunContextWrapper
+from openai.types.shared import Reasoning
 
 # context.py
 from dataclasses import dataclass
@@ -208,7 +209,7 @@ CALENDAR
 """
 
 
-def build_gmail_agent_and_context() -> tuple[Agent, AppContext]:
+def build_google_agent_and_context() -> tuple[Agent, AppContext]:
     # 1) Build creds provider ONCE (desktop or DB-backed)
     creds_provider = desktop_creds_provider_factory(
         credentials_file="credentials.json",
@@ -239,12 +240,17 @@ def build_gmail_agent_and_context() -> tuple[Agent, AppContext]:
             get_calendar_event,
         ],  # tool reads ctx.context.gmail
         model="gpt-5",
+        model_settings=ModelSettings(
+            reasoning=Reasoning(
+                effort="minimal",
+            )
+        ),
     )
     return agent, ctx
 
 
 async def main():
-    agent, ctx = build_gmail_agent_and_context()
+    agent, ctx = build_google_agent_and_context()
 
     result = await Runner.run(
         agent,

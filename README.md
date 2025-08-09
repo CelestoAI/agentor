@@ -105,8 +105,7 @@ prompt = "Find emails from Stripe with invoices in the last 7 days."
 
 result = agents.run_sync(
     prompt,
-    tools=["search_gmail"],
-    user_context={"email_user_id": "me"},
+    tools=["search_gmail", "list_gmail_messages", "list_calendar_events"],
 )
 print(result)
 ```
