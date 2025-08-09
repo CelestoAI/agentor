@@ -50,9 +50,92 @@ async def search_gmail(
     return json.dumps(res)
 
 
-SYSTEM_PROMPT = """You are an email search copilot.
-Use the `search_gmail` tool with precise Gmail operators (from:, to:, subject:, newer_than:, has:attachment).
-Return a short, readable summary of results.
+@function_tool(name_override="list_gmail_messages")
+async def list_gmail_messages(
+    ctx: RunContextWrapper[AppContext],
+    label_ids: Optional[List[str]] = None,
+    q: Optional[str] = None,
+    limit: int = 20,
+    page_token: Optional[str] = None,
+    include_spam_trash: bool = False,
+) -> str:
+    """
+    List message IDs using Gmail's list API (fast, minimal data).
+
+    Args:
+        label_ids: Filter by label IDs.
+        q: Optional Gmail query string.
+        limit: Max results (1-100).
+        page_token: For pagination.
+        include_spam_trash: Whether to include spam and trash.
+    """
+    app = ctx.context
+    res = app.gmail.list_messages(
+        user_id=app.user_id,
+        label_ids=label_ids,
+        q=q,
+        limit=limit,
+        page_token=page_token,
+        include_spam_trash=include_spam_trash,
+    )
+    return json.dumps(res)
+
+
+@function_tool(name_override="get_gmail_message")
+async def get_gmail_message(
+    ctx: RunContextWrapper[AppContext],
+    message_id: str,
+    format: str = "metadata",
+) -> str:
+    """
+    Fetch a single Gmail message.
+
+    Args:
+        message_id: Gmail message ID.
+        format: One of "metadata", "full", "raw", or "minimal". Defaults to "metadata".
+    """
+    app = ctx.context
+    res = app.gmail.get_message(
+        user_id=app.user_id,
+        message_id=message_id,
+        format=format,
+    )
+    return json.dumps(res)
+
+
+SYSTEM_PROMPT = """
+You are an email copilot focused on fast, precise retrieval from Gmail.
+
+TOOL SELECTION
+- Prefer `search_gmail` for semantic queries (e.g., "invoices from Stripe newer_than:30d", "from:google is:unread").
+- Prefer `list_gmail_messages` when the user asks for raw IDs, pagination, or a quick count under specific labels (cheap + fast).
+- Use `get_gmail_message` only after you have a specific message_id, and only if the user needs headers/snippet details not returned by search/list.
+  - Default format is "metadata". Do NOT use "full" or "raw" unless the user explicitly requests full body or raw MIME.
+
+QUERY CRAFTING
+- Build precise Gmail queries using operators: from:, to:, cc:, subject:, has:attachment, is:unread, newer_than:, older_than:, after:, before:, label:.
+- If dates are vague ("last month", "past week"), prefer newer_than:/older_than: where possible; otherwise use after:/before: with ISO dates.
+
+PAGINATION & LIMITS
+- Keep `limit` small (10–20) unless the user asks for more.
+- For large result sets or "show me more", call `list_gmail_messages` with `page_token` to paginate.
+
+DATA MINIMIZATION
+- Avoid fetching full bodies; metadata is usually enough to summarize (From, To, Subject, Date, snippet).
+- Only call `get_gmail_message` when the user asks to open/read a specific message.
+
+RESULT PRESENTATION
+- Return a short, readable summary. For each message: Date, From, Subject, and a brief snippet.
+- If no results, say so and suggest a refined query.
+
+SAFETY & TONE
+- Never fabricate results. If a query seems ambiguous, ask a short clarifying question and propose a tightened query.
+- Keep answers concise. Prefer bullet points for lists.
+
+EXAMPLES
+- "Find email from Google in the last 30 days" → call `search_gmail(query="from:google newer_than:30d", limit=10)`.
+- "List IDs in my Receipts label" → call `list_gmail_messages(label_ids=[<RECEIPTS_ID>], limit=20)` and include `page_token` if the user wants more.
+- "Open the third result" → use its `id` with `get_gmail_message(message_id=..., format="metadata")`.
 """
 
 
@@ -73,8 +156,12 @@ def build_gmail_agent_and_context() -> tuple[Agent, AppContext]:
     agent = Agent(
         name="Mail Agent",
         instructions=SYSTEM_PROMPT,
-        tools=[search_gmail],  # tool reads ctx.context.gmail
-        model="gpt-4.1-mini",
+        tools=[
+            search_gmail,
+            list_gmail_messages,
+            get_gmail_message,
+        ],  # tool reads ctx.context.gmail
+        model="gpt-5-mini",
     )
     return agent, ctx
 
