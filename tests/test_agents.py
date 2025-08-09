@@ -57,19 +57,17 @@ class TestAgentsRun:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.gmail_context", mock_gmail_context),
+                patch("zerozen.agents.google_context", mock_gmail_context),
             ):
                 result = await agents.run(
                     "Find emails from Stripe",
                     tools=["search_gmail"],
-                    user_context={"email_user_id": "user@example.com"},
                 )
 
                 assert result == "Test response from agent"
                 mock_runner.assert_called_once()
                 call_args = mock_runner.call_args
                 assert call_args[1]["context"] == mock_gmail_context
-                assert mock_gmail_context.user_id == "user@example.com"
 
     @pytest.mark.asyncio
     async def test_run_with_model_override(self, mock_runner_result, mock_main_agent):
@@ -96,7 +94,7 @@ class TestAgentsRun:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.gmail_context", mock_gmail_context),
+                patch("zerozen.agents.google_context", mock_gmail_context),
             ):
                 original_user_id = mock_gmail_context.user_id
                 result = await agents.run("Find emails", tools=["search_gmail"])
@@ -118,12 +116,11 @@ class TestAgentsRun:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.gmail_context", mock_context),
+                patch("zerozen.agents.google_context", mock_context),
             ):
                 result = await agents.run(
                     "Find emails",
                     tools=["search_gmail"],
-                    user_context={"email_user_id": "test@example.com"},
                 )
 
                 assert result == "Test response from agent"
@@ -153,12 +150,11 @@ class TestAgentsRunSync:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.gmail_context", mock_gmail_context),
+                patch("zerozen.agents.google_context", mock_gmail_context),
             ):
                 result = agents.run_sync(
                     prompt="Find emails",
                     tools=["search_gmail"],
-                    user_context={"email_user_id": "test@example.com"},
                     model="gpt-4",
                     max_turns=3,
                 )
@@ -183,7 +179,7 @@ class TestAgentsIntegration:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.gmail_context", mock_gmail_context),
+                patch("zerozen.agents.google_context", mock_gmail_context),
             ):
                 result = await agents.run(
                     "Search emails and web",
@@ -219,18 +215,16 @@ class TestAgentsIntegration:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.gmail_context", mock_gmail_context),
+                patch("zerozen.agents.google_context", mock_gmail_context),
             ):
                 result = await agents.run(
                     "List my events",
                     tools=["list_calendar_events"],
-                    user_context={"email_user_id": "me@example.com"},
                 )
 
                 assert result == "Test response from agent"
                 call_args = mock_runner.call_args
                 assert call_args[1]["context"] == mock_gmail_context
-                assert mock_gmail_context.user_id == "me@example.com"
 
     @pytest.mark.asyncio
     async def test_get_calendar_event_uses_context(
@@ -241,7 +235,7 @@ class TestAgentsIntegration:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.gmail_context", mock_gmail_context),
+                patch("zerozen.agents.google_context", mock_gmail_context),
             ):
                 result = await agents.run(
                     "Fetch event details",
