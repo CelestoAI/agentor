@@ -37,6 +37,12 @@ ______________________________________________________________________
 ## Installation
 
 ```bash
+pip install zenzero
+```
+
+### Install from source
+
+```bash
 pip install git+https://github.com/aniketmaurya/zerozen.git
 ```
 
