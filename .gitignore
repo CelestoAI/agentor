@@ -194,5 +194,5 @@ cython_debug/
 .cursorindexingignore
 uv.lock
 .DS_Store
-token.json
-credentials.json
+token*.json
+credentials*.json

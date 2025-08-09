@@ -2,7 +2,11 @@
 import asyncio
 from agents import Agent, Runner
 from .gmail_tool import GmailTool
-from .creds import desktop_creds_provider_factory  # from earlier
+from .calendar_tool import CalendarTool
+from .creds import (
+    desktop_creds_provider_factory,
+    desktop_calendar_creds_provider_factory,
+)  # from earlier
 import json
 from typing import Optional, List
 from agents import function_tool, RunContextWrapper
@@ -15,6 +19,7 @@ from dataclasses import dataclass
 class AppContext:
     user_id: str
     gmail: GmailTool
+    calendar: CalendarTool
 
 
 @function_tool(name_override="search_gmail")
@@ -122,6 +127,46 @@ async def get_gmail_message_body(
     return json.dumps(data)
 
 
+@function_tool(name_override="list_calendar_events")
+async def list_calendar_events(
+    ctx: RunContextWrapper[AppContext],
+    calendar_id: str = "primary",
+    time_min: Optional[str] = None,  # YYYY-MM-DD or RFC3339
+    time_max: Optional[str] = None,  # YYYY-MM-DD or RFC3339
+    max_results: int = 50,
+    page_token: Optional[str] = None,
+) -> str:
+    """
+    List Google Calendar events.
+    """
+    app = ctx.context
+    res = app.calendar.list_events(
+        user_id=app.user_id,
+        calendar_id=calendar_id,
+        time_min=time_min,
+        time_max=time_max,
+        max_results=max_results,
+        page_token=page_token,
+    )
+    return json.dumps(res)
+
+
+@function_tool(name_override="get_calendar_event")
+async def get_calendar_event(
+    ctx: RunContextWrapper[AppContext],
+    event_id: str,
+    calendar_id: str = "primary",
+) -> str:
+    """
+    Get a single Google Calendar event.
+    """
+    app = ctx.context
+    res = app.calendar.get_event(
+        user_id=app.user_id, calendar_id=calendar_id, event_id=event_id
+    )
+    return json.dumps(res)
+
+
 SYSTEM_PROMPT = """
 You are an email copilot focused on fast, precise retrieval from Gmail.
 
@@ -156,6 +201,10 @@ EXAMPLES
 - "List IDs in my Receipts label" → call `list_gmail_messages(label_ids=[<RECEIPTS_ID>], limit=20)` and include `page_token` if the user wants more.
     - "Open the third result" → use its `id` with `get_gmail_message(message_id=...)`.
     - "Show me the email content" → use `get_gmail_message_body(message_id=..., prefer="text")`.
+
+CALENDAR
+- To list upcoming events, use `list_calendar_events(calendar_id="primary", time_min=today, max_results=10)`.
+- To fetch details for a specific event, use `get_calendar_event(event_id=..., calendar_id="primary")`.
 """
 
 
@@ -165,21 +214,29 @@ def build_gmail_agent_and_context() -> tuple[Agent, AppContext]:
         credentials_file="credentials.json",
         token_file="token.json",
     )
+    cal_creds_provider = desktop_calendar_creds_provider_factory(
+        credentials_file="credentials.json",
+        token_file="token.calendar.json",
+    )
 
     # 2) Construct the integration ONCE, inject provider
     gmail = GmailTool(creds_provider)
+    calendar = CalendarTool(cal_creds_provider)
 
     # 3) App/Agent context (not visible to the model)
-    ctx = AppContext(user_id="local", gmail=gmail)
+    ctx = AppContext(user_id="local", gmail=gmail, calendar=calendar)
 
     # 4) Agent with tool(s)
     agent = Agent(
-        name="Mail Agent",
+        name="Google Agent",
         instructions=SYSTEM_PROMPT,
         tools=[
             search_gmail,
             list_gmail_messages,
             get_gmail_message,
+            get_gmail_message_body,
+            list_calendar_events,
+            get_calendar_event,
         ],  # tool reads ctx.context.gmail
         model="gpt-5",
     )
