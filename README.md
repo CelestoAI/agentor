@@ -72,7 +72,7 @@ ______________________________________________________________________
 ### Chat Interface
 
 ```bash
-zerozen chat
+zen chat
 ```
 
 ______________________________________________________________________
@@ -87,7 +87,7 @@ Now integrated with a Gmail search feature via OpenAI Agents.
 1. Run this tool to set up Gmail search for your agent:
 
 ```bash
-zerozen setup-gmail
+zen setup-gmail
 ```
 
 #### Example usage in Python:
