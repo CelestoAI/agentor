@@ -1,0 +1,35 @@
+name: Publish Python Package
+
+on:
+  push:
+    tags:
+      - "v*.*.*"  # Trigger on version tags like v1.2.3
+
+permissions:
+  contents: read
+  id-token: write  # Needed for PyPI trusted publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install 3.12  # or your target version
+
+      - name: Install dependencies
+        run: uv sync --frozen  # ensures lockfile is respected
+
+      - name: Build package
+        run: uv build  # creates dist/*.tar.gz and dist/*.whl
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true  # avoid error if version already exists
