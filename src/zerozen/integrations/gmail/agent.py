@@ -161,7 +161,7 @@ def build_gmail_agent_and_context() -> tuple[Agent, AppContext]:
             list_gmail_messages,
             get_gmail_message,
         ],  # tool reads ctx.context.gmail
-        model="gpt-5-mini",
+        model="gpt-5",
     )
     return agent, ctx
 
