@@ -1,12 +1,10 @@
 import asyncio
 import os
-import random
 from dataclasses import dataclass
 from typing import Optional
 
 import typer
 from rich.console import Console
-from rich.theme import Theme
 from rich.prompt import Prompt
 from rich.panel import Panel
 from rich.text import Text
@@ -15,16 +13,7 @@ from agents import Agent, Runner, SQLiteSession
 from zerozen.agenthub import main_agent, gmail_context
 
 app = typer.Typer()
-
-# Rich theme for sass
-custom_theme = Theme(
-    {
-        "sassy": "bold magenta",
-        "shade": "italic white on black",
-        "wink": "underline yellow",
-    }
-)
-console = Console(theme=custom_theme)
+console = Console()
 
 # Use your main agent and add session memory
 agent: Agent = main_agent
@@ -39,19 +28,8 @@ class ChatConfig:
     model_override: Optional[str] = None
 
 
-def get_shade_prefix() -> str:
-    return random.choice(
-        [
-            "[shade]Really?[/shade] ",
-            "[sassy]Oh please…[/sassy] ",
-            "[wink]*side‑eye*[/wink] ",
-        ]
-    )
-
-
 async def run_agent_stream(input_text: str, config: ChatConfig):
-    shade = get_shade_prefix()
-    console.print(f"[bold green]AI:[/bold green] {shade}", end="")
+    console.print("[bold green]AI:[/bold green] ", end="")
 
     result_stream = Runner.run_streamed(
         agent,
@@ -63,9 +41,7 @@ async def run_agent_stream(input_text: str, config: ChatConfig):
     try:
         async for event in result_stream.stream_events():
             if event.type == "agent_updated_stream_event":
-                console.print(
-                    f"\n[shade](psst... new agent in charge: {event.new_agent.name})[/shade]"
-                )
+                console.print(f"\n[dim]Agent updated: {event.new_agent.name}[/dim]")
 
             elif event.type == "raw_response_event":
                 if isinstance(event.data, ResponseTextDeltaEvent):
@@ -107,7 +83,7 @@ async def run_agent_stream(input_text: str, config: ChatConfig):
                         )
 
             elif event.type == "error":
-                console.print(f"\n[sassy]Drama alert:[/sassy] {event}")
+                console.print(f"\n[red]Error:[/red] {event}")
                 return
 
             else:
@@ -119,7 +95,7 @@ async def run_agent_stream(input_text: str, config: ChatConfig):
         # console.print(f"[bold green]AI ended with:[/bold green] {result_stream.final_output}")
 
     except Exception as e:
-        console.print(f"\n[sassy]Oh no babe, something broke:[/sassy] {e}")
+        console.print(f"\n[red]An error occurred:[/red] {e}")
 
 
 def _print_help():
@@ -178,7 +154,7 @@ def chat(
     console.print(
         Panel(
             Text.from_markup(
-                "[sassy]Hola, darling![/sassy] I’ll remember everything now. Type something (or '/exit').\n"
+                "Chat ready. Type something (or '/exit').\n"
                 "[dim]Hint: /help for commands. Gmail user: "
                 + (cfg.gmail_user_id or "(default)")
                 + ", model: "
@@ -192,14 +168,12 @@ def chat(
         try:
             user_input = _read_input()
         except (KeyboardInterrupt, EOFError):
-            console.print(
-                "\n[sassy]Ciao! I’ll remember you (until next time) 🙄[/sassy]"
-            )
+            console.print("\nGoodbye.")
             break
 
         cmd = user_input.strip()
         if cmd in {"/exit", "/quit", "exit", "quit"}:
-            console.print("[sassy]Ciao! I’ll remember you (until next time) 🙄[/sassy]")
+            console.print("Goodbye.")
             break
         if cmd == "/help":
             _print_help()
