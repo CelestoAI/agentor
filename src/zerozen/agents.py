@@ -2,13 +2,13 @@ import asyncio
 from typing import List, Optional
 from agents import Runner
 
-from .agenthub import main_agent, gmail_context
+from .agenthub import main_agent, google_context
 
 
 class Zen:
     def __init__(self):
         self.main_agent = main_agent
-        self.gmail_context = gmail_context
+        self.gmail_context = google_context
         self._tools = {
             "search_gmail",
             "list_gmail_messages",
