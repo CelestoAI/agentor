@@ -11,6 +11,9 @@ from rich.text import Text
 from openai.types.responses import ResponseTextDeltaEvent, ResponseOutputItemAddedEvent
 from agents import Agent, Runner, SQLiteSession
 from zerozen.agenthub import main_agent, gmail_context
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = typer.Typer()
 console = Console()

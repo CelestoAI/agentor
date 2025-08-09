@@ -4,7 +4,7 @@ from openai.types.shared import Reasoning
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
 from .web_search import web_search_agent
-from zerozen.integrations.gmail.agent import build_gmail_agent_and_context
+from zerozen.integrations.google.agent import build_gmail_agent_and_context
 
 
 concept_research_agent = Agent(

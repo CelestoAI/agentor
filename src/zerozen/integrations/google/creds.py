@@ -5,8 +5,11 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
-# Read-only for search
+# Read-only for Gmail search
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+
+# Read-only for Calendar
+SCOPES_CALENDAR = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 
 def desktop_creds_provider_factory(
@@ -32,6 +35,35 @@ def desktop_creds_provider_factory(
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     credentials_file, SCOPES
+                )
+                creds = flow.run_local_server(port=0)
+            with open(token_file, "w") as f:
+                f.write(creds.to_json())
+        return creds
+
+    return _provider
+
+
+def desktop_calendar_creds_provider_factory(
+    credentials_file: str = "credentials.json",
+    token_file: str = "token.calendar.json",
+):
+    """
+    Credential provider factory for Google Calendar (read-only).
+    Keeps Gmail tokens separate by default via different token file.
+    """
+
+    def _provider(user_id: str) -> Credentials:
+        del user_id
+        creds = None
+        if os.path.exists(token_file):
+            creds = Credentials.from_authorized_user_file(token_file, SCOPES_CALENDAR)
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    credentials_file, SCOPES_CALENDAR
                 )
                 creds = flow.run_local_server(port=0)
             with open(token_file, "w") as f:
