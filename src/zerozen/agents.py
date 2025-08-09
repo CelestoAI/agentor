@@ -29,8 +29,9 @@ async def run(
     agent = main_agent
     context = None
 
-    # If Gmail tools are requested, use the gmail context
-    if tools and "search_gmail" in tools:
+    # If any Gmail tool is requested, use the gmail context
+    gmail_tools = {"search_gmail", "list_gmail_messages", "get_gmail_message"}
+    if tools and any(t in gmail_tools for t in tools):
         context = gmail_context
 
         # Update context with user-provided values

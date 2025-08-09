@@ -155,3 +155,87 @@ class GmailTool:
             summaries.append(_normalize_metadata(msg))
 
         return {"messages": summaries}
+
+    def list_messages(
+        self,
+        *,
+        user_id: str,
+        label_ids: list[str] | None = None,
+        q: str | None = None,
+        limit: int = 20,
+        page_token: str | None = None,
+        include_spam_trash: bool = False,
+    ) -> dict:
+        """
+        Lightweight list of message ids (and thread ids) using Gmail's list API.
+
+        Returns: {"messages": [{"id": str, "threadId": str}, ...], "nextPageToken": str | None}
+        """
+        limit = max(1, min(int(limit or 20), 100))
+        svc = self._svc(user_id)
+
+        @backoff.on_exception(
+            backoff.expo,
+            Exception,
+            max_time=20,
+            jitter=None,
+            giveup=lambda e: not _is_transient(e),
+        )
+        def _list():
+            req = (
+                svc.users()
+                .messages()
+                .list(
+                    userId="me",
+                    labelIds=label_ids or [],
+                    q=q or "",
+                    maxResults=limit,
+                    pageToken=page_token,
+                    includeSpamTrash=include_spam_trash,
+                )
+            )
+            return req.execute()
+
+        res = _list() or {}
+        return {
+            "messages": res.get("messages", []),
+            "nextPageToken": res.get("nextPageToken"),
+        }
+
+    def get_message(
+        self,
+        *,
+        user_id: str,
+        message_id: str,
+        format: str = "metadata",  # one of: metadata, full, raw, minimal
+    ) -> dict:
+        """
+        Fetch a single message.
+
+        - format="metadata" returns a normalized metadata summary
+        - format in {"full", "raw", "minimal"} returns the Gmail API response as-is under "message"
+        """
+        svc = self._svc(user_id)
+
+        req_kwargs: dict[str, t.Any] = {
+            "userId": "me",
+            "id": message_id,
+            "format": format,
+        }
+        if format == "metadata":
+            req_kwargs["metadataHeaders"] = _metadata_headers()
+
+        @backoff.on_exception(
+            backoff.expo,
+            Exception,
+            max_time=20,
+            jitter=None,
+            giveup=lambda e: not _is_transient(e),
+        )
+        def _get():
+            return svc.users().messages().get(**req_kwargs).execute()
+
+        msg = _get()
+        if format == "metadata":
+            return {"message": _normalize_metadata(msg)}
+        return {"message": msg}
