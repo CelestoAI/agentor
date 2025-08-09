@@ -10,7 +10,7 @@ from rich.panel import Panel
 from rich.text import Text
 from openai.types.responses import ResponseTextDeltaEvent, ResponseOutputItemAddedEvent
 from agents import Agent, Runner, SQLiteSession
-from zerozen.agenthub import main_agent, gmail_context
+from zerozen.agenthub import main_agent, google_context
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -38,7 +38,7 @@ async def run_agent_stream(input_text: str, config: ChatConfig):
         agent,
         input=input_text,
         session=session,
-        context=gmail_context,
+        context=google_context,
     )
 
     try:
@@ -65,7 +65,9 @@ async def run_agent_stream(input_text: str, config: ChatConfig):
                             f"\n[bold yellow]🔧 Running tool:[/bold yellow] {tool_name}"
                         )
                     else:
-                        console.print("\n[bold yellow]🔧 Running tool...[/bold yellow]")
+                        console.print(
+                            f"\n[bold yellow]🔧 Running tool...[/bold yellow] {event.item.raw_item.name}"
+                        )
                 elif event.item.type == "tool_call_output_item":
                     if config.show_tool_output:
                         raw_output = str(getattr(event.item, "output", ""))
@@ -149,7 +151,7 @@ def chat(
     )
 
     if cfg.gmail_user_id:
-        gmail_context.user_id = cfg.gmail_user_id
+        google_context.user_id = cfg.gmail_user_id
 
     if cfg.model_override:
         agent.model = cfg.model_override
@@ -184,7 +186,7 @@ def chat(
         if cmd.startswith("/set user "):
             new_id = cmd[len("/set user ") :].strip()
             if new_id:
-                gmail_context.user_id = new_id
+                google_context.user_id = new_id
                 cfg.gmail_user_id = new_id
                 console.print(f"[dim]Gmail user set to[/dim] [bold]{new_id}[/bold]")
             else:

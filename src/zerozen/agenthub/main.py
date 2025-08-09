@@ -4,7 +4,7 @@ from openai.types.shared import Reasoning
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
 from .web_search import web_search_agent
-from zerozen.integrations.google.agent import build_google_agent_and_context
+from zerozen.integrations.google.google_agent import build_google_agent_and_context
 
 
 concept_research_agent = Agent(
@@ -33,16 +33,16 @@ You must use the web_search tool to get latest information about the topic. Repl
     handoffs=[concept_research_agent],
 )
 
-gmail_agent, gmail_context = build_google_agent_and_context()
+google_agent, google_context = build_google_agent_and_context()
 
 main_agent = Agent(
     name="Triage agent",
-    instructions="Handoff to the appropriate agent based on the language of the request.",
-    handoffs=[coder_agent, gmail_agent],
-    model="gpt-5-mini",
+    instructions="Handoff to the appropriate agent whenever required. E.g. when the user asks for a code, handoff to the coder agent.",
+    handoffs=[coder_agent, google_agent],
+    model="gpt-5",
     model_settings=ModelSettings(
         reasoning=Reasoning(
-            effort="low",
+            effort="minimal",
         )
     ),
 )
