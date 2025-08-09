@@ -85,22 +85,41 @@ async def list_gmail_messages(
 async def get_gmail_message(
     ctx: RunContextWrapper[AppContext],
     message_id: str,
-    format: str = "metadata",
 ) -> str:
     """
-    Fetch a single Gmail message.
+    Fetch a single Gmail message (metadata only).
 
     Args:
         message_id: Gmail message ID.
-        format: One of "metadata", "full", "raw", or "minimal". Defaults to "metadata".
     """
     app = ctx.context
     res = app.gmail.get_message(
         user_id=app.user_id,
         message_id=message_id,
-        format=format,
     )
     return json.dumps(res)
+
+
+@function_tool(name_override="get_gmail_message_body")
+async def get_gmail_message_body(
+    ctx: RunContextWrapper[AppContext],
+    message_id: str,
+    prefer: str = "text",
+    limit: int = 50000,
+) -> str:
+    """
+    Fetch a single Gmail message body for UI rendering.
+
+    Args:
+        message_id: Gmail message ID.
+        prefer: "text" or "html". Defaults to "text".
+        limit: Max characters to return for the selected body.
+    """
+    app = ctx.context
+    data = app.gmail.get_message_body(
+        user_id=app.user_id, message_id=message_id, prefer=prefer, max_chars=limit
+    )
+    return json.dumps(data)
 
 
 SYSTEM_PROMPT = """
@@ -109,8 +128,8 @@ You are an email copilot focused on fast, precise retrieval from Gmail.
 TOOL SELECTION
 - Prefer `search_gmail` for semantic queries (e.g., "invoices from Stripe newer_than:30d", "from:google is:unread").
 - Prefer `list_gmail_messages` when the user asks for raw IDs, pagination, or a quick count under specific labels (cheap + fast).
-- Use `get_gmail_message` only after you have a specific message_id, and only if the user needs headers/snippet details not returned by search/list.
-  - Default format is "metadata". Do NOT use "full" or "raw" unless the user explicitly requests full body or raw MIME.
+    - Use `get_gmail_message` only after you have a specific message_id, and only if the user needs headers/snippet details not returned by search/list. Always metadata-only.
+    - Use `get_gmail_message_body` only when the user asks to read/open a message content for UI display. Prefer text unless user asks for HTML.
 
 QUERY CRAFTING
 - Build precise Gmail queries using operators: from:, to:, cc:, subject:, has:attachment, is:unread, newer_than:, older_than:, after:, before:, label:.
@@ -135,7 +154,8 @@ SAFETY & TONE
 EXAMPLES
 - "Find email from Google in the last 30 days" → call `search_gmail(query="from:google newer_than:30d", limit=10)`.
 - "List IDs in my Receipts label" → call `list_gmail_messages(label_ids=[<RECEIPTS_ID>], limit=20)` and include `page_token` if the user wants more.
-- "Open the third result" → use its `id` with `get_gmail_message(message_id=..., format="metadata")`.
+    - "Open the third result" → use its `id` with `get_gmail_message(message_id=...)`.
+    - "Show me the email content" → use `get_gmail_message_body(message_id=..., prefer="text")`.
 """
 
 

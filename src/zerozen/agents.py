@@ -30,7 +30,12 @@ async def run(
     context = None
 
     # If any Gmail tool is requested, use the gmail context
-    gmail_tools = {"search_gmail", "list_gmail_messages", "get_gmail_message"}
+    gmail_tools = {
+        "search_gmail",
+        "list_gmail_messages",
+        "get_gmail_message",
+        "get_gmail_message_body",
+    }
     if tools and any(t in gmail_tools for t in tools):
         context = gmail_context
 

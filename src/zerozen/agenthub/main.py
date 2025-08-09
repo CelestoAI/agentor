@@ -1,4 +1,6 @@
-from agents import Agent
+from agents import Agent, ModelSettings
+from openai.types.shared import Reasoning
+
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
 from .web_search import web_search_agent
@@ -37,5 +39,10 @@ main_agent = Agent(
     name="Triage agent",
     instructions="Handoff to the appropriate agent based on the language of the request.",
     handoffs=[coder_agent, gmail_agent],
-    model="gpt-5-mini",
+    model="gpt-5",
+    model_settings=ModelSettings(
+        reasoning=Reasoning(
+            effort="minimal",
+        )
+    ),
 )
