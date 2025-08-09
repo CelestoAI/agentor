@@ -209,6 +209,49 @@ class TestAgentsIntegration:
                 call_args = mock_runner.call_args
                 assert call_args[1]["context"] is None
 
+    @pytest.mark.asyncio
+    async def test_calendar_tools_use_gmail_context(
+        self, mock_runner_result, mock_main_agent, mock_gmail_context
+    ):
+        """Calendar tools should also trigger the Google (gmail) context."""
+        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+            mock_runner.return_value = mock_runner_result
+
+            with (
+                patch("zerozen.agents.main_agent", mock_main_agent),
+                patch("zerozen.agents.gmail_context", mock_gmail_context),
+            ):
+                result = await agents.run(
+                    "List my events",
+                    tools=["list_calendar_events"],
+                    user_context={"email_user_id": "me@example.com"},
+                )
+
+                assert result == "Test response from agent"
+                call_args = mock_runner.call_args
+                assert call_args[1]["context"] == mock_gmail_context
+                assert mock_gmail_context.user_id == "me@example.com"
+
+    @pytest.mark.asyncio
+    async def test_get_calendar_event_uses_context(
+        self, mock_runner_result, mock_main_agent, mock_gmail_context
+    ):
+        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+            mock_runner.return_value = mock_runner_result
+
+            with (
+                patch("zerozen.agents.main_agent", mock_main_agent),
+                patch("zerozen.agents.gmail_context", mock_gmail_context),
+            ):
+                result = await agents.run(
+                    "Fetch event details",
+                    tools=["get_calendar_event"],
+                )
+
+                assert result == "Test response from agent"
+                call_args = mock_runner.call_args
+                assert call_args[1]["context"] == mock_gmail_context
+
     def test_empty_tools_list(self, mock_runner_result, mock_main_agent):
         """Test behavior with empty tools list."""
         with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:

@@ -35,6 +35,9 @@ async def run(
         "list_gmail_messages",
         "get_gmail_message",
         "get_gmail_message_body",
+        # Calendar tools share the same Google context
+        "list_calendar_events",
+        "get_calendar_event",
     }
     if tools and any(t in gmail_tools for t in tools):
         context = gmail_context
