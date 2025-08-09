@@ -65,7 +65,9 @@ async def run_agent_stream(input_text: str, config: ChatConfig):
                             f"\n[bold yellow]🔧 Running tool:[/bold yellow] {tool_name}"
                         )
                     else:
-                        console.print("\n[bold yellow]🔧 Running tool...[/bold yellow]")
+                        console.print(
+                            f"\n[bold yellow]🔧 Running tool...[/bold yellow] {event.item.raw_item.name}"
+                        )
                 elif event.item.type == "tool_call_output_item":
                     if config.show_tool_output:
                         raw_output = str(getattr(event.item, "output", ""))
