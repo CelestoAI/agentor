@@ -1,13 +1,11 @@
 # run_agent.py
 import asyncio
 from agents import Agent, Runner, ModelSettings
-from .gmail_tool import GmailTool
-from .calendar_tool import CalendarTool
-from .creds import (
-    desktop_creds_provider_factory,
-    desktop_calendar_creds_provider_factory,
-)  # from earlier
+from .gmail_tool_v2 import GmailTool
+from .calendar_tool_v2 import CalendarTool
+from .creds import load_user_credentials
 import json
+import os
 from typing import Optional, List
 from agents import function_tool, RunContextWrapper
 from openai.types.shared import Reasoning
@@ -45,7 +43,6 @@ async def search_gmail(
     """
     app = ctx.context
     res = app.gmail.search_messages(
-        user_id=app.user_id,
         query=query,
         label_ids=label_ids,
         after=after,
@@ -260,25 +257,30 @@ Remember: be concise, minimize data fetched, and ask before reading private emai
 """
 
 
-def build_google_agent_and_context() -> tuple[Agent, AppContext]:
-    # 1) Build creds provider ONCE (desktop or DB-backed)
-    creds_provider = desktop_creds_provider_factory(
-        credentials_file="credentials.json",
-        token_file="token.json",
-    )
-    cal_creds_provider = desktop_calendar_creds_provider_factory(
-        credentials_file="credentials.json",
-        token_file="token.calendar.json",
-    )
+def build_google_agent_and_context(user_creds_file: str = "my_google_account.json") -> tuple[Agent, AppContext]:
+    """
+    Build Google agent using desktop credentials.
+    
+    Args:
+        user_creds_file: Path to saved user credentials file
+    """
+    # Load user credentials from file
+    if not os.path.exists(user_creds_file):
+        raise FileNotFoundError(
+            f"User credentials not found: {user_creds_file}\n"
+            f"Run the desktop_oauth_demo.py first to authenticate."
+        )
+    
+    creds = load_user_credentials(user_creds_file)
+    
+    # Create tools using the same credentials
+    gmail = GmailTool(creds)
+    calendar = CalendarTool(creds)
 
-    # 2) Construct the integration ONCE, inject provider
-    gmail = GmailTool(creds_provider)
-    calendar = CalendarTool(cal_creds_provider)
+    # App/Agent context
+    ctx = AppContext(user_id=creds.user_id, gmail=gmail, calendar=calendar)
 
-    # 3) App/Agent context (not visible to the model)
-    ctx = AppContext(user_id="local", gmail=gmail, calendar=calendar)
-
-    # 4) Agent with tool(s)
+    # Agent with tools
     agent = Agent(
         name="Gmail and calendar agent",
         instructions=SYSTEM_PROMPT,
@@ -289,7 +291,7 @@ def build_google_agent_and_context() -> tuple[Agent, AppContext]:
             get_gmail_message_body,
             list_calendar_events,
             get_calendar_event,
-        ],  # tool reads ctx.context.gmail
+        ],
         model="gpt-5",
         model_settings=ModelSettings(
             reasoning=Reasoning(

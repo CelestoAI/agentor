@@ -40,7 +40,7 @@ ______________________________________________________________________
 pip install zenzero
 ```
 
-### Install from source
+**From source**
 
 ```bash
 pip install git+https://github.com/aniketmaurya/zerozen.git
@@ -49,31 +49,6 @@ pip install git+https://github.com/aniketmaurya/zerozen.git
 ______________________________________________________________________
 
 ## Usage
-
-### Convert Pydantic Models to XML
-
-```python
-from zerozen import pydantic_to_xml
-from pydantic import BaseModel
-
-
-class User(BaseModel):
-    name: str
-    age: int
-
-
-user = User(name="John", age=30)
-xml_string = pydantic_to_xml(user)
-print(xml_string)
-```
-
-**Output:**
-
-```xml
-<User><name>John</name><age>30</age></User>
-```
-
-______________________________________________________________________
 
 ### Chat Interface
 
@@ -116,6 +91,31 @@ print(result)
 
 ______________________________________________________________________
 
+### Convert Pydantic Models to XML
+
+```python
+from zerozen import pydantic_to_xml
+from pydantic import BaseModel
+
+
+class User(BaseModel):
+    name: str
+    age: int
+
+
+user = User(name="John", age=30)
+xml_string = pydantic_to_xml(user)
+print(xml_string)
+```
+
+**Output:**
+
+```xml
+<User><name>John</name><age>30</age></User>
+```
+
+______________________________________________________________________
+
 ## Roadmap
 
 | Feature                                      | Status     |
@@ -123,6 +123,7 @@ ______________________________________________________________________
 | Pydantic-to-XML                              | ✅          |
 | CLI Chat Interface                           | ✅          |
 | Gmail Integration (search)                   | ✅          |
+| Google Calendar                              | ✅          |
 | Gmail Agent: Read, Draft, Reply              | 🔳 Planned |
 | “Review & Send” workflow                     | 🔳 Planned |
 | Multi-tool Agents (email, calendar, docs...) | 🔳 Planned |
