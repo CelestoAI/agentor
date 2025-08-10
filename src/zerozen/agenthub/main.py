@@ -116,7 +116,7 @@ def get_google_agent_and_context():
                     error_msg = (
                         "❌ User authentication required!\n\n"
                         "🔧 QUICK FIX:\n"
-                        "Run: python examples/desktop_oauth_demo.py\n"
+                        "Run: zen setup-google\n"
                         "(This will open your browser to authenticate)\n\n"
                         "📄 Missing file: credentials.my_google_account.json"
                     )
