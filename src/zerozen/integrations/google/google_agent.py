@@ -74,7 +74,6 @@ async def list_gmail_messages(
     """
     app = ctx.context
     res = app.gmail.list_messages(
-        user_id=app.user_id,
         label_ids=label_ids,
         q=q,
         limit=limit,
@@ -97,7 +96,6 @@ async def get_gmail_message(
     """
     app = ctx.context
     res = app.gmail.get_message(
-        user_id=app.user_id,
         message_id=message_id,
     )
     return json.dumps(res)
@@ -120,7 +118,7 @@ async def get_gmail_message_body(
     """
     app = ctx.context
     data = app.gmail.get_message_body(
-        user_id=app.user_id, message_id=message_id, prefer=prefer, max_chars=limit
+        message_id=message_id, prefer=prefer, max_chars=limit
     )
     return json.dumps(data)
 
@@ -139,7 +137,6 @@ async def list_calendar_events(
     """
     app = ctx.context
     res = app.calendar.list_events(
-        user_id=app.user_id,
         calendar_id=calendar_id,
         time_min=time_min,
         time_max=time_max,
@@ -159,9 +156,7 @@ async def get_calendar_event(
     Get a single Google Calendar event.
     """
     app = ctx.context
-    res = app.calendar.get_event(
-        user_id=app.user_id, calendar_id=calendar_id, event_id=event_id
-    )
+    res = app.calendar.get_event(calendar_id=calendar_id, event_id=event_id)
     return json.dumps(res)
 
 
@@ -257,10 +252,12 @@ Remember: be concise, minimize data fetched, and ask before reading private emai
 """
 
 
-def build_google_agent_and_context(user_creds_file: str = "my_google_account.json") -> tuple[Agent, AppContext]:
+def build_google_agent_and_context(
+    user_creds_file: str = "credentials.my_google_account.json",
+) -> tuple[Agent, AppContext]:
     """
     Build Google agent using desktop credentials.
-    
+
     Args:
         user_creds_file: Path to saved user credentials file
     """
@@ -270,9 +267,9 @@ def build_google_agent_and_context(user_creds_file: str = "my_google_account.jso
             f"User credentials not found: {user_creds_file}\n"
             f"Run the desktop_oauth_demo.py first to authenticate."
         )
-    
+
     creds = load_user_credentials(user_creds_file)
-    
+
     # Create tools using the same credentials
     gmail = GmailTool(creds)
     calendar = CalendarTool(creds)

@@ -9,7 +9,7 @@ from zerozen.integrations.google import (
 
 # Configuration
 CREDENTIALS_FILE = "credentials.json"
-USER_CREDS_FILE = "my_google_account.json"
+USER_CREDS_FILE = "credentials.my_google_account.json"
 SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/gmail.readonly",
