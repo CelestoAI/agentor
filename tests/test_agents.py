@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
 
+# Import agents - test mode detection handles the mocking automatically
 from zerozen import agents
 
 
