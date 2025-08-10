@@ -19,6 +19,9 @@ dependencies = [
     "google-auth-httplib2>=0.2.0",
     "google-auth-oauthlib>=1.2.2",
     "backoff>=2.2.1",
+    "google-api-core>=2.25.1",
+    "google-auth>=2.40.3",
+    "googleapis-common-protos>=1.70.0",
 ]
 
 [project.scripts]
