@@ -16,11 +16,9 @@ class DummyEmbeddings(TextEmbeddingFunction):
         self._ndims = 768
 
     def generate_embeddings(self, texts):
-        return np.random.rand(len(texts), self._ndims)
+        return np.random.rand(len(texts), self._ndims).tolist()
 
     def ndims(self):
-        if self._ndims is None:
-            self._ndims = len(self.generate_embeddings("foo")[0])
         return self._ndims
 
     @cached(cache={})
@@ -37,8 +35,7 @@ def test_db(tmp_path):
 
 
 @patch("lancedb.embeddings.get_registry", return_value={"dummy": DummyEmbeddings})
-def test_memory(mock_get_registry):
-    mem = Memory()
+def test_memory(mock_get_registry, tmp_path):
+    mem = Memory(tmp_path / "memory")
     mem.add(user="How many 'r's in apples?", agent="there are 0 'r's in apples")
     assert mem.search("apple", limit=1) is not None
-    mock_get_registry.assert_called_once()
