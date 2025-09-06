@@ -6,7 +6,7 @@ def get_embedding_func():
     return (
         get_registry()
         .get("sentence-transformers")
-        .create(name="google/embeddinggemma-300M", device="cpu")
+        .create(name="google/embeddinggemma-300M")
     )
 
 
@@ -15,9 +15,11 @@ def get_embedding(text: str):
     return func.embed_query(text)
 
 
-class EmbeddingSchema(LanceModel):
-    role: str
-    content: str
-    embedding: Vector(
-        dim=768,
-    )
+model = get_embedding_func()
+
+
+class Chat(LanceModel):
+    user: str
+    agent: str
+    text: str = model.SourceField()
+    embedding: Vector(model.ndims()) = model.VectorField()
