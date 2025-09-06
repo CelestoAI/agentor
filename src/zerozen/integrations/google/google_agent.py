@@ -9,16 +9,7 @@ import os
 from typing import Optional, List
 from agents import function_tool, RunContextWrapper
 from openai.types.shared import Reasoning
-
-# context.py
-from dataclasses import dataclass
-
-
-@dataclass
-class AppContext:
-    user_id: str
-    gmail: GmailTool
-    calendar: CalendarTool
+from zerozen.utils import AppContext
 
 
 @function_tool(name_override="search_gmail")
