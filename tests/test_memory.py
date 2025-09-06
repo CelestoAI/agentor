@@ -13,7 +13,7 @@ class DummyEmbeddings(TextEmbeddingFunction):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._ndims = 768
+        self._ndims = 384
 
     def generate_embeddings(self, texts):
         return np.random.rand(len(texts), self._ndims).tolist()
