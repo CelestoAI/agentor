@@ -5,27 +5,27 @@ from zerozen.memory.embedding import Chat
 
 
 class DBManager:
-    def __init__(self):
-        uri = "zerozen/messages"
-        self._db = lancedb.connect(uri)
+    def __init__(self, uri: str = "zerozen/messages"):
+        self.uri = uri
+        self._db = lancedb.connect(self.uri)
 
-    def open_or_create_table(self) -> lancedb.table.Table:
+    def open_or_create_table(self, table_name: str = "messages") -> lancedb.table.Table:
         try:
-            tbl = self._db.open_table("messages")
+            tbl = self._db.open_table(table_name)
             # Check if the table has the expected schema
             schema = tbl.schema
-            expected_fields = {"user", "agent", "text", "embedding"}
+            expected_fields = set(Chat.__fields__.keys())
             actual_fields = {field.name for field in schema}
             if not expected_fields.issubset(actual_fields):
                 # Schema mismatch, recreate the table
-                self._db.drop_table("messages")
-                tbl = self._db.create_table(
-                    "messages",
-                    schema=Chat,
+                raise ValueError(
+                    f"Schema mismatch for table {table_name}. Expected fields: {expected_fields}, Actual fields: {actual_fields}\n"
+                    "Please delete the table and try again."
                 )
-        except Exception:
+        except Exception as e:
+            print(e)
             tbl = self._db.create_table(
-                "messages",
+                table_name,
                 schema=Chat,
             )
         return tbl
@@ -37,7 +37,6 @@ class DBManager:
 class ChatType(TypedDict):
     user: str
     agent: str
-    text: str
 
 
 class Memory:
@@ -57,40 +56,31 @@ class Memory:
     memory.add_message(response.output)
     """
 
-    def __init__(self):
-        self.db = DBManager()
-        self.tbl = self.db.open_or_create_table()
-        self._messages = []
+    def __init__(
+        self, db_uri: str = "zerozen/messages", table_name: str = "conversations"
+    ):
+        self.db = DBManager(db_uri)
+        self.tbl = self.db.open_or_create_table(table_name)
 
-    @property
-    def messages(self):
-        return self._messages
-
-    def _process_dict_msg(self, message: dict) -> str:
-        if "user" in message and (
-            "assistant" in message or "system" in message or "agent" in message
-        ):
-            return f"<user>{message['user']}</user>\n<assistant>{message['assistant']}</assistant>\n\n"
+    def add(
+        self, conversation: ChatType | None = None, user: str = None, agent: str = None
+    ) -> None:
+        if conversation is not None:
+            user = conversation["user"]
+            agent = conversation["agent"]
         else:
-            raise ValueError("Invalid message")
+            if user is None:
+                raise ValueError("User must be a string")
+            if agent is None:
+                raise ValueError("Agent must be a string")
 
-    def _process_list_msg(self, message: list[dict]) -> str:
-        dict_msg = {"user": message[0]["content"], "assistant": message[1]["content"]}
-        return self._process_dict_msg(dict_msg)
-
-    def add(self, message: ChatType) -> None:
-        if isinstance(message, dict):
-            text = self._process_dict_msg(message)
-            # Create a dictionary instead of Chat instance to let LanceDB handle embeddings
-            chat_data = {
-                "user": message["user"],
-                "agent": message["assistant"],
-                "text": text,
-            }
-            self.tbl.add([chat_data])
-
-        else:
-            raise ValueError("Invalid message")
+        text = f"<user>{user}</user>\n<assistant>{agent}</assistant>\n\n"
+        chat_data = {
+            "user": user,
+            "agent": agent,
+            "text": text,
+        }
+        self.tbl.add([chat_data])
 
     def search(self, query: str, limit: int = 10) -> pd.DataFrame:
         return self.tbl.search(query).limit(limit).to_pandas()
