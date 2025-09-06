@@ -22,6 +22,10 @@ dependencies = [
     "google-api-core>=2.25.1",
     "google-auth>=2.40.3",
     "googleapis-common-protos>=1.70.0",
+    "lancedb>=0.25.0",
+    "pandas>=2.3.2",
+    "typeguard>=4.4.4",
+    "sentence-transformers>=5.1.0",
 ]
 
 [project.scripts]
