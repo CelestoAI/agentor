@@ -24,6 +24,7 @@ dependencies = [
     "googleapis-common-protos>=1.70.0",
     "lancedb>=0.25.0",
     "pandas>=2.3.2",
+    "typeguard>=4.4.4",
 ]
 
 [project.scripts]

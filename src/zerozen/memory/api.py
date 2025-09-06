@@ -2,19 +2,21 @@ import lancedb
 from typing import TypedDict
 import pandas as pd
 from zerozen.memory.embedding import Chat
+from typeguard import typechecked
 
 
 class DBManager:
-    def __init__(self, uri: str = "zerozen/messages"):
+    def __init__(self, uri: str):
         self.uri = uri
         self._db = lancedb.connect(self.uri)
 
-    def open_or_create_table(self, table_name: str = "messages") -> lancedb.table.Table:
+    @typechecked
+    def open_or_create_table(self, table_name: str) -> lancedb.table.Table:
         try:
             tbl = self._db.open_table(table_name)
             # Check if the table has the expected schema
             schema = tbl.schema
-            expected_fields = set(Chat.__fields__.keys())
+            expected_fields = set(Chat.model_fields.keys())
             actual_fields = {field.name for field in schema}
             if not expected_fields.issubset(actual_fields):
                 # Schema mismatch, recreate the table
@@ -45,25 +47,28 @@ class Memory:
 
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    memory = Memory()
-
     response = client.responses.create(
         model="gpt-5",
-        input="Hello, how are you?",
+        input="how many 'r's in strawberries?",
     )
-    print(response.output)
 
-    memory.add_message(response.output)
+    memory = Memory()
+    memory.add(user="how many 'r's in strawberries?", agent=response.output)
+    memory.search("strawberries")
     """
 
     def __init__(
-        self, db_uri: str = "zerozen/messages", table_name: str = "conversations"
+        self, db_uri: str = ".zendata/memory", table_name: str = "conversations"
     ):
         self.db = DBManager(db_uri)
         self.tbl = self.db.open_or_create_table(table_name)
 
+    @typechecked
     def add(
-        self, conversation: ChatType | None = None, user: str = None, agent: str = None
+        self,
+        conversation: ChatType | None = None,
+        user: str | None = None,
+        agent: str | None = None,
     ) -> None:
         if conversation is not None:
             user = conversation["user"]
@@ -74,7 +79,7 @@ class Memory:
             if agent is None:
                 raise ValueError("Agent must be a string")
 
-        text = f"<user>{user}</user>\n<assistant>{agent}</assistant>\n\n"
+        text = f"<user> {user} </user>\n<assistant> {agent} </assistant>\n\n"
         chat_data = {
             "user": user,
             "agent": agent,
@@ -82,8 +87,9 @@ class Memory:
         }
         self.tbl.add([chat_data])
 
+    @typechecked
     def search(self, query: str, limit: int = 10) -> pd.DataFrame:
         return self.tbl.search(query).limit(limit).to_pandas()
 
-    def get_full_conversation(self) -> str:
+    def get_full_conversation(self) -> pd.DataFrame:
         return self.tbl.to_pandas()
