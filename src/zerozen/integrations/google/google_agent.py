@@ -243,16 +243,17 @@ Remember: be concise, minimize data fetched, and ask before reading private emai
 """
 
 
-def build_google_agent_and_context(
+def create_google_context(
     user_creds_file: str = "credentials.my_google_account.json",
-) -> tuple[Agent, AppContext]:
+    user_id: Optional[str] = None,
+) -> AppContext:
     """
-    Build Google agent using desktop credentials.
+    Create Google context with Gmail and Calendar tools.
 
     Args:
         user_creds_file: Path to saved user credentials file
+        user_id: Override user ID (defaults to credentials user_id)
     """
-    # Load user credentials from file
     if not os.path.exists(user_creds_file):
         raise FileNotFoundError(
             f"User credentials not found: {user_creds_file}\n"
@@ -260,16 +261,18 @@ def build_google_agent_and_context(
         )
 
     creds = load_user_credentials(user_creds_file)
-
-    # Create tools using the same credentials
     gmail = GmailTool(creds)
     calendar = CalendarTool(creds)
 
-    # App/Agent context
-    ctx = AppContext(user_id=creds.user_id, gmail=gmail, calendar=calendar)
+    effective_user_id = user_id or creds.user_id
+    return AppContext(
+        user_id=effective_user_id, gmail=gmail, calendar=calendar, memory=None
+    )
 
-    # Agent with tools
-    agent = Agent(
+
+def create_google_agent() -> Agent:
+    """Create Google agent with Gmail and Calendar tools."""
+    return Agent(
         name="Gmail and calendar agent",
         instructions=SYSTEM_PROMPT,
         tools=[
@@ -287,11 +290,11 @@ def build_google_agent_and_context(
             )
         ),
     )
-    return agent, ctx
 
 
 async def main():
-    agent, ctx = build_google_agent_and_context()
+    agent = create_google_agent()
+    ctx = create_google_context()
 
     result = await Runner.run(
         agent,
