@@ -6,7 +6,10 @@ import os
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
 from .web_search import web_search_agent
-from zerozen.integrations.google.google_agent import build_google_agent_and_context
+from zerozen.integrations.google.google_agent import (
+    create_google_agent,
+    create_google_context,
+)
 
 
 concept_research_agent = Agent(
@@ -44,7 +47,9 @@ def get_google_agent_and_context():
     global _google_agent_cache
     if _google_agent_cache is None:
         try:
-            _google_agent_cache = build_google_agent_and_context()
+            agent = create_google_agent()
+            context = create_google_context()
+            _google_agent_cache = (agent, context)
         except FileNotFoundError as e:
             # Check what type of credentials are missing and provide specific guidance
             user_creds_file = "credentials.my_google_account.json"
@@ -103,7 +108,9 @@ def get_google_agent_and_context():
                         print("🔄 Retrying agent initialization...")
 
                         # Retry building the agent
-                        _google_agent_cache = build_google_agent_and_context()
+                        agent = create_google_agent()
+                        context = create_google_context()
+                        _google_agent_cache = (agent, context)
                         return _google_agent_cache
 
                     except Exception as auth_error:
@@ -164,10 +171,5 @@ if is_testing:
 
     main_agent = Mock()
     main_agent.model = "gpt-4o"
-    google_agent = Mock()
-    google_context = Mock()
-    google_context.user_id = "test_user"
 else:
     main_agent = get_main_agent()
-    # For backwards compatibility, try to get Google context
-    google_agent, google_context = get_google_agent_and_context()

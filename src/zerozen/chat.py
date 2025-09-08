@@ -10,7 +10,8 @@ from rich.panel import Panel
 from rich.text import Text
 from openai.types.responses import ResponseTextDeltaEvent, ResponseOutputItemAddedEvent
 from agents import Agent, Runner, SQLiteSession
-from zerozen.agenthub import main_agent, google_context
+from zerozen.agenthub import main_agent
+from zerozen.integrations.google.google_agent import create_google_context
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -31,14 +32,14 @@ class ChatConfig:
     model_override: Optional[str] = None
 
 
-async def run_agent_stream(input_text: str, config: ChatConfig):
+async def run_agent_stream(input_text: str, config: ChatConfig, context):
     console.print("[bold green]AI:[/bold green] ", end="")
 
     result_stream = Runner.run_streamed(
         agent,
         input=input_text,
         session=session,
-        context=google_context,
+        context=context,
     )
 
     try:
@@ -150,8 +151,8 @@ def chat(
         model_override=model or os.getenv("ZEROZEN_MODEL_OVERRIDE"),
     )
 
-    if cfg.gmail_user_id:
-        google_context.user_id = cfg.gmail_user_id
+    # Create context with optional user_id override
+    google_context = create_google_context(user_id=cfg.gmail_user_id)
 
     if cfg.model_override:
         agent.model = cfg.model_override
@@ -186,7 +187,7 @@ def chat(
         if cmd.startswith("/set user "):
             new_id = cmd[len("/set user ") :].strip()
             if new_id:
-                google_context.user_id = new_id
+                google_context = create_google_context(user_id=new_id)
                 cfg.gmail_user_id = new_id
                 console.print(f"[dim]Gmail user set to[/dim] [bold]{new_id}[/bold]")
             else:
@@ -212,7 +213,7 @@ def chat(
                 console.print("[red]Usage:[/red] /model <name>")
             continue
 
-        asyncio.run(run_agent_stream(user_input, cfg))
+        asyncio.run(run_agent_stream(user_input, cfg, google_context))
 
 
 if __name__ == "__main__":

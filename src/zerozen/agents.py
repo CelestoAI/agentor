@@ -2,13 +2,13 @@ import asyncio
 from typing import List, Optional
 from agents import Runner
 
-from .agenthub import main_agent, google_context
+from .agenthub import main_agent
+from .integrations.google.google_agent import create_google_context
 
 
 class Zen:
     def __init__(self):
         self.main_agent = main_agent
-        self.gmail_context = google_context
         self._tools = {
             "search_gmail",
             "list_gmail_messages",
@@ -28,6 +28,7 @@ class Zen:
         tools: Optional[List[str]] = None,
         model: Optional[str] = None,
         max_turns: int = 10,
+        user_id: Optional[str] = None,
     ) -> str:
         """
         Run an agent with the specified tools and context.
@@ -37,6 +38,7 @@ class Zen:
             tools: List of tool names to enable (e.g., ["search_gmail", "web_search"])
             model: Optional model override
             max_turns: Maximum conversation turns
+            user_id: Optional user ID for Google tools context
 
         Returns:
             The agent's response as a string
@@ -45,9 +47,9 @@ class Zen:
         agent = self.main_agent
         context = None
 
-        # If any Gmail tool is requested, use the gmail context
+        # If any Gmail tool is requested, create the gmail context
         if tools and any(t in self._tools for t in tools):
-            context = self.gmail_context
+            context = create_google_context(user_id=user_id)
 
         # Override model if specified
         if model:
@@ -69,8 +71,9 @@ class Zen:
         tools: Optional[List[str]] = None,
         model: Optional[str] = None,
         max_turns: int = 10,
+        user_id: Optional[str] = None,
     ) -> str:
-        return asyncio.run(self.run(prompt, tools, model, max_turns))
+        return asyncio.run(self.run(prompt, tools, model, max_turns, user_id))
 
 
 async def run(
@@ -78,6 +81,7 @@ async def run(
     tools: Optional[List[str]] = None,
     model: Optional[str] = None,
     max_turns: int = 10,
+    user_id: Optional[str] = None,
 ) -> str:
     """
     Run an agent with the specified tools and context.
@@ -85,16 +89,15 @@ async def run(
     Args:
         prompt: The user's request/prompt
         tools: List of tool names to enable (e.g., ["search_gmail", "web_search"])
-        user_context: Context data (e.g., {"email_user_id": "me"})
         model: Optional model override
         max_turns: Maximum conversation turns
+        user_id: Optional user ID for Google tools context
 
     Returns:
         The agent's response as a string
     """
-    # Determine which agent to use based on tools
     zen = Zen()
-    return await zen.run(prompt, tools, model, max_turns)
+    return await zen.run(prompt, tools, model, max_turns, user_id)
 
 
 def run_sync(
@@ -102,8 +105,9 @@ def run_sync(
     tools: Optional[List[str]] = None,
     model: Optional[str] = None,
     max_turns: int = 10,
+    user_id: Optional[str] = None,
 ) -> str:
     """
     Synchronous wrapper for the run function.
     """
-    return asyncio.run(run(prompt, tools, model, max_turns))
+    return asyncio.run(run(prompt, tools, model, max_turns, user_id))
