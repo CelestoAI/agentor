@@ -1,5 +1,5 @@
-from .gmail_tool import GmailTool
-from .calendar_tool import CalendarTool
+from .gmail_tool import GmailService
+from .calendar_tool import CalendarService
 from .creds import (
     GoogleAccount,
     CredentialRecord,
@@ -10,8 +10,8 @@ from .creds import (
 )
 
 __all__ = [
-    "GmailTool",
-    "CalendarTool",
+    "GmailService",
+    "CalendarService",
     "GoogleAccount",
     "CredentialRecord",
     "UserProviderMetadata",

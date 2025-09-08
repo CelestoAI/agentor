@@ -35,7 +35,7 @@ def _is_transient(err: Exception) -> bool:
     return False
 
 
-class CalendarTool:
+class CalendarService:
     """
     Google Calendar integration with Google OAuth2 credentials.
     Accepts either Credentials or CredentialRecord objects.

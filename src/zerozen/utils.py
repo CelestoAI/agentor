@@ -1,11 +1,27 @@
-from .integrations.google import GmailTool, CalendarTool
+from .integrations.google import GmailService, CalendarService
 from dataclasses import dataclass
 from zerozen.memory.api import Memory
 
 
 @dataclass
+class GoogleServices:
+    gmail: GmailService | None = None
+    calendar: CalendarService | None = None
+
+
+@dataclass
+class CoreServices:
+    memory: Memory | None = None
+
+
+@dataclass
 class AppContext:
     user_id: str | None = None
-    gmail: GmailTool | None = None
-    calendar: CalendarTool | None = None
-    memory: Memory | None = None
+    services: GoogleServices = None
+    core: CoreServices = None
+
+    def __post_init__(self):
+        if self.services is None:
+            self.services = GoogleServices()
+        if self.core is None:
+            self.core = CoreServices()

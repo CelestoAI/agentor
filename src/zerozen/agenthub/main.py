@@ -1,5 +1,4 @@
 from agents import Agent
-import sys
 from typing import Optional, Tuple
 import os
 
@@ -157,19 +156,27 @@ def get_main_agent():
 
 
 # Create main agent with available handoffs
-# Allow test mode to skip Google agent initialization
-# Check if we're running in test mode (pytest sets sys.modules['pytest'])
-is_testing = (
-    "pytest" in sys.modules
-    or os.getenv("PYTEST_CURRENT_TEST")
-    or "unittest" in sys.modules
-)
+# Use lazy loading to avoid import-time Google credential requirements
+_main_agent = None
 
-if is_testing:
-    # In test mode, create mock objects
-    from unittest.mock import Mock
 
-    main_agent = Mock()
-    main_agent.model = "gpt-4o"
-else:
-    main_agent = get_main_agent()
+def get_main_agent_instance():
+    """Get the main agent instance, creating it if necessary."""
+    global _main_agent
+    if _main_agent is None:
+        _main_agent = get_main_agent()
+    return _main_agent
+
+
+# For backward compatibility, provide main_agent as a lazy property
+class LazyMainAgent:
+    def __getattr__(self, name):
+        agent = get_main_agent_instance()
+        return getattr(agent, name)
+
+    def __call__(self, *args, **kwargs):
+        agent = get_main_agent_instance()
+        return agent(*args, **kwargs)
+
+
+main_agent = LazyMainAgent()
