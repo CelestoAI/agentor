@@ -58,7 +58,10 @@ class TestAgentsRun:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.google_context", mock_gmail_context),
+                patch(
+                    "zerozen.agents.create_google_context",
+                    return_value=mock_gmail_context,
+                ),
             ):
                 result = await agents.run(
                     "Find emails from Stripe",
@@ -86,46 +89,50 @@ class TestAgentsRun:
                 assert call_args[1]["max_turns"] == 5
 
     @pytest.mark.asyncio
-    async def test_run_without_gmail_context_update(
+    async def test_run_without_user_id_specified(
         self, mock_runner_result, mock_main_agent, mock_gmail_context
     ):
-        """Test run with Gmail tools but no user_context."""
+        """Test run with Gmail tools but no user_id parameter."""
         with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.google_context", mock_gmail_context),
+                patch(
+                    "zerozen.agents.create_google_context",
+                    return_value=mock_gmail_context,
+                ) as mock_create_context,
             ):
-                original_user_id = mock_gmail_context.user_id
                 result = await agents.run("Find emails", tools=["search_gmail"])
 
                 assert result == "Test response from agent"
-                assert (
-                    mock_gmail_context.user_id == original_user_id
-                )  # Should not be changed
+                # Should create context with user_id=None (default)
+                mock_create_context.assert_called_once_with(user_id=None)
 
     @pytest.mark.asyncio
-    async def test_run_context_without_user_id_attribute(
-        self, mock_runner_result, mock_main_agent
+    async def test_run_with_custom_user_id(
+        self, mock_runner_result, mock_main_agent, mock_gmail_context
     ):
-        """Test run with Gmail tools but context doesn't have user_id attribute."""
-        mock_context = Mock(spec=[])  # Mock without user_id attribute
-
+        """Test run with Gmail tools and custom user_id."""
         with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.google_context", mock_context),
+                patch(
+                    "zerozen.agents.create_google_context",
+                    return_value=mock_gmail_context,
+                ) as mock_create_context,
             ):
                 result = await agents.run(
                     "Find emails",
                     tools=["search_gmail"],
+                    user_id="custom_user_123",
                 )
 
                 assert result == "Test response from agent"
-                # Should not raise an error even if context doesn't have user_id
+                # Should create context with the specified user_id
+                mock_create_context.assert_called_once_with(user_id="custom_user_123")
 
 
 class TestAgentsRunSync:
@@ -151,13 +158,17 @@ class TestAgentsRunSync:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.google_context", mock_gmail_context),
+                patch(
+                    "zerozen.agents.create_google_context",
+                    return_value=mock_gmail_context,
+                ),
             ):
                 result = agents.run_sync(
                     prompt="Find emails",
                     tools=["search_gmail"],
                     model="gpt-4",
                     max_turns=3,
+                    user_id="test_user",
                 )
 
                 assert result == "Test response from agent"
@@ -180,7 +191,10 @@ class TestAgentsIntegration:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.google_context", mock_gmail_context),
+                patch(
+                    "zerozen.agents.create_google_context",
+                    return_value=mock_gmail_context,
+                ),
             ):
                 result = await agents.run(
                     "Search emails and web",
@@ -216,7 +230,10 @@ class TestAgentsIntegration:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.google_context", mock_gmail_context),
+                patch(
+                    "zerozen.agents.create_google_context",
+                    return_value=mock_gmail_context,
+                ),
             ):
                 result = await agents.run(
                     "List my events",
@@ -236,7 +253,10 @@ class TestAgentsIntegration:
 
             with (
                 patch("zerozen.agents.main_agent", mock_main_agent),
-                patch("zerozen.agents.google_context", mock_gmail_context),
+                patch(
+                    "zerozen.agents.create_google_context",
+                    return_value=mock_gmail_context,
+                ),
             ):
                 result = await agents.run(
                     "Fetch event details",
