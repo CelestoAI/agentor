@@ -69,7 +69,7 @@ def _is_transient(err: Exception) -> bool:
     return False
 
 
-class GmailTool:
+class GmailService:
     """
     Gmail integration with Google OAuth2 credentials.
     Accepts either Credentials or CredentialRecord objects.

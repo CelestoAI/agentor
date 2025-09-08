@@ -1,8 +1,8 @@
 # run_agent.py
 import asyncio
 from agents import Agent, Runner, ModelSettings
-from .gmail_tool import GmailTool
-from .calendar_tool import CalendarTool
+from .gmail_tool import GmailService
+from .calendar_tool import CalendarService
 from .creds import load_user_credentials
 import json
 import os
@@ -33,7 +33,7 @@ async def search_gmail(
         limit: Max results (1-50).
     """
     app = ctx.context
-    res = app.gmail.search_messages(
+    res = app.services.gmail.search_messages(
         query=query,
         label_ids=label_ids,
         after=after,
@@ -64,7 +64,7 @@ async def list_gmail_messages(
         include_spam_trash: Whether to include spam and trash.
     """
     app = ctx.context
-    res = app.gmail.list_messages(
+    res = app.services.gmail.list_messages(
         label_ids=label_ids,
         q=q,
         limit=limit,
@@ -86,7 +86,7 @@ async def get_gmail_message(
         message_id: Gmail message ID.
     """
     app = ctx.context
-    res = app.gmail.get_message(
+    res = app.services.gmail.get_message(
         message_id=message_id,
     )
     return json.dumps(res)
@@ -108,7 +108,7 @@ async def get_gmail_message_body(
         limit: Max characters to return for the selected body.
     """
     app = ctx.context
-    data = app.gmail.get_message_body(
+    data = app.services.gmail.get_message_body(
         message_id=message_id, prefer=prefer, max_chars=limit
     )
     return json.dumps(data)
@@ -127,7 +127,7 @@ async def list_calendar_events(
     List Google Calendar events.
     """
     app = ctx.context
-    res = app.calendar.list_events(
+    res = app.services.calendar.list_events(
         calendar_id=calendar_id,
         time_min=time_min,
         time_max=time_max,
@@ -147,7 +147,7 @@ async def get_calendar_event(
     Get a single Google Calendar event.
     """
     app = ctx.context
-    res = app.calendar.get_event(calendar_id=calendar_id, event_id=event_id)
+    res = app.services.calendar.get_event(calendar_id=calendar_id, event_id=event_id)
     return json.dumps(res)
 
 
@@ -261,12 +261,16 @@ def create_google_context(
         )
 
     creds = load_user_credentials(user_creds_file)
-    gmail = GmailTool(creds)
-    calendar = CalendarTool(creds)
+    gmail = GmailService(creds)
+    calendar = CalendarService(creds)
 
     effective_user_id = user_id or creds.user_id
+    from zerozen.utils import GoogleServices, CoreServices
+
     return AppContext(
-        user_id=effective_user_id, gmail=gmail, calendar=calendar, memory=None
+        user_id=effective_user_id,
+        services=GoogleServices(gmail=gmail, calendar=calendar),
+        core=CoreServices(memory=None),
     )
 
 

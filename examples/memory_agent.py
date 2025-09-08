@@ -1,5 +1,5 @@
 from agents import Runner
-from zerozen.utils import AppContext
+from zerozen.utils import AppContext, CoreServices
 from zerozen.memory.api import Memory
 from zerozen.agenthub.memagent import build_memory_agent
 
@@ -9,7 +9,7 @@ runner = Runner()
 output = runner.run_sync(
     agent,
     "What is the capital of France?",
-    context=AppContext(memory=mem),
+    context=AppContext(core=CoreServices(memory=mem)),
 )
 print(output)
 

@@ -2,7 +2,7 @@
 import os
 import json
 from zerozen.integrations.google import (
-    GmailTool,
+    GmailService,
     authenticate_user,
     load_user_credentials,
 )
@@ -45,7 +45,7 @@ def main():
         print(f"Authenticated: {creds.user_id}")
 
     # Use Gmail
-    gmail = GmailTool(creds)
+    gmail = GmailService(creds)
     messages = gmail.search_messages(query="in:inbox", limit=3)
     print(f"Found {len(messages.get('messages', []))} messages")
 
