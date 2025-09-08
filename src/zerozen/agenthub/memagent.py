@@ -18,18 +18,3 @@ def build_memory_agent(model: str = "gpt-5-mini") -> Agent:
         tools=[memory_search, memory_get_full_conversation, memory_add],
         model=model,
     )
-
-
-if __name__ == "__main__":
-    from agents import Runner, RunContextWrapper
-    from zerozen.utils import AppContext
-    from zerozen.memory.api import Memory
-
-    agent = build_memory_agent()
-    runner = Runner()
-    output = runner.run_sync(
-        agent,
-        "What is the capital of France?",
-        context=RunContextWrapper(AppContext(None, None, None, Memory())),
-    )
-    print(output)

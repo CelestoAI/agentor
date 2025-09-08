@@ -1,6 +1,9 @@
 from typing import Any
 from agents import RunContextWrapper, function_tool
 from zerozen.memory.api import ChatType
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @function_tool
@@ -10,8 +13,12 @@ def memory_search(
     """
     Search the memory for the most relevant conversations.
     """
-    memory = ctx.context.memory
-    return memory.search(query, limit)["text"].tolist()
+    try:
+        memory = ctx.context.memory
+        return memory.search(query, limit)["text"].tolist()
+    except Exception as e:
+        logger.error(f"Error searching memory: {e}", exc_info=True)
+        return []
 
 
 @function_tool
@@ -19,12 +26,20 @@ def memory_get_full_conversation(ctx: RunContextWrapper[Any]) -> list[str]:
     """
     Get the full conversation from the memory.
     """
-    memory = ctx.context.memory
-    return memory.get_full_conversation()["text"].tolist()
+    try:
+        memory = ctx.context.memory
+        return memory.get_full_conversation()["text"].tolist()
+    except Exception as e:
+        logger.error(f"Error getting full conversation: {e}", exc_info=True)
+        return []
 
 
 @function_tool
 def memory_add(ctx: RunContextWrapper[Any], conversation: ChatType) -> None:
     """Add a conversation to the memory."""
-    memory = ctx.context.memory
-    memory.add(conversation)
+    try:
+        memory = ctx.context.memory
+        memory.add(conversation)
+    except Exception as e:
+        logger.error(f"Error adding conversation: {e}", exc_info=True)
+        return None
