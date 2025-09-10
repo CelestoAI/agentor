@@ -6,7 +6,7 @@
 
 <br>
 
-# Your hyper-personal, always-on, open-source AI companion.
+# Hyper-personal, always-on, open-source AI companion.
 
 **Zero friction. Maximum zen. 🧘‍♀️**
 
@@ -25,18 +25,23 @@ ______________________________________________________________________
 
 ## ✨ What is ZeroZen?
 
-ZeroZen is your **personal AI assistant** that seamlessly integrates with your daily tools. Think of it as having a smart conversation with your Gmail, Google Calendar, and more — all through a beautiful command-line interface.
+ZeroZen is an open-source framework for building AI assistants that handle your personal and professional tasks.
+Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
 
 **🎯 Perfect for:**
 
 - **Busy professionals** who live in their inbox
-- **Developers** who want AI that actually helps with real work
 - **Power users** seeking zero-friction automation
 - **Privacy-conscious individuals** who prefer local, controllable AI
 
 ______________________________________________________________________
 
 ## 🚀 Quick Start
+
+<p align="center">
+  🔧 <b>DIY with OSS</b> &nbsp; | &nbsp; 
+  🖥️ <a href="https://celesto.ai" target="_blank"><b>Visit CelestoAI for UI</b></a>
+</p>
 
 ### Installation
 
