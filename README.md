@@ -17,7 +17,6 @@ Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in m
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 
 </div>
-
 </center>
 
 
