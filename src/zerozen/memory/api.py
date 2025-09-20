@@ -1,8 +1,17 @@
 import lancedb
 from typing import TypedDict
 import pandas as pd
-from zerozen.memory.embedding import Chat
 from typeguard import typechecked
+
+from zerozen.memory.embedding import (
+    SOURCE_COLUMN,
+    get_chat_schema,
+    get_embedding_config,
+)
+
+
+CHAT_SCHEMA = get_chat_schema()
+CHAT_FIELD_NAMES = set(CHAT_SCHEMA.names)
 
 
 class DBManager:
@@ -16,7 +25,7 @@ class DBManager:
             tbl = self._db.open_table(table_name)
             # Check if the table has the expected schema
             schema = tbl.schema
-            expected_fields = set(Chat.model_fields.keys())
+            expected_fields = CHAT_FIELD_NAMES
             actual_fields = {field.name for field in schema}
             if not expected_fields.issubset(actual_fields):
                 # Schema mismatch, recreate the table
@@ -28,7 +37,8 @@ class DBManager:
             print(e)
             tbl = self._db.create_table(
                 table_name,
-                schema=Chat,
+                schema=CHAT_SCHEMA,
+                embedding_functions=[get_embedding_config()],
             )
         return tbl
 
@@ -83,7 +93,7 @@ class Memory:
         chat_data = {
             "user": user,
             "agent": agent,
-            "text": text,
+            SOURCE_COLUMN: text,
         }
         self.tbl.add([chat_data])
 
