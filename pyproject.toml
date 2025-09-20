@@ -25,11 +25,15 @@ dependencies = [
     "lancedb>=0.25.0",
     "pandas>=2.3.2",
     "typeguard>=4.4.4",
-    "sentence-transformers>=5.1.0",
 ]
 
 [project.scripts]
 zen="zerozen.cli:app"
+
+[project.optional-dependencies]
+models = [
+    "sentence-transformers>=5.1.0",
+]
 
 [tool.uv]
 package = true
