@@ -4,7 +4,7 @@ import pyarrow as pa
 from lancedb.embeddings import EmbeddingFunctionConfig, get_registry
 from lancedb.schema import vector as vector_type
 from lancedb.embeddings import register, TextEmbeddingFunction
-import sentence_transformers
+
 from typeguard import typechecked
 
 
@@ -31,6 +31,8 @@ class SentenceTransformerEmbeddings(TextEmbeddingFunction):
         return self._ndims
 
     def _embedding_model(self):
+        import sentence_transformers
+
         if self._model is None:
             self._model = sentence_transformers.SentenceTransformer(self.name)
         return self._model
