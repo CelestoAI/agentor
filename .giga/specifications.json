@@ -1,0 +1,22 @@
+[
+  {
+    "fileName": "main-overview.mdc",
+    "description": "Complete system overview covering the agent hub architecture, key components, and high-level interaction patterns between agents, memory system, and Google integrations"
+  },
+  {
+    "fileName": "agent-system-architecture.mdc",
+    "description": "Detailed documentation of the agent system architecture, including agent types, handoff mechanisms, tool integration patterns, and the triage system for routing requests"
+  },
+  {
+    "fileName": "memory-system-implementation.mdc",
+    "description": "Comprehensive documentation of the memory system, including embedding generation, LanceDB integration, semantic search algorithms, and conversation storage/retrieval mechanisms"
+  },
+  {
+    "fileName": "google-integration-architecture.mdc",
+    "description": "Detailed documentation of Google service integrations, covering OAuth implementation, credential management, and the implementation of Gmail and Calendar tools"
+  },
+  {
+    "fileName": "data-flow-patterns.mdc",
+    "description": "Documentation of data flow patterns between components, including agent communication, memory system interactions, and integration with external services"
+  }
+]

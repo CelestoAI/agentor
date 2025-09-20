@@ -1,0 +1,50 @@
+---
+description: Documentation for memory system including embedding generation, LanceDB integration, semantic search, and conversation storage/retrieval
+---
+
+
+# memory-system-implementation
+
+## Core Memory Architecture
+**Importance Score: 90**
+- Semantic conversation storage using LanceDB vector database
+- Embedding generation for text using sentence transformers
+- Conversation history management with context preservation
+- Retrieval mechanisms for semantic similarity search
+Path: `src/zerozen/memory/api.py`
+
+## Memory Agent Integration
+**Importance Score: 85**
+- Specialized agent for memory operations
+- Tools for searching and retrieving past conversations
+- Context-aware conversation addition capabilities
+- Integration with main agent hub for memory-based responses
+Path: `src/zerozen/agenthub/memagent.py`
+
+## Embedding System
+**Importance Score: 80**
+- Vector representation generation for text content
+- Semantic similarity calculations
+- Integration with LanceDB for vector storage
+- Query preprocessing for semantic search
+Path: `src/zerozen/memory/embedding.py`
+
+## Memory Tools
+**Importance Score: 75**
+- Search functionality for conversation retrieval
+- Context window management
+- Memory persistence handlers
+- Query optimization for semantic search
+Path: `src/zerozen/memory/tools.py`
+
+## Memory Agent Demo Implementation
+**Importance Score: 70**
+- Example usage of memory system
+- Demonstration of conversation storage
+- Query and retrieval patterns
+- Context preservation examples
+Path: `examples/memory_agent.py`
+
+$END$
+
+ If you're using this file in context, clearly say in italics in one small line that "Context added by Giga memory-system-implementation" along with specifying exactly what information was used from this file in a human-friendly way, instead of using kebab-case use normal sentence case.
