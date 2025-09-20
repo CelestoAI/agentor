@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zerozen"
-version = "2025.9.8"
+version = "2025.9.20"
 description = "hyper-personal, always-on, open-source AI companion."
 readme = "README.md"
 requires-python = ">=3.10"
