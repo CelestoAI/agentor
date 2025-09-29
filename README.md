@@ -12,25 +12,23 @@ Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in m
 
 <img src="/assets/cli.png" alt="zerozen CLI" width="500" />
 
-[![💻 Try CelestoAI](https://img.shields.io/badge/💻%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)  
+[![💻 Try CelestoAI](https://img.shields.io/badge/%F0%9F%92%BB%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)\
 [![PyPI version](https://badge.fury.io/py/zerozen.svg)](https://badge.fury.io/py/zerozen)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 
 </div>
 </center>
 
-
 ## ✨ What is ZeroZen?
+
 ZeroZen is an open-source framework for building AI assistants that handle your personal and professional tasks.
 Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
-
 
 **🎯 Perfect for:**
 
 - **Busy professionals** who live in their inbox
 - **Power users** seeking zero-friction automation
 - **Privacy-conscious individuals** who prefer local, controllable AI
-
 
 ## 🚀 Quick Start
 
