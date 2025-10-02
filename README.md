@@ -2,17 +2,13 @@
 
 <div align="center">
 
-<img src="/assets/zerozen-min.png" alt="zerozen" width="200" />
-
-<br>
-
 <h1>Hyper-personal, always-on, open-source AI companion.</h1>
 
 Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
 
-<img src="/assets/cli.png" alt="zerozen CLI" width="500" />
+<img src="/assets/ZeroZen.png" alt="banner" width="640" />
 
-[![💻 Try CelestoAI](https://img.shields.io/badge/%F0%9F%92%BB%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)\
+[![💻 Try CelestoAI](https://img.shields.io/badge/%F0%9F%92%BB%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)
 [![PyPI version](https://badge.fury.io/py/zerozen.svg)](https://badge.fury.io/py/zerozen)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -34,7 +30,7 @@ Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in m
 
 <p align="center">
   🔧 <b>DIY with OSS</b> &nbsp; | &nbsp; 
-  🖥️ <a href="https://celesto.ai" target="_blank"><b>Visit CelestoAI for UI</b></a>
+  🖥️ <a href="https://celesto.ai" target="_blank"><b>Try the CelestoAI web interface</b></a>
 </p>
 
 ### Installation
