@@ -201,7 +201,14 @@ user_creds = CredentialRecord(
     access_token="ya29.xxx",
     user_provider_metadata=UserProviderMetadata(
         refresh_token="1//xxx",
-        scope="gmail.readonly calendar calendar.readonly userinfo.email userinfo.profile",
+        scope=(
+            "openid "
+            "https://www.googleapis.com/auth/gmail.readonly "
+            "https://www.googleapis.com/auth/calendar "
+            "https://www.googleapis.com/auth/calendar.readonly "
+            "https://www.googleapis.com/auth/userinfo.email "
+            "https://www.googleapis.com/auth/userinfo.profile"
+        ),
         expires_at=1234567890,
     ),
     user_info=UserInfo(email="user@example.com", sub="google_user_id"),

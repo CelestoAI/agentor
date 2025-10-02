@@ -5,16 +5,12 @@ from zerozen.integrations.google import (
     GmailService,
     authenticate_user,
     load_user_credentials,
+    DEFAULT_GOOGLE_OAUTH_SCOPES,
 )
 
 # Configuration
 CREDENTIALS_FILE = "credentials.json"
 USER_CREDS_FILE = "credentials.my_google_account.json"
-SCOPES = [
-    "openid",
-    "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/userinfo.email",
-]
 
 
 def main():
@@ -38,7 +34,7 @@ def main():
         creds = authenticate_user(
             client_id=client_id,
             client_secret=client_secret,
-            scopes=SCOPES,
+            scopes=DEFAULT_GOOGLE_OAUTH_SCOPES,
             user_storage_path=USER_CREDS_FILE,
             credentials_file=CREDENTIALS_FILE,
         )

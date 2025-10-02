@@ -7,6 +7,7 @@ from .creds import (
     UserInfo,
     authenticate_user,
     load_user_credentials,
+    DEFAULT_GOOGLE_OAUTH_SCOPES,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "UserInfo",
     "authenticate_user",
     "load_user_credentials",
+    "DEFAULT_GOOGLE_OAUTH_SCOPES",
 ]

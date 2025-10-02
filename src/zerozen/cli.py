@@ -101,7 +101,10 @@ def setup_google(
     console.print("🚀 Starting Google authentication setup...")
 
     try:
-        from zerozen.integrations.google.creds import authenticate_user
+        from zerozen.integrations.google.creds import (
+            authenticate_user,
+            DEFAULT_GOOGLE_OAUTH_SCOPES,
+        )
         import json
 
         # Extract client credentials
@@ -113,14 +116,7 @@ def setup_google(
         console.print(f"🔑 Using client_id: {client_id}")
 
         # Define scopes
-        scopes = [
-            "openid",
-            "https://www.googleapis.com/auth/gmail.readonly",
-            "https://www.googleapis.com/auth/calendar",
-            "https://www.googleapis.com/auth/calendar.readonly",
-            "https://www.googleapis.com/auth/userinfo.email",
-            "https://www.googleapis.com/auth/userinfo.profile",
-        ]
+        scopes = DEFAULT_GOOGLE_OAUTH_SCOPES
 
         console.print("🔐 Requesting scopes:")
         for scope in scopes:
