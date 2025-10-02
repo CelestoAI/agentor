@@ -77,7 +77,10 @@ def get_google_agent_and_context():
                         "🔄 Found credentials.json - starting automatic authentication..."
                     )
                     try:
-                        from zerozen.integrations.google.creds import authenticate_user
+                        from zerozen.integrations.google.creds import (
+                            authenticate_user,
+                            DEFAULT_GOOGLE_OAUTH_SCOPES,
+                        )
                         import json
 
                         # Extract client credentials
@@ -87,12 +90,7 @@ def get_google_agent_and_context():
                             client_secret = creds_data["installed"]["client_secret"]
 
                         # Authenticate user automatically
-                        scopes = [
-                            "openid",
-                            "https://www.googleapis.com/auth/gmail.readonly",
-                            "https://www.googleapis.com/auth/calendar.readonly",
-                            "https://www.googleapis.com/auth/userinfo.email",
-                        ]
+                        scopes = DEFAULT_GOOGLE_OAUTH_SCOPES
 
                         print("🌐 Opening browser for authentication...")
                         creds = authenticate_user(

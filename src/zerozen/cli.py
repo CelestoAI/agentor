@@ -101,7 +101,10 @@ def setup_google(
     console.print("🚀 Starting Google authentication setup...")
 
     try:
-        from zerozen.integrations.google.creds import authenticate_user
+        from zerozen.integrations.google.creds import (
+            authenticate_user,
+            DEFAULT_GOOGLE_OAUTH_SCOPES,
+        )
         import json
 
         # Extract client credentials
@@ -113,12 +116,11 @@ def setup_google(
         console.print(f"🔑 Using client_id: {client_id}")
 
         # Define scopes
-        scopes = [
-            "openid",
-            "https://www.googleapis.com/auth/gmail.readonly",
-            "https://www.googleapis.com/auth/calendar.readonly",
-            "https://www.googleapis.com/auth/userinfo.email",
-        ]
+        scopes = DEFAULT_GOOGLE_OAUTH_SCOPES
+
+        console.print("🔐 Requesting scopes:")
+        for scope in scopes:
+            console.print(f"  • {scope}")
 
         console.print("🌐 Opening browser for authentication...")
         console.print("👆 Please complete authentication in your browser")
@@ -132,18 +134,32 @@ def setup_google(
             credentials_file=credentials_file,
         )
 
+        console.print("🔍 Granted scopes:")
+        granted_scopes = creds.user_provider_metadata.scope.split()
+        for scope in granted_scopes:
+            console.print(f"  • {scope}")
+
+        missing_scopes = [scope for scope in scopes if scope not in granted_scopes]
+        if missing_scopes:
+            console.print(
+                "[yellow]⚠️ Google did not return all requested scopes. Missing:[/yellow]"
+            )
+            for scope in missing_scopes:
+                console.print(f"  • {scope}")
+
         console.print(
             Panel.fit(
                 Text.from_markup(f"""
 [bold green]✅ Authentication Successful![/bold green]
 
 [bold]User:[/bold] {creds.user_id}
-[bold]Scopes:[/bold] Gmail, Calendar, User Info
+[bold]Scopes:[/bold] Gmail, Calendar (read/write), User Info
 [bold]Saved to:[/bold] {user_storage}
 
 [bold]Next Steps:[/bold]
 • Run [bold cyan]zen chat[/bold cyan] to start using Gmail/Calendar features
 • Your credentials will be loaded automatically
+• Use [bold cyan]--force[/bold cyan] next time if you need to refresh scopes
             """),
                 title="🎉 Setup Complete",
                 border_style="green",
