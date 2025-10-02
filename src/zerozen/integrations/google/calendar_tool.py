@@ -15,6 +15,15 @@ if t.TYPE_CHECKING:
 CalendarEvent = dict[str, t.Any]
 
 
+# Any of these scopes allow creating or modifying calendar events
+_WRITE_CAPABLE_SCOPES = frozenset(
+    {
+        "https://www.googleapis.com/auth/calendar.events",
+        "https://www.googleapis.com/auth/calendar",
+    }
+)
+
+
 class CalendarEventTimeBlock(t.TypedDict):
     dateTime: str | dt.datetime
     timeZone: t.NotRequired[str]
@@ -53,6 +62,25 @@ def _rfc3339(ts: str | dt.datetime | None) -> str | None:
 def _is_transient(err: Exception) -> bool:
     if isinstance(err, HttpError) and getattr(err, "resp", None):
         return err.resp.status in (429, 500, 502, 503, 504)
+    return False
+
+
+def _credentials_have_write_access(creds: Credentials) -> bool:
+    scopes = getattr(creds, "scopes", None) or []
+    scope_set = {scope for scope in scopes if scope}
+    if scope_set.intersection(_WRITE_CAPABLE_SCOPES):
+        return True
+
+    has_scopes = getattr(creds, "has_scopes", None)
+    if callable(has_scopes):
+        for scope in _WRITE_CAPABLE_SCOPES:
+            try:
+                if has_scopes([scope]):
+                    return True
+            except Exception:
+                # Ignore unexpected failures and fall back to default False
+                continue
+
     return False
 
 
@@ -206,6 +234,22 @@ class CalendarService:
             ...     }
             ... )
         """
+
+        if not _credentials_have_write_access(self._credentials):
+            available = sorted(
+                scope
+                for scope in (getattr(self._credentials, "scopes", None) or [])
+                if scope
+            )
+            message = (
+                "Google Calendar credentials do not include write access. "
+                "Re-authorize with the https://www.googleapis.com/auth/calendar.events scope "
+                "or the broader https://www.googleapis.com/auth/calendar scope. "
+                f"Current scopes: {', '.join(available) if available else '<none>'}."
+            )
+            if self._logger:
+                self._logger.warning(message)
+            raise PermissionError(message)
 
         def _normalize_time(block: t.Any) -> dict:
             if isinstance(block, dt.datetime):

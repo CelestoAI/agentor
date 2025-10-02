@@ -202,7 +202,12 @@ def authenticate_user(
     """
     # Run OAuth flow
     flow = InstalledAppFlow.from_client_secrets_file(credentials_file, scopes)
-    creds = flow.run_local_server(port=0)
+    creds = flow.run_local_server(
+        port=0,
+        access_type="offline",
+        prompt="consent",
+        include_granted_scopes="true",
+    )
 
     # Decode ID token to get user info
     import base64

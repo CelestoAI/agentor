@@ -116,6 +116,7 @@ def setup_google(
         scopes = [
             "openid",
             "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/calendar.events",
             "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/userinfo.email",
         ]
@@ -138,12 +139,13 @@ def setup_google(
 [bold green]✅ Authentication Successful![/bold green]
 
 [bold]User:[/bold] {creds.user_id}
-[bold]Scopes:[/bold] Gmail, Calendar, User Info
+[bold]Scopes:[/bold] Gmail, Calendar (read/write), User Info
 [bold]Saved to:[/bold] {user_storage}
 
 [bold]Next Steps:[/bold]
 • Run [bold cyan]zen chat[/bold cyan] to start using Gmail/Calendar features
 • Your credentials will be loaded automatically
+• Use [bold cyan]--force[/bold cyan] next time if you need to refresh scopes
             """),
                 title="🎉 Setup Complete",
                 border_style="green",
