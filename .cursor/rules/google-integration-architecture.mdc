@@ -1,62 +1,63 @@
 ---
-description: Specification for Google service integrations including OAuth, Gmail, and Calendar tooling implementations
+description: Specifies Google service integration architecture including OAuth, credentials, and Gmail/Calendar tools implementation
 ---
 
 
 # google-integration-architecture
 
-The Google integration architecture implements secure access to Google services with privacy-focused agents and tools.
+## Core Integration Components
 
-## Core Components
+### Credential Management (75)
+- Path: `src/zerozen/integrations/google/creds.py`
+- Manages OAuth authentication flow and credential persistence
+- Implements `CredentialRecord` for storing user-specific Google access tokens
+- Handles token refresh and secure local storage of credentials
+- Maintains `UserProviderMetadata` for provider-specific authentication details
 
-### OAuth Credential Management (Importance: 90)
-`src/zerozen/integrations/google/creds.py`
-- Structured credential management system for Google OAuth
-- Supports both desktop and backend authentication flows
-- Implements secure token storage and automatic refresh
-- Maintains per-user isolation of credentials
+### Gmail Integration (80)
+- Path: `src/zerozen/integrations/google/gmail_tool.py`
+- `GmailService` provides domain-specific email operations
+- Implements specialized email search and retrieval functionality
+- Handles Gmail-specific message formats and threading
 
-### Gmail Integration Tools (Importance: 85)
-`src/zerozen/integrations/google/gmail_tool.py`
-- Read-only access to Gmail data with privacy controls
-- Email search and retrieval with content protection
-- Requires explicit user consent for email body access
-- Implements structured email data extraction
+### Calendar Integration (80)
+- Path: `src/zerozen/integrations/google/calendar_tool.py`
+- `CalendarService` manages calendar-specific operations
+- Provides event scheduling and retrieval capabilities
+- Handles calendar-specific data formats and recurring event logic
 
-### Calendar Integration Tools (Importance: 85)
-`src/zerozen/integrations/google/calendar_tool.py`
-- Calendar event listing and search capabilities
-- Event detail retrieval with privacy constraints
-- Time-based queries for schedule management
-- Read-only access to calendar data
+### Google Agent (85)
+- Path: `src/zerozen/integrations/google/google_agent.py`
+- Specialized agent for Google service orchestration
+- Coordinates between Gmail and Calendar tools
+- Manages context switching between different Google services
+- Implements service-specific conversation handling
 
-### Google Agent Implementation (Importance: 80)
-`src/zerozen/integrations/google/google_agent.py`
-- Specialized agent for Google service interactions
-- Privacy-focused system prompts
-- Integration of Gmail and Calendar tools
-- User consent management for data access
+### Integration Entry Points
 
-### Integration Orchestration (Importance: 75)
-`src/zerozen/integrations/google/main.py`
-- Coordination of Google service tools
-- Authentication flow management
-- Tool initialization and configuration
-- Service access control
+#### Desktop OAuth Flow (70)
+- Path: `examples/desktop_oauth_demo.py`
+- Implements desktop-specific OAuth authentication flow
+- Handles local credential storage and refresh
 
-## Demo Implementations
+#### Google Agent Demo (65)
+- Path: `examples/google_agent_demo.py`
+- Demonstrates integrated usage of Gmail and Calendar services
+- Shows cross-service functionality and context management
 
-### Desktop OAuth Flow (Importance: 70)
-`examples/desktop_oauth_demo.py`
-- Desktop-based authentication implementation
-- Local credential storage handling
-- Token refresh demonstration
+## Service Architecture
 
-### Google Agent Usage (Importance: 70)
-`examples/google_agent_demo.py`
-- Example implementations of Google agent workflows
-- Service integration demonstrations
-- Privacy-aware data access patterns
+### Main Integration Hub (75)
+- Path: `src/zerozen/integrations/google/main.py`
+- Centralizes Google service initialization
+- Manages service dependencies and configuration
+- Coordinates credential sharing between services
+
+### Tool Integration (70)
+- Path: `src/zerozen/integrations/google/google_backend_tool.py`
+- Provides backend integration points for Google services
+- Implements service-specific error handling and retry logic
+- Manages service quotas and rate limiting
 
 $END$
 

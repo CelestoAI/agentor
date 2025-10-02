@@ -1,50 +1,76 @@
 ---
-description: Analysis of data flow patterns between components including agent communication, memory integration, and external service interactions
+description: Documents the data flow patterns between components including agent communication, memory systems, and external service integration.
 ---
 
 
 # data-flow-patterns
 
-## Core Data Flow Paths
+### Core Data Flow Components
 
-### Agent Communication Flow (Importance: 85)
-- Agent triage system in `src/zerozen/agenthub/main.py` routes requests between specialized agents:
-  1. Main triage agent receives initial user request
-  2. Request analyzed and routed to specialized agent (memory, Google, etc.)
-  3. Specialized agent processes request and returns response
-  4. Response flows back through triage to user
+1. Agent Communication Pattern
+- Primary flow between `Agent` class (`agents.py`) and specialized agents
+- Agents exchange context and responses through structured message passing
+- Memory agent (`memagent.py`) retrieves relevant conversation history
+- Google agent (`google_agent.py`) handles service-specific operations
+- Importance Score: 85
 
-### Memory System Integration (Importance: 90)
-- Bidirectional flow between agents and memory system:
-  1. Memory agent (`src/zerozen/agenthub/memagent.py`) receives queries
-  2. Queries converted to embeddings via `src/zerozen/memory/embedding.py`
-  3. LanceDB performs semantic search on embeddings
-  4. Relevant conversation history returned to agent
-  5. New conversations stored back in memory system
-
-### Google Service Integration (Importance: 80)
-- Multi-stage OAuth flow and data access pattern:
-  1. Credential management (`src/zerozen/integrations/google/creds.py`) handles auth flow
-  2. Google agent (`src/zerozen/integrations/google/google_agent.py`) receives requests
-  3. Requests routed to specific tools:
-     - Gmail tool fetches email data
-     - Calendar tool retrieves event information
-  4. Data processed and returned with privacy constraints enforced
-
-### Cross-Component Data Exchange (Importance: 75)
-Data flows between major components follow structured paths:
-- Agent Hub → Memory System: Conversation storage/retrieval
-- Agent Hub → Google Integration: Service requests/responses
-- Memory System → Embedding Service: Text vectorization
-- Google Integration → Tools: API data access
-
-Key file paths implementing these flows:
+2. Memory System Integration
 ```
-src/zerozen/agenthub/main.py
-src/zerozen/memory/api.py
-src/zerozen/integrations/google/main.py
-src/zerozen/memory/embedding.py
+User Query -> Agent -> Memory System -> Vector DB -> Response
 ```
+- `Memory` class (`memory/api.py`) manages conversation storage/retrieval
+- Embedding system (`memory/embedding.py`) converts text to vectors
+- LanceDB integration for semantic search capabilities
+- Memory tools provide agent access to historical context
+- Importance Score: 80
+
+3. Google Services Data Flow
+```
+Agent -> Google OAuth -> Service APIs -> Response
+```
+- `GmailService` and `CalendarService` handle API communication
+- Credential management through `CredentialRecord` system
+- OAuth flow manages token refresh and storage
+- Results transformed into agent-compatible formats
+- Importance Score: 75
+
+4. Chat Interface Data Flow
+```
+User Input -> Agent Hub -> Specialized Agents -> Memory -> Response
+```
+- Chat interface (`chat.py`) streams responses
+- Agent hub (`agenthub/main.py`) routes to specialized agents
+- Context maintained through `AppContext` dataclass
+- Responses formatted through output formatter
+- Importance Score: 70
+
+### Key Integration Points
+
+1. Memory-Agent Interface
+- Memory tools expose search and retrieval methods
+- Agents query memory system using semantic search
+- Conversation history maintained across sessions
+- Importance Score: 75
+
+2. External Service Integration
+- Google services accessed through dedicated tools
+- OAuth credentials managed centrally
+- Service responses normalized for agent consumption
+- Importance Score: 70
+
+### Data Storage Patterns
+
+1. Conversation Storage
+- Vector embeddings stored in LanceDB
+- Contextual metadata maintained with conversations
+- Historical data indexed for semantic search
+- Importance Score: 65
+
+2. Credential Management
+- OAuth tokens stored securely
+- User provider metadata tracked
+- Automatic refresh handling
+- Importance Score: 60
 
 $END$
 

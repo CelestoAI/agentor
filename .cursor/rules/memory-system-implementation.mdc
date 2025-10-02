@@ -1,49 +1,68 @@
 ---
-description: Documentation for memory system including embedding generation, LanceDB integration, semantic search, and conversation storage/retrieval
+description: Specification for implementing memory systems with embedding generation, LanceDB integration, and semantic search in AI applications
 ---
 
 
 # memory-system-implementation
 
-## Core Memory Architecture
-**Importance Score: 90**
-- Semantic conversation storage using LanceDB vector database
-- Embedding generation for text using sentence transformers
-- Conversation history management with context preservation
-- Retrieval mechanisms for semantic similarity search
-Path: `src/zerozen/memory/api.py`
+## Core Memory System Components
 
-## Memory Agent Integration
-**Importance Score: 85**
-- Specialized agent for memory operations
-- Tools for searching and retrieving past conversations
-- Context-aware conversation addition capabilities
-- Integration with main agent hub for memory-based responses
-Path: `src/zerozen/agenthub/memagent.py`
+### Memory Storage and Retrieval
+**Path:** `src/zerozen/memory/api.py`
+- Memory class manages conversation storage using LanceDB backend
+- Implements schema handling for conversational data persistence
+- Provides semantic search capabilities across stored conversations
+- Importance Score: 85
 
-## Embedding System
-**Importance Score: 80**
-- Vector representation generation for text content
-- Semantic similarity calculations
-- Integration with LanceDB for vector storage
-- Query preprocessing for semantic search
-Path: `src/zerozen/memory/embedding.py`
+### Embedding Generation
+**Path:** `src/zerozen/memory/embedding.py`
+- Implements SentenceTransformerEmbeddings for conversation vectorization
+- Handles text-to-vector conversion for semantic search functionality
+- Configures embedding parameters for memory storage optimization
+- Importance Score: 80
 
-## Memory Tools
-**Importance Score: 75**
-- Search functionality for conversation retrieval
-- Context window management
-- Memory persistence handlers
-- Query optimization for semantic search
-Path: `src/zerozen/memory/tools.py`
+### Memory Agent Implementation
+**Path:** `src/zerozen/agenthub/memagent.py`
+- Specialized agent for memory operations and retrieval
+- Handles contextual search through conversation history
+- Implements memory-augmented response generation
+- Importance Score: 75
 
-## Memory Agent Demo Implementation
-**Importance Score: 70**
-- Example usage of memory system
-- Demonstration of conversation storage
-- Query and retrieval patterns
-- Context preservation examples
-Path: `examples/memory_agent.py`
+### Conversation Storage Schema
+**Path:** `memory-dev.ipynb`
+- Defines conversation storage structure in LanceDB
+- Implements full conversation retrieval mechanisms
+- Manages vector storage for semantic querying
+- Importance Score: 70
+
+## Memory Integration Points
+
+### Memory Tools
+**Path:** `src/zerozen/memory/tools.py`
+- Implements memory search functionality
+- Provides tools for conversation addition and retrieval
+- Handles memory context management
+- Importance Score: 65
+
+### Vector Database Operations
+- LanceDB table management for conversation storage
+- Vector similarity search implementation
+- Conversation embedding storage and indexing
+- Importance Score: 75
+
+## Memory System Workflow
+
+### Conversation Processing
+- Converts user-agent interactions into storable format
+- Generates embeddings for new conversations
+- Updates memory context with recent interactions
+- Importance Score: 70
+
+### Semantic Search Implementation
+- Vector-based similarity search across stored conversations
+- Contextual relevance scoring for search results
+- Memory-augmented response generation
+- Importance Score: 85
 
 $END$
 

@@ -1,59 +1,80 @@
 ---
-description: Design specification for ZeroZen's agent architecture, delegation patterns, and tool integration system
+description: Documentation for agent system architecture including agent types, handoffs, tools, and request routing
 ---
 
 
 # agent-system-architecture
 
-## Core Agent Architecture Components
+## Core Agent System
 
-### 1. Agent Hub Orchestration (Importance: 95)
-Path: `src/zerozen/agenthub/main.py`
-- Central triage system that routes user requests to specialized agents
-- Manages agent handoffs and state transitions between different agent types
-- Coordinates tool access and permissions across agent boundaries
+The agent architecture consists of specialized agents coordinated through a hub system:
 
-### 2. Memory-Augmented Agents (Importance: 90)
-Path: `src/zerozen/agenthub/memagent.py`
-- Memory agent with semantic search and retrieval capabilities
-- Contextual conversation storage with embedding-based recall
-- Integration with LanceDB for persistent memory storage
+### Primary Agent Types (Importance: 90)
+- Main Orchestrator Agent (`agenthub/main.py`)
+  - Routes requests to specialized agents
+  - Manages context and state between agent handoffs
+  - Coordinates multi-agent workflows
 
-### 3. Google Service Integration (Importance: 85)
-Path: `src/zerozen/integrations/google/google_agent.py`
-- Specialized agent for Gmail and Calendar operations
-- Privacy-first design with read-only access controls
-- Structured tool integration patterns for Google APIs
+- Memory Agent (`agenthub/memagent.py`)
+  - Handles conversation history retrieval
+  - Maintains context across sessions
+  - Provides relevant historical information to other agents
 
-## Agent Communication Patterns
+- Google Integration Agent (`integrations/google/google_agent.py`)
+  - Manages Gmail and Calendar operations
+  - Handles OAuth authentication flows
+  - Provides tool access for email and calendar queries
 
-### 1. Tool Integration Framework (Importance: 85)
-Paths:
-- `src/zerozen/integrations/google/gmail_tool.py`
-- `src/zerozen/integrations/google/calendar_tool.py`
-- Standardized tool registration and access patterns
-- Credential management and OAuth flow integration
-- Cross-agent tool sharing mechanisms
+### Agent Handoff System (Importance: 85)
+Located in `src/zerozen/agents.py`:
+- Dynamic agent switching based on request type
+- Context preservation during handoffs
+- Tool permission management between agents
+- State synchronization during transitions
 
-### 2. Agent State Management (Importance: 80)
-Path: `src/zerozen/agents.py`
-- Conversation context preservation between agent handoffs
-- Tool state synchronization across agent boundaries
-- Memory persistence across agent transitions
+### Tool Integration Pattern (Importance: 80)
+- Tools are packaged as service classes:
+  - `GmailService` - Email operations
+  - `CalendarService` - Calendar management
+  - Memory tools for context storage/retrieval
+- Agents access tools through standardized interfaces
+- Tool state persists across agent handoffs
 
-## Specialized Agent Types
+### Request Triage System (Importance: 75)
+- Initial request analysis in main hub
+- Request classification by domain and intent
+- Dynamic tool allocation based on request type
+- Priority-based routing for concurrent requests
 
-### 1. Google Integration Agent (Importance: 85)
-Path: `src/zerozen/integrations/google/google_agent.py`
-- Email and calendar data access patterns
-- Privacy-aware interaction model
-- Structured response formatting for Google service data
+## Agent Workflows
 
-### 2. Memory Agent (Importance: 80)
-Path: `src/zerozen/agenthub/memagent.py`
-- Conversational context management
-- Semantic search integration
-- Historical interaction retrieval
+### Core Processing Flow (Importance: 85)
+1. Request received by main agent
+2. Context loaded from memory agent
+3. Tool requirements determined
+4. Request routed to specialized agent
+5. Results aggregated and returned
+
+### Integration Points (Importance: 70)
+- Memory system interface for context storage
+- Google API integration for service access
+- Cross-agent communication protocols
+- Tool state synchronization
+
+File Paths:
+```
+src/zerozen/
+  ├── agents.py
+  ├── agenthub/
+  │   ├── main.py
+  │   ├── memagent.py
+  │   └── web_search.py
+  └── integrations/
+      └── google/
+          ├── google_agent.py
+          ├── gmail_tool.py
+          └── calendar_tool.py
+```
 
 $END$
 
