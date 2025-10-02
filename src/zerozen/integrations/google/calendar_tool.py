@@ -1,4 +1,3 @@
-# calendar_tool_v2.py - Calendar tool with dataclass credentials support
 from __future__ import annotations
 import datetime as dt
 import typing as t
@@ -14,6 +13,28 @@ if t.TYPE_CHECKING:
 
 
 CalendarEvent = dict[str, t.Any]
+
+
+class CalendarEventTimeBlock(t.TypedDict):
+    dateTime: str | dt.datetime
+    timeZone: t.NotRequired[str]
+
+
+class CalendarAttendee(t.TypedDict, total=False):
+    email: str
+    displayName: str
+    optional: bool
+
+
+class CalendarEventPayload(t.TypedDict, total=False):
+    summary: str
+    description: str
+    start: CalendarEventTimeBlock | dt.datetime | str
+    end: CalendarEventTimeBlock | dt.datetime | str
+    attendees: list[CalendarAttendee]
+    location: str
+    conferenceData: dict[str, t.Any]
+    reminders: dict[str, t.Any]
 
 
 def _rfc3339(ts: str | dt.datetime | None) -> str | None:
@@ -152,3 +173,90 @@ class CalendarService:
             return svc.events().get(calendarId=calendar_id, eventId=event_id).execute()
 
         return {"event": _get()}
+
+    def create_event(
+        self,
+        *,
+        event: CalendarEventPayload | CalendarEvent,
+        calendar_id: str = "primary",
+    ) -> dict:
+        """
+        Create a Google Calendar event.
+
+        Args:
+            event: Event payload matching the Google Calendar API schema
+            calendar_id: Calendar ID (default "primary")
+
+        Returns:
+            {"event": CalendarEvent}
+
+        Notes:
+            `start` and `end` accept timezone-aware `datetime` objects, RFC3339 strings,
+            or dicts containing a `dateTime` field (and optional `timeZone`).
+
+        Example:
+            >>> calendar = CalendarService(creds)
+            >>> calendar.create_event(
+            ...     event={
+            ...         "summary": "Weekly sync",
+            ...         "description": "Process updates and blockers",
+            ...         "start": dt.datetime(2024, 6, 18, 15, 0, tzinfo=dt.timezone.utc),
+            ...         "end": "2024-06-18T19:30:00Z",
+            ...         "attendees": [{"email": "alice@example.com"}],
+            ...     }
+            ... )
+        """
+
+        def _normalize_time(block: t.Any) -> dict:
+            if isinstance(block, dt.datetime):
+                return {"dateTime": _rfc3339(block)}
+            if isinstance(block, str):
+                if len(block) == 10:
+                    raise ValueError("dateTime string must include a time component")
+                return {"dateTime": _rfc3339(block)}
+            if isinstance(block, dict):
+                block = dict(block)
+                if "date" in block:
+                    raise ValueError("start/end blocks must use dateTime, not date")
+                if "dateTime" not in block:
+                    raise ValueError("start/end blocks require a dateTime field")
+
+                value = block["dateTime"]
+                if not isinstance(value, (str, dt.datetime)):
+                    raise TypeError("dateTime must be a datetime or RFC3339 string")
+                if isinstance(value, str) and len(value) == 10:
+                    raise ValueError("dateTime string must include a time component")
+
+                block["dateTime"] = _rfc3339(value)
+                return block
+
+            raise TypeError(
+                "start/end must be datetime, RFC3339 string, or mapping with dateTime field"
+            )
+
+        body = dict(event)
+        for key in ("start", "end", "originalStartTime"):
+            if key in body:
+                body[key] = _normalize_time(body[key])
+
+        svc = self._svc()
+
+        @backoff.on_exception(
+            backoff.expo,
+            Exception,
+            max_time=20,
+            jitter=None,
+            giveup=lambda e: not _is_transient(e),
+        )
+        def _insert():
+            return (
+                svc.events()
+                .insert(
+                    calendarId=calendar_id,
+                    body=body,
+                    conferenceDataVersion=1 if body.get("conferenceData") else 0,
+                )
+                .execute()
+            )
+
+        return {"event": _insert()}

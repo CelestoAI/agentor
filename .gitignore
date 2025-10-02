@@ -197,3 +197,4 @@ uv.lock
 token*.json
 credentials*.json
 .zendata/
+.idea/
