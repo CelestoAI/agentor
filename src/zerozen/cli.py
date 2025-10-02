@@ -116,10 +116,15 @@ def setup_google(
         scopes = [
             "openid",
             "https://www.googleapis.com/auth/gmail.readonly",
-            "https://www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/calendar",
             "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
         ]
+
+        console.print("🔐 Requesting scopes:")
+        for scope in scopes:
+            console.print(f"  • {scope}")
 
         console.print("🌐 Opening browser for authentication...")
         console.print("👆 Please complete authentication in your browser")
@@ -132,6 +137,19 @@ def setup_google(
             user_storage_path=user_storage,
             credentials_file=credentials_file,
         )
+
+        console.print("🔍 Granted scopes:")
+        granted_scopes = creds.user_provider_metadata.scope.split()
+        for scope in granted_scopes:
+            console.print(f"  • {scope}")
+
+        missing_scopes = [scope for scope in scopes if scope not in granted_scopes]
+        if missing_scopes:
+            console.print(
+                "[yellow]⚠️ Google did not return all requested scopes. Missing:[/yellow]"
+            )
+            for scope in missing_scopes:
+                console.print(f"  • {scope}")
 
         console.print(
             Panel.fit(

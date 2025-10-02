@@ -224,10 +224,21 @@ def authenticate_user(
     decoded = base64.urlsafe_b64decode(payload)
     user_data = json_lib.loads(decoded)
 
+    granted_scopes = list(creds.scopes or [])
+
+    # Sanity-check that Google returned the requested scopes.
+    missing_scopes = [scope for scope in scopes if scope not in granted_scopes]
+    if missing_scopes:
+        missing = ", ".join(missing_scopes)
+        raise RuntimeError(
+            "Google OAuth consent did not grant required scopes. "
+            f"Missing: {missing}. Re-run setup and ensure you approve the requested permissions."
+        )
+
     # Create structured dataclasses
     user_provider_metadata = UserProviderMetadata(
         refresh_token=creds.refresh_token,
-        scope=" ".join(creds.scopes),
+        scope=" ".join(granted_scopes),
         expires_at=int(creds.expiry.timestamp()) if creds.expiry else 0,
         id_token=id_token,
     )
