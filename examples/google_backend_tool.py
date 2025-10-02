@@ -1,9 +1,9 @@
 from zerozen.integrations.google import (
-    GmailService,
     CalendarService,
     CredentialRecord,
-    UserProviderMetadata,
+    GmailService,
     UserInfo,
+    UserProviderMetadata,
 )
 
 # Create structured dataclasses from your DB

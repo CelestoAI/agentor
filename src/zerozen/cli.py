@@ -1,5 +1,6 @@
 import typer
 from rich import print
+
 from zerozen import proxy
 
 app = typer.Typer()
@@ -60,6 +61,7 @@ def setup_google(
 ):
     """Set up Google authentication for Gmail and Calendar access."""
     import os
+
     from rich.console import Console
     from rich.panel import Panel
     from rich.text import Text
@@ -101,11 +103,12 @@ def setup_google(
     console.print("🚀 Starting Google authentication setup...")
 
     try:
-        from zerozen.integrations.google.creds import (
-            authenticate_user,
-            DEFAULT_GOOGLE_OAUTH_SCOPES,
-        )
         import json
+
+        from zerozen.integrations.google.creds import (
+            DEFAULT_GOOGLE_OAUTH_SCOPES,
+            authenticate_user,
+        )
 
         # Extract client credentials
         with open(credentials_file) as f:

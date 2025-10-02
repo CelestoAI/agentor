@@ -4,15 +4,16 @@ from dataclasses import dataclass
 from typing import Optional
 
 import typer
-from rich.console import Console
-from rich.prompt import Prompt
-from rich.panel import Panel
-from rich.text import Text
-from openai.types.responses import ResponseTextDeltaEvent, ResponseOutputItemAddedEvent
 from agents import Agent, Runner, SQLiteSession
+from dotenv import load_dotenv
+from openai.types.responses import ResponseOutputItemAddedEvent, ResponseTextDeltaEvent
+from rich.console import Console
+from rich.panel import Panel
+from rich.prompt import Prompt
+from rich.text import Text
+
 from zerozen.agenthub import main_agent
 from zerozen.integrations.google.google_agent import create_google_context
-from dotenv import load_dotenv
 
 load_dotenv()
 

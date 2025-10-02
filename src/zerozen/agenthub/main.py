@@ -1,15 +1,15 @@
-from agents import Agent
-from typing import Optional, Tuple
 import os
+from typing import Optional, Tuple
 
+from agents import Agent
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
-from .web_search import web_search_agent
 from zerozen.integrations.google.google_agent import (
     create_google_agent,
     create_google_context,
 )
 
+from .web_search import web_search_agent
 
 concept_research_agent = Agent(
     name="Concept research agent",
@@ -77,11 +77,12 @@ def get_google_agent_and_context():
                         "🔄 Found credentials.json - starting automatic authentication..."
                     )
                     try:
-                        from zerozen.integrations.google.creds import (
-                            authenticate_user,
-                            DEFAULT_GOOGLE_OAUTH_SCOPES,
-                        )
                         import json
+
+                        from zerozen.integrations.google.creds import (
+                            DEFAULT_GOOGLE_OAUTH_SCOPES,
+                            authenticate_user,
+                        )
 
                         # Extract client credentials
                         with open(credentials_file) as f:

@@ -1,5 +1,7 @@
 # gmail_tool_v2.py - Gmail tool with dataclass credentials support
 from __future__ import annotations
+
+import base64
 import datetime as dt
 import typing as t
 
@@ -7,7 +9,6 @@ import backoff
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-import base64
 
 # Import here to avoid circular imports
 if t.TYPE_CHECKING:

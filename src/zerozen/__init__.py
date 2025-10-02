@@ -1,8 +1,8 @@
 from .cli import app
+from .memory.api import Memory
 from .output_text_formatter import pydantic_to_xml
 from .proxy import create_proxy
 from .utils import AppContext
-from .memory.api import Memory
 
 __all__ = ["app", "create_proxy", "pydantic_to_xml", "AppContext", "Memory"]
 

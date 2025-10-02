@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-import os
 import json
+import os
+
 from zerozen.integrations.google import (
+    DEFAULT_GOOGLE_OAUTH_SCOPES,
     GmailService,
     authenticate_user,
     load_user_credentials,
-    DEFAULT_GOOGLE_OAUTH_SCOPES,
 )
 
 # Configuration

@@ -1,12 +1,14 @@
 from functools import lru_cache
 
 import pyarrow as pa
-from lancedb.embeddings import EmbeddingFunctionConfig, get_registry
+from lancedb.embeddings import (
+    EmbeddingFunctionConfig,
+    TextEmbeddingFunction,
+    get_registry,
+    register,
+)
 from lancedb.schema import vector as vector_type
-from lancedb.embeddings import register, TextEmbeddingFunction
-
 from typeguard import typechecked
-
 
 DEFAULT_MODEL_NAME = "all-MiniLM-L6-v2"
 DEFAULT_EMBEDDING_DIM = 384

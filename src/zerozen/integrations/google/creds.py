@@ -10,15 +10,15 @@ This module provides:
 - desktop_creds_provider_factory: Desktop OAuth flow helper
 """
 
-import os
-import json
 import datetime as dt
+import json
+import os
+from dataclasses import asdict, dataclass
 from typing import Callable, Optional
-from dataclasses import dataclass, asdict
 
+from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 
 # Default scoped permissions requested by CLI and agent setup flows
 DEFAULT_GOOGLE_OAUTH_SCOPES = [

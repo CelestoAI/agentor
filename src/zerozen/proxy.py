@@ -1,6 +1,5 @@
-from fastmcp import FastMCP
 import typer
-
+from fastmcp import FastMCP
 
 app = typer.Typer()
 

@@ -1,6 +1,7 @@
-from pydantic import BaseModel
-from xml.etree.ElementTree import Element, tostring, SubElement
 from typing import Any
+from xml.etree.ElementTree import Element, SubElement, tostring
+
+from pydantic import BaseModel
 
 
 def pydantic_to_xml(obj: BaseModel) -> str:

@@ -1,7 +1,9 @@
-from typing import Any
-from agents import RunContextWrapper, function_tool
-from zerozen.memory.api import ChatType
 import logging
+from typing import Any
+
+from agents import RunContextWrapper, function_tool
+
+from zerozen.memory.api import ChatType
 
 logger = logging.getLogger(__name__)
 

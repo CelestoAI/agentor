@@ -1,5 +1,6 @@
-import lancedb
 from typing import TypedDict
+
+import lancedb
 import pandas as pd
 from typeguard import typechecked
 
@@ -8,7 +9,6 @@ from zerozen.memory.embedding import (
     get_chat_schema,
     get_embedding_config,
 )
-
 
 CHAT_SCHEMA = get_chat_schema()
 CHAT_FIELD_NAMES = set(CHAT_SCHEMA.names)

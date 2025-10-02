@@ -1,5 +1,6 @@
 from agents import Agent
-from zerozen.memory.tools import memory_search, memory_get_full_conversation, memory_add
+
+from zerozen.memory.tools import memory_add, memory_get_full_conversation, memory_search
 
 _instructions = """
 You are a memory agent. You are responsible for finding relevent information from the memory for the user's request and updating the memory with the new information.

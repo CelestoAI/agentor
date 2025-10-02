@@ -1,15 +1,17 @@
 # run_agent.py
 import asyncio
-from agents import Agent, Runner, ModelSettings
-from .gmail_tool import GmailService
-from .calendar_tool import CalendarService
-from .creds import load_user_credentials
 import json
 import os
-from typing import Optional, List
-from agents import function_tool, RunContextWrapper
+from typing import List, Optional
+
+from agents import Agent, ModelSettings, RunContextWrapper, Runner, function_tool
 from openai.types.shared import Reasoning
+
 from zerozen.utils import AppContext
+
+from .calendar_tool import CalendarService
+from .creds import load_user_credentials
+from .gmail_tool import GmailService
 
 
 @function_tool(name_override="search_gmail")
@@ -265,7 +267,7 @@ def create_google_context(
     calendar = CalendarService(creds)
 
     effective_user_id = user_id or creds.user_id
-    from zerozen.utils import GoogleServices, CoreServices
+    from zerozen.utils import CoreServices, GoogleServices
 
     return AppContext(
         user_id=effective_user_id,

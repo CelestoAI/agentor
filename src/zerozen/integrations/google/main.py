@@ -1,6 +1,6 @@
-from rich import print
-from gmail_tool import GmailTool
 from creds import desktop_creds_provider_factory
+from gmail_tool import GmailTool
+from rich import print
 
 
 def main():
