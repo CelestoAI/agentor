@@ -9,7 +9,7 @@ def create_proxy(remote_url: str, name: str | None = None):
     """Create a proxy to a remote MCP server.
 
     Example:
-        zen create-proxy https://example.com/mcp/ MyProxyServer
+        agentor create-proxy https://example.com/mcp/ MyProxyServer
 
     Args:
         remote_url (str): The URL of the remote MCP server.

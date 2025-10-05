@@ -46,13 +46,13 @@ pip install agentor
 
    ```bash
    # Opens setup guide with direct links
-   zen setup-google
+   agentor setup-google
    ```
 
 1. **Start chatting with your data**:
 
    ```bash
-   zen chat
+   agentor chat
    ```
 
 1. **Ask questions like**:
@@ -71,13 +71,13 @@ ______________________________________________________________________
 
 ```bash
 pip install agentor
-zen setup-google  # One-time setup
-zen chat          # Start using!
+agentor setup-google  # One-time setup
+agentor chat          # Start using!
 ```
 
 ### Google Setup Details
 
-The `zen setup-google` command guides you through:
+The `agentor setup-google` command guides you through:
 
 1. **Creating Google Cloud Project** (if needed)
 1. **Enabling APIs** (Gmail, Calendar)
@@ -88,7 +88,7 @@ The `zen setup-google` command guides you through:
 **First run:**
 
 ```bash
-zen setup-google
+agentor setup-google
 # ✅ Opens browser for one-time authentication
 # ✅ Saves credentials locally
 # ✅ Ready to use!
@@ -97,7 +97,7 @@ zen setup-google
 **Already set up:**
 
 ```bash
-zen setup-google
+agentor setup-google
 # ✅ Google credentials already exist
 # Use --force to re-authenticate
 ```
@@ -109,7 +109,7 @@ ______________________________________________________________________
 The heart of Agentor is its conversational interface. Just talk to your data naturally.
 
 ```bash
-zen chat
+agentor chat
 ```
 
 ### Example Conversations
@@ -228,7 +228,7 @@ ______________________________________________________________________
 ### CLI Options
 
 ```bash
-zen chat --help
+agentor chat --help
 ```
 
 ### Environment Variables
@@ -238,8 +238,8 @@ zen chat --help
 export OPENAI_MODEL=gpt-4o
 
 # Optional: Custom credential paths
-zen setup-google --credentials-file /path/to/creds.json
-zen setup-google --user-storage /path/to/user-creds.json
+agentor setup-google --credentials-file /path/to/creds.json
+agentor setup-google --user-storage /path/to/user-creds.json
 ```
 
 ______________________________________________________________________
@@ -317,8 +317,8 @@ We'd love your help making Agentor even better!
 
    ```bash
    # Test your changes
-   zen setup-google
-   zen chat
+   agentor setup-google
+   agentor chat
 
    # Run linters
    ruff check .
@@ -342,7 +342,7 @@ ______________________________________________________________________
 ### Gmail Power Queries
 
 ```bash
-zen chat
+agentor chat
 ```
 
 ```
@@ -403,8 +403,8 @@ ______________________________________________________________________
 
 ```bash
 pip install agentor
-zen setup-google
-zen chat
+agentor setup-google
+agentor chat
 ```
 
 *Welcome to your **Zen** mode.* 🧘‍♀️✨

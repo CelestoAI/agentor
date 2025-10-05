@@ -17,7 +17,7 @@ except Exception:
     def chat_placeholder():
         """Start the chat interface."""
         print("[red]❌ Chat requires Google credentials setup.[/red]")
-        print("[yellow]Run:[/yellow] [bold]zen setup-google[/bold]")
+        print("[yellow]Run:[/yellow] [bold]agentor setup-google[/bold]")
         raise typer.Exit(1)
 
 
@@ -34,8 +34,8 @@ def main(ctx: typer.Context):
 [/bold green]
 
 [bold cyan]🚀 Quick Start:[/bold cyan]
-  zen setup-google  # Set up Gmail/Calendar access
-  zen chat          # Start chatting with your AI agent
+  agentor setup-google  # Set up Gmail/Calendar access
+  agentor chat          # Start chatting with your AI agent
 
 """)
         typer.echo(ctx.get_help())
@@ -160,7 +160,7 @@ def setup_google(
 [bold]Saved to:[/bold] {user_storage}
 
 [bold]Next Steps:[/bold]
-• Run [bold cyan]zen chat[/bold cyan] to start using Gmail/Calendar features
+• Run [bold cyan]agentor chat[/bold cyan] to start using Gmail/Calendar features
 • Your credentials will be loaded automatically
 • Use [bold cyan]--force[/bold cyan] next time if you need to refresh scopes
             """),

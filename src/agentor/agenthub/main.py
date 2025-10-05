@@ -122,7 +122,7 @@ def get_google_agent_and_context():
                     error_msg = (
                         "❌ User authentication required!\n\n"
                         "🔧 QUICK FIX:\n"
-                        "Run: zen setup-google\n"
+                        "Run: agentor setup-google\n"
                         "(This will open your browser to authenticate)\n\n"
                         "📄 Missing file: credentials.my_google_account.json"
                     )
@@ -142,7 +142,7 @@ def get_main_agent():
     google_agent, _ = get_google_agent_and_context()
     if google_agent is None:
         raise FileNotFoundError(
-            "Google credentials not found. Please run 'zen setup-google' first to authenticate."
+            "Google credentials not found. Please run 'agentor setup-google' first to authenticate."
         )
     handoffs.append(google_agent)
 
