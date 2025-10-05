@@ -2,13 +2,17 @@
 
 <div align="center">
 
-<h1>Hyper-personal, always-on, open-source AI companion.</h1>
+<h1>Agentor</h1>
 
-Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
+<h2>Fastest way to build, prototype and deploy AI Agents.</h2>
+Connect AI Agents with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
+
 
 <img src="/assets/Agentor.png" alt="banner" width="640" />
 
-[![💻 Try CelestoAI](https://img.shields.io/badge/%F0%9F%92%BB%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)
+
+
+[![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)
 
 [![PyPI version](https://badge.fury.io/py/agentor.svg)](https://badge.fury.io/py/agentor)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
