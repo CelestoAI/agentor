@@ -21,11 +21,6 @@ Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in m
 Agentor is an open-source framework for building AI assistants that handle your personal and professional tasks.
 Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
 
-**🎯 Perfect for:**
-
-- **Busy professionals** who live in their inbox
-- **Power users** seeking zero-friction automation
-- **Privacy-conscious individuals** who prefer local, controllable AI
 
 ## 🚀 Quick Start
 
@@ -40,14 +35,9 @@ Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in m
 pip install agentor
 ```
 
-### Setup Google Integration (2 minutes)
+## Examples
 
-1. **Get Google credentials** (one-time setup):
-
-   ```bash
-   # Opens setup guide with direct links
-   agentor setup-google
-   ```
+### Chat with email and calendar (2 minutes)
 
 1. **Start chatting with your data**:
 
@@ -61,21 +51,8 @@ pip install agentor
    - *"What meetings do I have this week?"*
    - *"Find invoices from Stripe in my Gmail"*
 
-That's it! 🎉
 
-______________________________________________________________________
-
-## 🛠️ Integrations
-
-### Gmail and Google Calendar
-
-```bash
-pip install agentor
-agentor setup-google  # One-time setup
-agentor chat          # Start using!
-```
-
-### Google Setup Details
+#### Setup Gmail and Calendar integration
 
 The `agentor setup-google` command guides you through:
 
@@ -102,61 +79,9 @@ agentor setup-google
 # Use --force to re-authenticate
 ```
 
-______________________________________________________________________
+# 🧑‍💻 Developer Experience
 
-## 💬 Chat Interface
-
-The heart of Agentor is its conversational interface. Just talk to your data naturally.
-
-```bash
-agentor chat
-```
-
-### Example Conversations
-
-**📧 Email Management:**
-
-```
-You: Find emails from stripe with invoices
-AI: 🔍 Found 3 invoices from Stripe in the last 30 days:
-    • Dec 15: Monthly subscription - $29.00
-    • Nov 15: Pro upgrade - $99.00  
-    • Oct 15: Monthly subscription - $29.00
-```
-
-**📅 Calendar Queries:**
-
-```
-You: What's my schedule tomorrow?
-AI: 📅 Tomorrow (Dec 16):
-    • 9:00 AM - Team standup (30 min)
-    • 2:00 PM - Client presentation (1 hour)
-    • 4:30 PM - 1:1 with Sarah (30 min)
-```
-
-**🔗 Cross-tool Intelligence:**
-
-```
-You: Do I have any meetings about the project mentioned in John's email?
-AI: 🔍 Found John's email about "Project Alpha" from yesterday.
-    📅 Yes! You have "Project Alpha Planning" tomorrow at 10 AM.
-```
-
-### Chat Features
-
-- **🧠 Smart context** - Remembers your conversation
-- **🛠️ Multiple tools** - Gmail, Calendar, web search (coming soon)
-- **⚡ Fast responses** - Optimized for quick queries
-- **🎨 Rich formatting** - Beautiful, readable output
-- **💾 Session memory** - Continues where you left off
-
-______________________________________________________________________
-
-## 🧑‍💻 Developer Experience
-
-### Python API
-
-Use Agentor programmatically in your own applications:
+Use Agentor programmatically in your applications:
 
 ```python
 from agentor import agents
@@ -175,7 +100,9 @@ result = agents.run_sync(
 )
 ```
 
-### Custom Integrations
+## Use Tools & Services without LLMs
+
+You can direcrly use the underlying tools and services without using LLMs such as search through emails and calendar events.
 
 ```python
 from agentor.integrations.google import GmailService, load_user_credentials
@@ -186,13 +113,12 @@ creds = load_user_credentials("credentials.my_google_account.json")
 # Direct tool usage
 gmail = GmailService(creds)
 messages = gmail.search_messages(query="from:github.com", limit=10)
-
-# Your custom logic here...
 ```
 
-### Backend Integration
+## Building Public Applications with OAuth
 
-Perfect for server applications:
+If you are building an application which is used by multiple public users, it's recommended to authenticate them using OAuth to access their data. For example, you can build a public application which allows users to search through their emails and calendar events.
+
 
 ```python
 from agentor.integrations.google import CredentialRecord, UserProviderMetadata, UserInfo
@@ -221,11 +147,13 @@ user_creds = CredentialRecord(
 gmail = GmailService(user_creds)
 ```
 
-______________________________________________________________________
+---
 
 ## 🔧 Configuration
 
 ### CLI Options
+
+You can use the following CLI options to configure the Agentor CLI.
 
 ```bash
 agentor chat --help
@@ -242,7 +170,7 @@ agentor setup-google --credentials-file /path/to/creds.json
 agentor setup-google --user-storage /path/to/user-creds.json
 ```
 
-______________________________________________________________________
+---
 
 ## 🔐 Security & Privacy
 
@@ -260,7 +188,7 @@ ______________________________________________________________________
 - Per-user isolation
 - Configurable file paths
 
-______________________________________________________________________
+---
 
 ## 🛣️ Roadmap
 
@@ -271,14 +199,14 @@ ______________________________________________________________________
 | Chat Interface | ✅ | Conversational AI with memory |
 | Desktop OAuth | ✅ | One-command authentication |
 | Backend API | ✅ | Programmatic access |
+| Calendar Management | ✅ | Create, update events |
 | **Email Actions** | 🔜 | Draft, reply, send emails |
-| **Calendar Management** | 🔜 | Create, update events |
 | **Slack Integration** | 🔜 | Team communication |
 | **Document AI** | 🔜 | Google Docs, Sheets analysis |
 | **Multi-user Support** | 🔜 | Team deployments |
 | **Plugin System** | 🔮 | Custom integrations |
 
-______________________________________________________________________
+---
 
 ## 🤝 Contributing
 
@@ -289,7 +217,7 @@ We'd love your help making Agentor even better!
 1. **🍴 Fork & Clone**
 
    ```bash
-   git clone https://github.com/yourusername/agentor.git
+   git clone https://github.com/CelestoAI/agentor.git
    cd agentor
    ```
 
@@ -335,47 +263,7 @@ We'd love your help making Agentor even better!
 - **🧪 Testing** (edge cases, error handling)
 - **🌍 Internationalization** (non-English support)
 
-______________________________________________________________________
-
-## 📖 More Examples
-
-### Gmail Power Queries
-
-```bash
-agentor chat
-```
-
-```
-# Search patterns
-You: "Emails from my manager in the last week"
-You: "Unread emails with attachments"  
-You: "Messages about the Q4 planning"
-
-# Analysis
-You: "Summarize the latest email from accounting"
-You: "What action items do I have from recent emails?"
-
-# Time-based
-You: "Show me emails I received while I was on vacation"
-You: "Important emails from the last 3 days"
-```
-
-### Calendar Intelligence
-
-```
-# Schedule awareness
-You: "When am I free for a 1-hour meeting this week?"
-You: "Do I have conflicts with the team all-hands?"
-
-# Event analysis  
-You: "How many meetings do I have this week?"
-You: "What's the longest meeting on my calendar?"
-
-# Cross-reference
-You: "Find emails about meetings I have tomorrow"
-```
-
-______________________________________________________________________
+---
 
 ## 🙏 Acknowledgments
 
@@ -396,15 +284,3 @@ ______________________________________________________________________
 ## 📄 License
 
 Apache 2.0 License - see [LICENSE](LICENSE) for details.
-
-______________________________________________________________________
-
-**Ready to experience zero-friction AI?**
-
-```bash
-pip install agentor
-agentor setup-google
-agentor chat
-```
-
-*Welcome to your **Zen** mode.* 🧘‍♀️✨
