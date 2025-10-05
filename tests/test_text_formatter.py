@@ -1,4 +1,4 @@
-from zerozen import pydantic_to_xml
+from agentor import pydantic_to_xml
 from pydantic import BaseModel
 
 

@@ -1,8 +1,8 @@
 from agents import Runner
 
-from zerozen.agenthub.memagent import build_memory_agent
-from zerozen.memory.api import Memory
-from zerozen.utils import AppContext, CoreServices
+from agentor.agenthub.memagent import build_memory_agent
+from agentor.memory.api import Memory
+from agentor.utils import AppContext, CoreServices
 
 agent = build_memory_agent()
 mem = Memory()

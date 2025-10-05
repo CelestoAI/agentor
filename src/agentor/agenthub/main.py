@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 from agents import Agent
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
-from zerozen.integrations.google.google_agent import (
+from agentor.integrations.google.google_agent import (
     create_google_agent,
     create_google_context,
 )
@@ -79,7 +79,7 @@ def get_google_agent_and_context():
                     try:
                         import json
 
-                        from zerozen.integrations.google.creds import (
+                        from agentor.integrations.google.creds import (
                             DEFAULT_GOOGLE_OAUTH_SCOPES,
                             authenticate_user,
                         )

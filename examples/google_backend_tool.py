@@ -1,4 +1,4 @@
-from zerozen.integrations.google import (
+from agentor.integrations.google import (
     CalendarService,
     CredentialRecord,
     GmailService,

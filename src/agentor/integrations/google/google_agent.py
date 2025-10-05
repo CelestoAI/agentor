@@ -7,7 +7,7 @@ from typing import List, Optional
 from agents import Agent, ModelSettings, RunContextWrapper, Runner, function_tool
 from openai.types.shared import Reasoning
 
-from zerozen.utils import AppContext
+from agentor.utils import AppContext
 
 from .calendar_tool import CalendarService
 from .creds import load_user_credentials
@@ -267,7 +267,7 @@ def create_google_context(
     calendar = CalendarService(creds)
 
     effective_user_id = user_id or creds.user_id
-    from zerozen.utils import CoreServices, GoogleServices
+    from agentor.utils import CoreServices, GoogleServices
 
     return AppContext(
         user_id=effective_user_id,

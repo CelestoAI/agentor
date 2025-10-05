@@ -2,7 +2,7 @@
 import json
 import os
 
-from zerozen.integrations.google import (
+from agentor.integrations.google import (
     DEFAULT_GOOGLE_OAUTH_SCOPES,
     GmailService,
     authenticate_user,

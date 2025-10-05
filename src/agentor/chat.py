@@ -12,8 +12,8 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.text import Text
 
-from zerozen.agenthub import main_agent
-from zerozen.integrations.google.google_agent import create_google_context
+from agentor.agenthub import main_agent
+from agentor.integrations.google.google_agent import create_google_context
 
 load_dotenv()
 

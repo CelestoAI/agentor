@@ -30,7 +30,7 @@ Core Business Components:
 - OAuth credential handling for secure authentication
 - Privacy-focused email content processing
 - Automated calendar event management
-  File path: `src/zerozen/integrations/google/main.py`
+  File path: `src/agentor/integrations/google/main.py`
 
 2. AI Conversation Engine (Score: 90)
 
@@ -38,7 +38,7 @@ Core Business Components:
 - Context-aware response generation
 - Integration with multiple service tools
 - Session state management
-  File path: `src/zerozen/chat.py`
+  File path: `src/agentor/chat.py`
 
 3. Memory Management System (Score: 85)
 
@@ -46,14 +46,14 @@ Core Business Components:
 - Semantic search capabilities for historical context
 - Conversation state persistence
 - Context-aware retrieval system
-  File path: `src/zerozen/memory/api.py`
+  File path: `src/agentor/memory/api.py`
 
 4. Agent Framework (Score: 85)
 
 - Specialized agents for different service integrations
 - Tool-based task execution system
 - Memory-augmented decision making
-  File path: `src/zerozen/agents.py`
+  File path: `src/agentor/agents.py`
 
 5. Integration Tools (Score: 80)
 
@@ -61,8 +61,8 @@ Core Business Components:
 - Calendar event handling
 - Service-specific API abstractions
   File paths:
-- `src/zerozen/integrations/google/gmail_tool.py`
-- `src/zerozen/integrations/google/calendar_tool.py`
+- `src/agentor/integrations/google/gmail_tool.py`
+- `src/agentor/integrations/google/calendar_tool.py`
 
 Key Business Workflows:
 

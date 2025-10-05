@@ -6,10 +6,10 @@
 
 Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
 
-<img src="/assets/zerozen.png" alt="banner" width="640" />
+<img src="/assets/agentor.png" alt="banner" width="640" />
 
 [![💻 Try CelestoAI](https://img.shields.io/badge/%F0%9F%92%BB%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)
-[![PyPI version](https://badge.fury.io/py/zerozen.svg)](https://badge.fury.io/py/zerozen)
+[![PyPI version](https://badge.fury.io/py/agentor.svg)](https://badge.fury.io/py/agentor)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 
 </div>
@@ -36,7 +36,7 @@ Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in m
 ### Installation
 
 ```bash
-pip install zerozen
+pip install agentor
 ```
 
 ### Setup Google Integration (2 minutes)
@@ -69,7 +69,7 @@ ______________________________________________________________________
 ### Gmail and Google Calendar
 
 ```bash
-pip install zerozen
+pip install agentor
 zen setup-google  # One-time setup
 zen chat          # Start using!
 ```
@@ -158,7 +158,7 @@ ______________________________________________________________________
 Use ZeroZen programmatically in your own applications:
 
 ```python
-from zerozen import agents
+from agentor import agents
 
 # Simple agent usage
 result = agents.run_sync(
@@ -177,7 +177,7 @@ result = agents.run_sync(
 ### Custom Integrations
 
 ```python
-from zerozen.integrations.google import GmailService, load_user_credentials
+from agentor.integrations.google import GmailService, load_user_credentials
 
 # Load your saved credentials
 creds = load_user_credentials("credentials.my_google_account.json")
@@ -194,7 +194,7 @@ messages = gmail.search_messages(query="from:github.com", limit=10)
 Perfect for server applications:
 
 ```python
-from zerozen.integrations.google import CredentialRecord, UserProviderMetadata, UserInfo
+from agentor.integrations.google import CredentialRecord, UserProviderMetadata, UserInfo
 
 # Create from your database/API
 user_creds = CredentialRecord(
@@ -288,8 +288,8 @@ We'd love your help making ZeroZen even better!
 1. **🍴 Fork & Clone**
 
    ```bash
-   git clone https://github.com/yourusername/zerozen.git
-   cd zerozen
+   git clone https://github.com/yourusername/agentor.git
+   cd agentor
    ```
 
 1. **🔧 Development Setup**
@@ -401,7 +401,7 @@ ______________________________________________________________________
 **Ready to experience zero-friction AI?**
 
 ```bash
-pip install zerozen
+pip install agentor
 zen setup-google
 zen chat
 ```

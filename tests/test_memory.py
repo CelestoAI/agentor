@@ -1,4 +1,4 @@
-from zerozen.memory.api import DBManager, Memory
+from agentor.memory.api import DBManager, Memory
 
 from lancedb.embeddings import register, TextEmbeddingFunction
 import numpy as np

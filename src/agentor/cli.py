@@ -1,14 +1,14 @@
 import typer
 from rich import print
 
-from zerozen import proxy
+from agentor import proxy
 
 app = typer.Typer()
 app.add_typer(proxy.app)
 
 # Conditionally add chat app - this will fail gracefully if Google creds not set up
 try:
-    from zerozen import chat
+    from agentor import chat
 
     app.add_typer(chat.app)
 except Exception:
@@ -27,7 +27,7 @@ def main(ctx: typer.Context):
         print("""
 [bold green]
     ╭──────────────╮
-    │   ZEROZEN    │
+    │   agentor    │
     ╰──────────────╯
         LLMs in
         ZEN mode
@@ -105,7 +105,7 @@ def setup_google(
     try:
         import json
 
-        from zerozen.integrations.google.creds import (
+        from agentor.integrations.google.creds import (
             DEFAULT_GOOGLE_OAUTH_SCOPES,
             authenticate_user,
         )

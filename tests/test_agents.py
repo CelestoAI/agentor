@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock, patch, AsyncMock
 
 # Import agents - test mode detection handles the mocking automatically
-from zerozen import agents
+from agentor import agents
 
 
 @pytest.fixture
@@ -35,10 +35,10 @@ class TestAgentsRun:
     @pytest.mark.asyncio
     async def test_run_basic_prompt(self, mock_runner_result, mock_main_agent):
         """Test basic run with just a prompt."""
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
-            with patch("zerozen.agents.main_agent", mock_main_agent):
+            with patch("agentor.agents.main_agent", mock_main_agent):
                 result = await agents.run("Hello, how are you?")
 
                 assert result == "Test response from agent"
@@ -53,13 +53,13 @@ class TestAgentsRun:
         self, mock_runner_result, mock_main_agent, mock_gmail_context
     ):
         """Test run with Gmail tools specified."""
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
             with (
-                patch("zerozen.agents.main_agent", mock_main_agent),
+                patch("agentor.agents.main_agent", mock_main_agent),
                 patch(
-                    "zerozen.agents.create_google_context",
+                    "agentor.agents.create_google_context",
                     return_value=mock_gmail_context,
                 ),
             ):
@@ -76,10 +76,10 @@ class TestAgentsRun:
     @pytest.mark.asyncio
     async def test_run_with_model_override(self, mock_runner_result, mock_main_agent):
         """Test run with model override."""
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
-            with patch("zerozen.agents.main_agent", mock_main_agent):
+            with patch("agentor.agents.main_agent", mock_main_agent):
                 result = await agents.run("Hello", model="gpt-3.5-turbo", max_turns=5)
 
                 assert result == "Test response from agent"
@@ -93,13 +93,13 @@ class TestAgentsRun:
         self, mock_runner_result, mock_main_agent, mock_gmail_context
     ):
         """Test run with Gmail tools but no user_id parameter."""
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
             with (
-                patch("zerozen.agents.main_agent", mock_main_agent),
+                patch("agentor.agents.main_agent", mock_main_agent),
                 patch(
-                    "zerozen.agents.create_google_context",
+                    "agentor.agents.create_google_context",
                     return_value=mock_gmail_context,
                 ) as mock_create_context,
             ):
@@ -114,13 +114,13 @@ class TestAgentsRun:
         self, mock_runner_result, mock_main_agent, mock_gmail_context
     ):
         """Test run with Gmail tools and custom user_id."""
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
             with (
-                patch("zerozen.agents.main_agent", mock_main_agent),
+                patch("agentor.agents.main_agent", mock_main_agent),
                 patch(
-                    "zerozen.agents.create_google_context",
+                    "agentor.agents.create_google_context",
                     return_value=mock_gmail_context,
                 ) as mock_create_context,
             ):
@@ -140,10 +140,10 @@ class TestAgentsRunSync:
 
     def test_run_sync_basic(self, mock_runner_result, mock_main_agent):
         """Test synchronous wrapper function."""
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
-            with patch("zerozen.agents.main_agent", mock_main_agent):
+            with patch("agentor.agents.main_agent", mock_main_agent):
                 result = agents.run_sync("Hello, world!")
 
                 assert result == "Test response from agent"
@@ -153,13 +153,13 @@ class TestAgentsRunSync:
         self, mock_runner_result, mock_main_agent, mock_gmail_context
     ):
         """Test synchronous wrapper with all parameters."""
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
             with (
-                patch("zerozen.agents.main_agent", mock_main_agent),
+                patch("agentor.agents.main_agent", mock_main_agent),
                 patch(
-                    "zerozen.agents.create_google_context",
+                    "agentor.agents.create_google_context",
                     return_value=mock_gmail_context,
                 ),
             ):
@@ -186,13 +186,13 @@ class TestAgentsIntegration:
         self, mock_runner_result, mock_main_agent, mock_gmail_context
     ):
         """Test that Gmail context is used when search_gmail is in tools list."""
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
             with (
-                patch("zerozen.agents.main_agent", mock_main_agent),
+                patch("agentor.agents.main_agent", mock_main_agent),
                 patch(
-                    "zerozen.agents.create_google_context",
+                    "agentor.agents.create_google_context",
                     return_value=mock_gmail_context,
                 ),
             ):
@@ -208,10 +208,10 @@ class TestAgentsIntegration:
     @pytest.mark.asyncio
     async def test_non_gmail_tools_only(self, mock_runner_result, mock_main_agent):
         """Test that no Gmail context is used when search_gmail is not in tools."""
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
-            with patch("zerozen.agents.main_agent", mock_main_agent):
+            with patch("agentor.agents.main_agent", mock_main_agent):
                 result = await agents.run(
                     "Search the web", tools=["web_search", "other_tool"]
                 )
@@ -225,13 +225,13 @@ class TestAgentsIntegration:
         self, mock_runner_result, mock_main_agent, mock_gmail_context
     ):
         """Calendar tools should also trigger the Google (gmail) context."""
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
             with (
-                patch("zerozen.agents.main_agent", mock_main_agent),
+                patch("agentor.agents.main_agent", mock_main_agent),
                 patch(
-                    "zerozen.agents.create_google_context",
+                    "agentor.agents.create_google_context",
                     return_value=mock_gmail_context,
                 ),
             ):
@@ -248,13 +248,13 @@ class TestAgentsIntegration:
     async def test_get_calendar_event_uses_context(
         self, mock_runner_result, mock_main_agent, mock_gmail_context
     ):
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
             with (
-                patch("zerozen.agents.main_agent", mock_main_agent),
+                patch("agentor.agents.main_agent", mock_main_agent),
                 patch(
-                    "zerozen.agents.create_google_context",
+                    "agentor.agents.create_google_context",
                     return_value=mock_gmail_context,
                 ),
             ):
@@ -269,10 +269,10 @@ class TestAgentsIntegration:
 
     def test_empty_tools_list(self, mock_runner_result, mock_main_agent):
         """Test behavior with empty tools list."""
-        with patch("zerozen.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
+        with patch("agentor.agents.Runner.run", new_callable=AsyncMock) as mock_runner:
             mock_runner.return_value = mock_runner_result
 
-            with patch("zerozen.agents.main_agent", mock_main_agent):
+            with patch("agentor.agents.main_agent", mock_main_agent):
                 result = agents.run_sync("Hello", tools=[])
 
                 assert result == "Test response from agent"

@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "zerozen"
-version = "2025.10.5"
+name = "agentor"
+version = "0.0.0"
 description = "hyper-personal, always-on, open-source AI companion."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -37,14 +37,14 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 homepage = "https://celesto.ai"
-repository = "https://github.com/CelestoAI/zerozen"
-documentation = "https://github.com/CelestoAI/zerozen/blob/main/README.md"
-issues = "https://github.com/CelestoAI/zerozen/issues"
+repository = "https://github.com/CelestoAI/agentor"
+documentation = "https://github.com/CelestoAI/agentor/blob/main/README.md"
+issues = "https://github.com/CelestoAI/agentor/issues"
 
 
 
 [project.scripts]
-zen="zerozen.cli:app"
+zen="agentor.cli:app"
 
 [project.optional-dependencies]
 models = [

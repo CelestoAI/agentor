@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from zerozen.memory.api import Memory
+from agentor.memory.api import Memory
 
 from .integrations.google import CalendarService, GmailService
 

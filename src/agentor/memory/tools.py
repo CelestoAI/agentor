@@ -3,7 +3,7 @@ from typing import Any
 
 from agents import RunContextWrapper, function_tool
 
-from zerozen.memory.api import ChatType
+from agentor.memory.api import ChatType
 
 logger = logging.getLogger(__name__)
 

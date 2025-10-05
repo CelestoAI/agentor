@@ -4,7 +4,7 @@ import lancedb
 import pandas as pd
 from typeguard import typechecked
 
-from zerozen.memory.embedding import (
+from agentor.memory.embedding import (
     SOURCE_COLUMN,
     get_chat_schema,
     get_embedding_config,
