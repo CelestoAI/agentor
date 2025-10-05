@@ -1,68 +1,56 @@
 ---
-description: Specification for implementing memory systems with embedding generation, LanceDB integration, and semantic search in AI applications
+description: Specification for memory system implementation, including embedding generation, storage, and semantic search functionality
 ---
 
 
 # memory-system-implementation
 
-## Core Memory System Components
+## Core Memory System Components (Importance Score: 95)
 
-### Memory Storage and Retrieval
-**Path:** `src/zerozen/memory/api.py`
-- Memory class manages conversation storage using LanceDB backend
-- Implements schema handling for conversational data persistence
-- Provides semantic search capabilities across stored conversations
-- Importance Score: 85
+File: `src/zerozen/memory/api.py`
+- LanceDB integration for vector storage of conversations
+- Schema definition for conversation data storage
+- Memory management interface for storing/retrieving chat history
+- Conversation context maintenance and retrieval mechanisms
 
-### Embedding Generation
-**Path:** `src/zerozen/memory/embedding.py`
-- Implements SentenceTransformerEmbeddings for conversation vectorization
-- Handles text-to-vector conversion for semantic search functionality
-- Configures embedding parameters for memory storage optimization
-- Importance Score: 80
+## Embedding Generation (Importance Score: 85)
 
-### Memory Agent Implementation
-**Path:** `src/zerozen/agenthub/memagent.py`
-- Specialized agent for memory operations and retrieval
-- Handles contextual search through conversation history
-- Implements memory-augmented response generation
-- Importance Score: 75
+File: `src/zerozen/memory/embedding.py`
+- Text-to-vector conversion for semantic storage
+- Embedding functions for conversation content
+- Vector representation management for efficient searching
+- Integration with transformer models for embedding generation
 
-### Conversation Storage Schema
-**Path:** `memory-dev.ipynb`
-- Defines conversation storage structure in LanceDB
-- Implements full conversation retrieval mechanisms
-- Manages vector storage for semantic querying
-- Importance Score: 70
+## Memory Tools Interface (Importance Score: 80)
 
-## Memory Integration Points
+File: `src/zerozen/memory/tools.py`
+- Tool functions for agent interaction with memory system
+- Search capabilities across conversation history
+- Memory addition and retrieval operations
+- Context-aware response generation support
 
-### Memory Tools
-**Path:** `src/zerozen/memory/tools.py`
-- Implements memory search functionality
-- Provides tools for conversation addition and retrieval
-- Handles memory context management
-- Importance Score: 65
+## Memory Agent Implementation (Importance Score: 85)
 
-### Vector Database Operations
-- LanceDB table management for conversation storage
-- Vector similarity search implementation
-- Conversation embedding storage and indexing
-- Importance Score: 75
+File: `src/zerozen/agenthub/memagent.py`
+- Specialized agent for memory operations
+- Integration with memory tools for conversation management
+- Search and retrieval functionality for historical context
+- Conversation storage and indexing logic
 
-## Memory System Workflow
+## Semantic Search Components (Importance Score: 90)
 
-### Conversation Processing
-- Converts user-agent interactions into storable format
-- Generates embeddings for new conversations
-- Updates memory context with recent interactions
-- Importance Score: 70
+Files: `memory-dev.ipynb`, `src/zerozen/memory/api.py`
+- Vector-based semantic search implementation
+- Query processing for conversation retrieval
+- Relevance scoring for search results
+- Context matching algorithms for conversation lookups
 
-### Semantic Search Implementation
-- Vector-based similarity search across stored conversations
-- Contextual relevance scoring for search results
-- Memory-augmented response generation
-- Importance Score: 85
+## Memory Storage Schema (Importance Score: 75)
+
+- Conversation data structure definitions
+- User input and agent response storage format
+- Metadata management for conversations
+- Indexing structure for efficient retrieval
 
 $END$
 

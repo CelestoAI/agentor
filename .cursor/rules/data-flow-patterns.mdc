@@ -1,76 +1,51 @@
 ---
-description: Documents the data flow patterns between components including agent communication, memory systems, and external service integration.
+description: Documents data flow patterns between components, agent communication, memory systems, and external service integrations
 ---
 
 
 # data-flow-patterns
 
-### Core Data Flow Components
+Key data flow patterns in the system:
 
-1. Agent Communication Pattern
-- Primary flow between `Agent` class (`agents.py`) and specialized agents
-- Agents exchange context and responses through structured message passing
-- Memory agent (`memagent.py`) retrieves relevant conversation history
-- Google agent (`google_agent.py`) handles service-specific operations
-- Importance Score: 85
+1. Memory System Data Flow (Importance Score: 85)
+`src/zerozen/memory/api.py`, `src/zerozen/memory/embedding.py`
 
-2. Memory System Integration
-```
-User Query -> Agent -> Memory System -> Vector DB -> Response
-```
-- `Memory` class (`memory/api.py`) manages conversation storage/retrieval
-- Embedding system (`memory/embedding.py`) converts text to vectors
-- LanceDB integration for semantic search capabilities
-- Memory tools provide agent access to historical context
-- Importance Score: 80
+- Conversation data flows from agents to LanceDB storage through memory management layer
+- Text is converted to vector embeddings before storage
+- Memory retrieval flows through semantic search against stored embeddings
+- Historical context flows back to agents during conversations
 
-3. Google Services Data Flow
-```
-Agent -> Google OAuth -> Service APIs -> Response
-```
-- `GmailService` and `CalendarService` handle API communication
-- Credential management through `CredentialRecord` system
-- OAuth flow manages token refresh and storage
-- Results transformed into agent-compatible formats
-- Importance Score: 75
+2. Google Service Integration Flow (Importance Score: 90)
+`src/zerozen/integrations/google/google_agent.py`, `src/zerozen/integrations/google/gmail_tool.py`
 
-4. Chat Interface Data Flow
-```
-User Input -> Agent Hub -> Specialized Agents -> Memory -> Response
-```
-- Chat interface (`chat.py`) streams responses
-- Agent hub (`agenthub/main.py`) routes to specialized agents
-- Context maintained through `AppContext` dataclass
-- Responses formatted through output formatter
-- Importance Score: 70
+- OAuth credentials flow from credential manager to service tools
+- Email/calendar data flows from Google APIs through tool layer to agent
+- Agent responses flow back through privacy filters for content redaction
+- User consent checks gate access to sensitive content flows
 
-### Key Integration Points
+3. Agent Communication Patterns (Importance Score: 95)
+`src/zerozen/agents.py`, `src/zerozen/agenthub/memagent.py`
 
-1. Memory-Agent Interface
-- Memory tools expose search and retrieval methods
-- Agents query memory system using semantic search
-- Conversation history maintained across sessions
-- Importance Score: 75
+- Tool function results flow to agents for decision making
+- Context and historical data flows from memory system to agents
+- Agent outputs flow through formatting layer before user presentation
+- Inter-agent communication flows through structured message passing
 
-2. External Service Integration
-- Google services accessed through dedicated tools
-- OAuth credentials managed centrally
-- Service responses normalized for agent consumption
-- Importance Score: 70
+4. External Service Data Exchange (Importance Score: 80)
+`src/zerozen/integrations/google/calendar_tool.py`, `src/zerozen/integrations/google/gmail_tool.py`
 
-### Data Storage Patterns
+- Calendar events flow through timezone conversion pipeline
+- Email content flows through summarization and redaction filters
+- Search queries flow through scope validation checks
+- API responses flow through retry/backoff handling layer
 
-1. Conversation Storage
-- Vector embeddings stored in LanceDB
-- Contextual metadata maintained with conversations
-- Historical data indexed for semantic search
-- Importance Score: 65
+5. Memory Tool Integration Flow (Importance Score: 75)
+`src/zerozen/memory/tools.py`, `src/zerozen/agenthub/memagent.py`
 
-2. Credential Management
-- OAuth tokens stored securely
-- User provider metadata tracked
-- Automatic refresh handling
-- Importance Score: 60
+- Search queries flow from agents to memory system
+- Conversation context flows from memory to active sessions
+- New interactions flow to memory storage through embedding pipeline
+- Retrieved context flows through relevance filtering
 
 $END$
 

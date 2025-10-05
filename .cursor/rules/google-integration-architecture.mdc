@@ -1,63 +1,51 @@
 ---
-description: Specifies Google service integration architecture including OAuth, credentials, and Gmail/Calendar tools implementation
+description: Specification for Google service integrations including OAuth, Gmail and Calendar functionality
 ---
 
 
 # google-integration-architecture
 
-## Core Integration Components
+The Google integration architecture consists of three main components:
 
-### Credential Management (75)
-- Path: `src/zerozen/integrations/google/creds.py`
-- Manages OAuth authentication flow and credential persistence
-- Implements `CredentialRecord` for storing user-specific Google access tokens
-- Handles token refresh and secure local storage of credentials
-- Maintains `UserProviderMetadata` for provider-specific authentication details
+1. OAuth Credential Management (Importance Score: 90)
+- Implements desktop and service-based authentication flows
+- Handles automatic credential refresh and secure storage
+- Manages OAuth scopes for Gmail and Calendar access
+- File: `src/zerozen/integrations/google/creds.py`
 
-### Gmail Integration (80)
-- Path: `src/zerozen/integrations/google/gmail_tool.py`
-- `GmailService` provides domain-specific email operations
-- Implements specialized email search and retrieval functionality
-- Handles Gmail-specific message formats and threading
+2. Service-Specific Tools (Importance Score: 85)
 
-### Calendar Integration (80)
-- Path: `src/zerozen/integrations/google/calendar_tool.py`
-- `CalendarService` manages calendar-specific operations
-- Provides event scheduling and retrieval capabilities
-- Handles calendar-specific data formats and recurring event logic
+Gmail Integration:
+- Email search, listing and retrieval capabilities
+- Privacy-focused content summarization and redaction
+- Consent management for email body access
+File: `src/zerozen/integrations/google/gmail_tool.py`
 
-### Google Agent (85)
-- Path: `src/zerozen/integrations/google/google_agent.py`
-- Specialized agent for Google service orchestration
-- Coordinates between Gmail and Calendar tools
-- Manages context switching between different Google services
-- Implements service-specific conversation handling
+Calendar Integration:
+- Event listing and retrieval functionality
+- Timezone-aware date handling
+- Calendar query operations
+File: `src/zerozen/integrations/google/calendar_tool.py`
 
-### Integration Entry Points
+3. Google Agent Implementation (Importance Score: 95)
+- Specialized agent combining Gmail and Calendar capabilities
+- System prompt defining service interaction boundaries
+- Privacy-preserving data access patterns
+- Tool functions for email and calendar operations
+File: `src/zerozen/integrations/google/google_agent.py`
 
-#### Desktop OAuth Flow (70)
-- Path: `examples/desktop_oauth_demo.py`
-- Implements desktop-specific OAuth authentication flow
-- Handles local credential storage and refresh
+Core Integration Flows:
+- OAuth authentication and token management
+- Service scope validation and access control
+- Secure credential storage and refresh
+- Privacy-focused data retrieval and presentation
+- Agent-based service interaction orchestration
 
-#### Google Agent Demo (65)
-- Path: `examples/google_agent_demo.py`
-- Demonstrates integrated usage of Gmail and Calendar services
-- Shows cross-service functionality and context management
-
-## Service Architecture
-
-### Main Integration Hub (75)
-- Path: `src/zerozen/integrations/google/main.py`
-- Centralizes Google service initialization
-- Manages service dependencies and configuration
-- Coordinates credential sharing between services
-
-### Tool Integration (70)
-- Path: `src/zerozen/integrations/google/google_backend_tool.py`
-- Provides backend integration points for Google services
-- Implements service-specific error handling and retry logic
-- Manages service quotas and rate limiting
+The architecture emphasizes:
+- Secure authentication and authorization
+- Privacy-preserving data access
+- Unified service interaction model
+- Context-aware agent capabilities
 
 $END$
 

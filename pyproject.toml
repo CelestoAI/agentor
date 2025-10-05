@@ -26,7 +26,6 @@ dependencies = [
     "pandas>=2.3.2",
     "typeguard>=4.4.4",
 ]
-license = "Apache 2.0"
 license-files = ["LICENSE"]
 authors = [
     { name="Aniket Maurya", email="aniket@celesto.ai" }

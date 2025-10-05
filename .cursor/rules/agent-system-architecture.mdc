@@ -1,80 +1,48 @@
 ---
-description: Documentation for agent system architecture including agent types, handoffs, tools, and request routing
+description: Specification for agent system architecture including agent types, handoff mechanisms, tool integration, and request routing.
 ---
 
 
 # agent-system-architecture
 
-## Core Agent System
+The agent system architecture consists of several specialized agents and integration layers:
 
-The agent architecture consists of specialized agents coordinated through a hub system:
+1. Core Agent Framework (Importance Score: 95)
+File: `src/zerozen/agents.py`
+- Domain-specific agent types with tool integration capabilities
+- Request routing and triage system for handling different query types
+- Tool function registration and validation system
 
-### Primary Agent Types (Importance: 90)
-- Main Orchestrator Agent (`agenthub/main.py`)
-  - Routes requests to specialized agents
-  - Manages context and state between agent handoffs
-  - Coordinates multi-agent workflows
+2. Google Integration Agent (Importance Score: 90) 
+File: `src/zerozen/integrations/google/google_agent.py`
+- Specialized agent for Gmail and Calendar operations
+- Tool integration patterns for email and calendar access
+- Privacy-aware content handling with summarization and redaction
+- User consent management for sensitive operations
 
-- Memory Agent (`agenthub/memagent.py`)
-  - Handles conversation history retrieval
-  - Maintains context across sessions
-  - Provides relevant historical information to other agents
+3. Memory Agent System (Importance Score: 85)
+Files: 
+- `src/zerozen/agenthub/memagent.py`
+- `src/zerozen/memory/api.py`
+- Context-aware conversation management
+- Integration with LanceDB for conversation storage
+- Tool functions for memory search and retrieval
+- Embedding-based semantic search capabilities
 
-- Google Integration Agent (`integrations/google/google_agent.py`)
-  - Manages Gmail and Calendar operations
-  - Handles OAuth authentication flows
-  - Provides tool access for email and calendar queries
+4. Web Search Agent (Importance Score: 80)
+File: `src/zerozen/agenthub/web_search.py`
+- Integration with web search capabilities
+- Result filtering and relevance scoring
+- Context preservation across search operations
 
-### Agent Handoff System (Importance: 85)
-Located in `src/zerozen/agents.py`:
-- Dynamic agent switching based on request type
-- Context preservation during handoffs
-- Tool permission management between agents
-- State synchronization during transitions
-
-### Tool Integration Pattern (Importance: 80)
-- Tools are packaged as service classes:
-  - `GmailService` - Email operations
-  - `CalendarService` - Calendar management
-  - Memory tools for context storage/retrieval
-- Agents access tools through standardized interfaces
-- Tool state persists across agent handoffs
-
-### Request Triage System (Importance: 75)
-- Initial request analysis in main hub
-- Request classification by domain and intent
-- Dynamic tool allocation based on request type
-- Priority-based routing for concurrent requests
-
-## Agent Workflows
-
-### Core Processing Flow (Importance: 85)
-1. Request received by main agent
-2. Context loaded from memory agent
-3. Tool requirements determined
-4. Request routed to specialized agent
-5. Results aggregated and returned
-
-### Integration Points (Importance: 70)
-- Memory system interface for context storage
-- Google API integration for service access
+5. Agent Hub Architecture (Importance Score: 85)
+File: `src/zerozen/agenthub/main.py`
+- Central coordination of multiple agent types
+- Request routing and agent handoff mechanisms
+- Tool sharing and permission management
 - Cross-agent communication protocols
-- Tool state synchronization
 
-File Paths:
-```
-src/zerozen/
-  ├── agents.py
-  ├── agenthub/
-  │   ├── main.py
-  │   ├── memagent.py
-  │   └── web_search.py
-  └── integrations/
-      └── google/
-          ├── google_agent.py
-          ├── gmail_tool.py
-          └── calendar_tool.py
-```
+The architecture supports dynamic tool registration, agent specialization, and contextual handoffs between different agent types based on request characteristics.
 
 $END$
 
