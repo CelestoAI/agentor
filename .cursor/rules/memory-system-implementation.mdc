@@ -1,56 +1,46 @@
 ---
-description: Specification for memory system implementation, including embedding generation, storage, and semantic search functionality
+description: Documentation for memory system including embedding generation, LanceDB integration, and conversation storage/retrieval mechanisms
 ---
 
 
 # memory-system-implementation
 
-## Core Memory System Components (Importance Score: 95)
+## Core Memory Components
 
-File: `src/zerozen/memory/api.py`
-- LanceDB integration for vector storage of conversations
-- Schema definition for conversation data storage
-- Memory management interface for storing/retrieving chat history
-- Conversation context maintenance and retrieval mechanisms
+### Conversational Memory Store (Importance Score: 95)
+- `src/agentor/memory/api.py`
+- LanceDB-based memory system for storing and retrieving conversational context
+- Custom schema for conversation storage including metadata, timestamps, and embedding vectors
+- Semantic search capabilities for finding relevant historical conversations
+- Maintains conversation threads and context across multiple interactions
 
-## Embedding Generation (Importance Score: 85)
+### Embedding Generation System (Importance Score: 85)
+- `src/agentor/memory/embedding.py`
+- Custom embedding function using sentence transformers
+- Converts conversational text into vector representations
+- Enables semantic similarity searches across stored conversations
+- Maintains embedding consistency for memory retrieval operations
 
-File: `src/zerozen/memory/embedding.py`
-- Text-to-vector conversion for semantic storage
-- Embedding functions for conversation content
-- Vector representation management for efficient searching
-- Integration with transformer models for embedding generation
-
-## Memory Tools Interface (Importance Score: 80)
-
-File: `src/zerozen/memory/tools.py`
-- Tool functions for agent interaction with memory system
-- Search capabilities across conversation history
-- Memory addition and retrieval operations
-- Context-aware response generation support
-
-## Memory Agent Implementation (Importance Score: 85)
-
-File: `src/zerozen/agenthub/memagent.py`
+### Memory Agent Implementation (Importance Score: 90)
+- `src/agentor/agenthub/memagent.py`
 - Specialized agent for memory operations
-- Integration with memory tools for conversation management
-- Search and retrieval functionality for historical context
-- Conversation storage and indexing logic
+- Tools for searching, retrieving, and adding to conversation memory
+- Handles memory context maintenance during agent handoffs
+- Manages conversation threading and relevance scoring
 
-## Semantic Search Components (Importance Score: 90)
+### Memory Tools (Importance Score: 80)
+- `src/agentor/memory/tools.py`
+- Implements memory_search tool for semantic querying
+- memory_get_full_conversation tool for thread retrieval
+- memory_add tool for storing new conversations
+- Context preservation tools for multi-turn dialogues
 
-Files: `memory-dev.ipynb`, `src/zerozen/memory/api.py`
-- Vector-based semantic search implementation
-- Query processing for conversation retrieval
-- Relevance scoring for search results
-- Context matching algorithms for conversation lookups
-
-## Memory Storage Schema (Importance Score: 75)
-
-- Conversation data structure definitions
-- User input and agent response storage format
-- Metadata management for conversations
-- Indexing structure for efficient retrieval
+### Memory Integration Layer (Importance Score: 75)
+- `examples/memory_agent.py`
+- Demonstrates memory system integration with agent workflows
+- Handles conversation persistence and retrieval
+- Implements memory-aware agent responses
+- Manages memory context during tool operations
 
 $END$
 

@@ -9,15 +9,16 @@ Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in m
 <img src="/assets/Agentor.png" alt="banner" width="640" />
 
 [![💻 Try CelestoAI](https://img.shields.io/badge/%F0%9F%92%BB%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)
+
 [![PyPI version](https://badge.fury.io/py/agentor.svg)](https://badge.fury.io/py/agentor)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 
 </div>
 </center>
 
-## ✨ What is ZeroZen?
+## ✨ What is Agentor?
 
-ZeroZen is an open-source framework for building AI assistants that handle your personal and professional tasks.
+Agentor is an open-source framework for building AI assistants that handle your personal and professional tasks.
 Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
 
 **🎯 Perfect for:**
@@ -105,7 +106,7 @@ ______________________________________________________________________
 
 ## 💬 Chat Interface
 
-The heart of ZeroZen is its conversational interface. Just talk to your data naturally.
+The heart of Agentor is its conversational interface. Just talk to your data naturally.
 
 ```bash
 zen chat
@@ -155,7 +156,7 @@ ______________________________________________________________________
 
 ### Python API
 
-Use ZeroZen programmatically in your own applications:
+Use Agentor programmatically in your own applications:
 
 ```python
 from agentor import agents
@@ -281,7 +282,7 @@ ______________________________________________________________________
 
 ## 🤝 Contributing
 
-We'd love your help making ZeroZen even better!
+We'd love your help making Agentor even better!
 
 ### Quick Contribution Guide
 

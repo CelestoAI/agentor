@@ -148,8 +148,8 @@ def chat(
     # Configure from CLI or env
     cfg = ChatConfig(
         show_tool_output=show_tools,
-        gmail_user_id=gmail_user_id or os.getenv("ZEROZEN_GMAIL_USER_ID"),
-        model_override=model or os.getenv("ZEROZEN_MODEL_OVERRIDE"),
+        gmail_user_id=gmail_user_id or os.getenv("AGENTOR_GMAIL_USER_ID"),
+        model_override=model or os.getenv("AGENTOR_MODEL_OVERRIDE"),
     )
 
     # Create context with optional user_id override

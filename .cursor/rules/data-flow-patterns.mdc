@@ -1,51 +1,42 @@
 ---
-description: Documents data flow patterns between components, agent communication, memory systems, and external service integrations
+description: Documents the core data flow patterns between system components, with focus on agent communication and memory system interactions
 ---
 
 
 # data-flow-patterns
 
-Key data flow patterns in the system:
+## Core Agent Communication Flow (Importance Score: 95)
+- Agent Hub (`src/agentor/agenthub/main.py`) orchestrates multi-agent communication
+- Triage agent evaluates requests and routes to specialized agents
+- Cross-agent handoff protocol enables task delegation between specialized agents
 
-1. Memory System Data Flow (Importance Score: 85)
-`src/zerozen/memory/api.py`, `src/zerozen/memory/embedding.py`
+## Memory System Data Flow (Importance Score: 90)
+`src/agentor/memory/api.py` implements:
+- Bi-directional conversation storage flow between agents and LanceDB
+- Vector embedding pipeline for semantic search capabilities
+- Contextual retrieval system for maintaining conversation history
 
-- Conversation data flows from agents to LanceDB storage through memory management layer
-- Text is converted to vector embeddings before storage
-- Memory retrieval flows through semantic search against stored embeddings
-- Historical context flows back to agents during conversations
+## Google Integration Data Pipeline (Importance Score: 85)
+`src/agentor/integrations/google/google_agent.py`:
+- OAuth credential flow management for Google services
+- Bi-directional data synchronization with Gmail/Calendar APIs
+- Read-only data access patterns for privacy protection
 
-2. Google Service Integration Flow (Importance Score: 90)
-`src/zerozen/integrations/google/google_agent.py`, `src/zerozen/integrations/google/gmail_tool.py`
+## Agent-Memory Interaction Pattern (Importance Score: 80)
+`src/agentor/agenthub/memagent.py`:
+- Memory agent handles persistent storage requests
+- Conversation embedding and indexing workflow
+- Context retrieval pattern for maintaining conversation state
 
-- OAuth credentials flow from credential manager to service tools
-- Email/calendar data flows from Google APIs through tool layer to agent
-- Agent responses flow back through privacy filters for content redaction
-- User consent checks gate access to sensitive content flows
+## External Service Integration Flow (Importance Score: 75)
+- Standardized tool integration pattern for external services
+- Credential management flow for service authentication
+- Service-specific data transformation pipelines
 
-3. Agent Communication Patterns (Importance Score: 95)
-`src/zerozen/agents.py`, `src/zerozen/agenthub/memagent.py`
-
-- Tool function results flow to agents for decision making
-- Context and historical data flows from memory system to agents
-- Agent outputs flow through formatting layer before user presentation
-- Inter-agent communication flows through structured message passing
-
-4. External Service Data Exchange (Importance Score: 80)
-`src/zerozen/integrations/google/calendar_tool.py`, `src/zerozen/integrations/google/gmail_tool.py`
-
-- Calendar events flow through timezone conversion pipeline
-- Email content flows through summarization and redaction filters
-- Search queries flow through scope validation checks
-- API responses flow through retry/backoff handling layer
-
-5. Memory Tool Integration Flow (Importance Score: 75)
-`src/zerozen/memory/tools.py`, `src/zerozen/agenthub/memagent.py`
-
-- Search queries flow from agents to memory system
-- Conversation context flows from memory to active sessions
-- New interactions flow to memory storage through embedding pipeline
-- Retrieved context flows through relevance filtering
+## Cross-Tool Intelligence Flow (Importance Score: 70)
+- Data correlation pattern between different tools
+- Context sharing mechanism between specialized agents
+- Unified response formatting pipeline for multi-source data
 
 $END$
 

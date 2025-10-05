@@ -1,48 +1,44 @@
 ---
-description: Specification for agent system architecture including agent types, handoff mechanisms, tool integration, and request routing.
+description: Documents the agent system architecture including agent types, handoff mechanisms, and request routing patterns
 ---
 
 
 # agent-system-architecture
 
-The agent system architecture consists of several specialized agents and integration layers:
+## Core Agent System (Importance Score: 95)
+`src/agentor/agenthub/main.py`
+- Multi-agent coordination system with specialized agent types
+- Triage mechanism routes requests to appropriate specialized agents
+- Dynamic agent handoff protocol enables seamless task transitions
+- Centralized context management for maintaining conversation state
 
-1. Core Agent Framework (Importance Score: 95)
-File: `src/zerozen/agents.py`
-- Domain-specific agent types with tool integration capabilities
-- Request routing and triage system for handling different query types
-- Tool function registration and validation system
+## Agent Types and Specialization (Importance Score: 90)
+`src/agentor/agents.py`, `src/agentor/integrations/google/google_agent.py`
+- Google Agent: Handles Gmail and Calendar operations with read-only constraints
+- Memory Agent: Manages contextual recall and conversation history
+- Triage Agent: Routes incoming requests to specialized agents
+- Coder Agent: Handles programming and technical requests
 
-2. Google Integration Agent (Importance Score: 90) 
-File: `src/zerozen/integrations/google/google_agent.py`
-- Specialized agent for Gmail and Calendar operations
-- Tool integration patterns for email and calendar access
-- Privacy-aware content handling with summarization and redaction
-- User consent management for sensitive operations
+## Memory Architecture (Importance Score: 85)
+`src/agentor/memory/api.py`, `src/agentor/memory/embedding.py`
+- LanceDB-based conversation storage system 
+- Vector embeddings for semantic conversation retrieval
+- Contextual memory management across agent handoffs
+- Conversation history preservation and recall
 
-3. Memory Agent System (Importance Score: 85)
-Files: 
-- `src/zerozen/agenthub/memagent.py`
-- `src/zerozen/memory/api.py`
-- Context-aware conversation management
-- Integration with LanceDB for conversation storage
-- Tool functions for memory search and retrieval
-- Embedding-based semantic search capabilities
+## Integration Patterns (Importance Score: 80)
+`src/agentor/integrations/google/main.py`
+- OAuth-based service integration framework
+- Tool-based agent capability system
+- Privacy-first data access patterns
+- Cross-tool intelligence coordination
 
-4. Web Search Agent (Importance Score: 80)
-File: `src/zerozen/agenthub/web_search.py`
-- Integration with web search capabilities
-- Result filtering and relevance scoring
-- Context preservation across search operations
-
-5. Agent Hub Architecture (Importance Score: 85)
-File: `src/zerozen/agenthub/main.py`
-- Central coordination of multiple agent types
-- Request routing and agent handoff mechanisms
-- Tool sharing and permission management
-- Cross-agent communication protocols
-
-The architecture supports dynamic tool registration, agent specialization, and contextual handoffs between different agent types based on request characteristics.
+## Request Routing System (Importance Score: 75)
+`src/agentor/agenthub/main.py`
+- Request classification based on intent analysis
+- Dynamic agent selection logic
+- Task decomposition for multi-agent coordination
+- Context preservation during handoffs
 
 $END$
 
