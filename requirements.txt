@@ -168,9 +168,9 @@ markdown-it-py==3.0.0 \
     #   mdit-py-plugins
     #   rich
     #   textual
-mcp==1.9.3 \
-    --hash=sha256:587ba38448e81885e5d1b84055cfcc0ca56d35cd0c58f50941cab01109405388 \
-    --hash=sha256:69b0136d1ac9927402ed4cf221d4b8ff875e7132b0b06edd446448766f34f9b9
+mcp==1.10.0 \
+    --hash=sha256:91fb1623c3faf14577623d14755d3213db837c5da5dae85069e1b59124cbe0e9 \
+    --hash=sha256:925c45482d75b1b6f11febddf9736d55edf7739c7ea39b583309f6651cbc9e5c
     # via fastmcp
 mdit-py-plugins==0.4.2 \
     --hash=sha256:0c673c3f889399a33b95e88d2f0d111b4447bdfea7f237dab2d488f459835636 \
