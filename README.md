@@ -17,12 +17,13 @@ Connect AI Agents with your everyday tools — Gmail, Calendar, CRMs, and more �
 </div>
 </center>
 
-## ✨ What is Agentor?
+## ✴️ What is Agentor?
 
-Agentor is an open-source framework for building AI assistants that handle your personal and professional tasks.
-Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
+Agentor is an open-source framework that makes it easy to build multi-agent pipelines with secure integrations across email, calendars, CRMs, and more.
 
-## 🚀 Quick Start
+It lets you connect LLMs to tools — like Gmail, Google Calendar, and your CRM — securely, in just minutes.
+
+## 🚅 Quick Start
 
 <p align="center">
   🔧 <b>DIY with OSS</b> &nbsp; | &nbsp; 
@@ -34,6 +35,13 @@ Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in m
 ```bash
 pip install agentor
 ```
+
+## 🚀 Features
+
+✅ Pre-built agents with ready-to-use tools\
+🔐 Secure integrations with email, calendar, CRMs, and more\
+☁️ Easy agent deployment\
+🧩 OpenAI App SDK for rapid development
 
 ## Examples
 
@@ -51,9 +59,9 @@ pip install agentor
    - *"What meetings do I have this week?"*
    - *"Find invoices from Stripe in my Gmail"*
 
-# 🧑‍💻 Developer Experience
+## API Usage
 
-Use Agentor programmatically in your applications:
+Use Agentor using the API in your applications:
 
 ```python
 from agentor import agents
@@ -72,7 +80,13 @@ result = agents.run_sync(
 )
 ```
 
-## Secure Tool use with LLMs
+### Tool Routing with AgentMCP
+
+Adding multiple tools directly to a single Agent can bloat the LLM’s context and degrade performance. Agentor solves this with `AgentMCP` — a unified interface that aggregates all your tools under one connection to the LLM.
+
+From the model’s perspective, there’s just one tool; `AgentMCP` automatically routes each request to the appropriate underlying tool based on context.
+
+### Secure Tool use with LLMs
 
 You can direcrly use the underlying tools and services without using LLMs such as search through emails and calendar events.
 
@@ -87,7 +101,23 @@ gmail = GmailService(creds)
 messages = gmail.search_messages(query="from:github.com", limit=10)
 ```
 
-## Building Public Applications with OAuth
+## 🔐 Security & Privacy
+
+**🛡️ Your data stays yours:**
+
+- **Local credentials** - Stored securely on your machine
+- **No data collection** - We don't see your emails or calendar
+- **Open source** - Audit the code yourself
+- **Standard OAuth** - Uses Google's official authentication
+
+**🔒 Credential management:**
+
+- Automatic token refresh
+- Secure local storage
+- Per-user isolation
+- Configurable file paths
+
+### Tool-use and Security
 
 If you are building an application which is used by multiple public users, it's recommended to authenticate them using OAuth to access their data. For example, you can build a public application which allows users to search through their emails and calendar events.
 
@@ -117,22 +147,6 @@ user_creds = CredentialRecord(
 # Use with any tool
 gmail = GmailService(user_creds)
 ```
-
-## 🔐 Security & Privacy
-
-**🛡️ Your data stays yours:**
-
-- **Local credentials** - Stored securely on your machine
-- **No data collection** - We don't see your emails or calendar
-- **Open source** - Audit the code yourself
-- **Standard OAuth** - Uses Google's official authentication
-
-**🔒 Credential management:**
-
-- Automatic token refresh
-- Secure local storage
-- Per-user isolation
-- Configurable file paths
 
 ## 🛣️ Roadmap
 
