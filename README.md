@@ -7,10 +7,7 @@
 <h2>Fastest way to build, prototype and deploy AI Agents.</h2>
 Connect AI Agents with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
 
-
 <img src="/assets/Agentor.png" alt="banner" width="640" />
-
-
 
 [![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)
 
@@ -24,7 +21,6 @@ Connect AI Agents with your everyday tools — Gmail, Calendar, CRMs, and more �
 
 Agentor is an open-source framework for building AI assistants that handle your personal and professional tasks.
 Connect it with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
-
 
 ## 🚀 Quick Start
 
@@ -55,34 +51,6 @@ pip install agentor
    - *"What meetings do I have this week?"*
    - *"Find invoices from Stripe in my Gmail"*
 
-
-#### Setup Gmail and Calendar integration
-
-The `agentor setup-google` command guides you through:
-
-1. **Creating Google Cloud Project** (if needed)
-1. **Enabling APIs** (Gmail, Calendar)
-1. **OAuth credentials** (desktop app)
-1. **Browser authentication** (automatic)
-1. **Credential storage** (secure, local)
-
-**1. First run:**
-
-```bash
-agentor setup-google
-# ✅ Opens browser for one-time authentication
-# ✅ Saves credentials locally
-# ✅ Ready to use!
-```
-
-**2. Already set up:**
-
-```bash
-agentor setup-google
-# ✅ Google credentials already exist
-# Use --force to re-authenticate
-```
-
 # 🧑‍💻 Developer Experience
 
 Use Agentor programmatically in your applications:
@@ -104,7 +72,7 @@ result = agents.run_sync(
 )
 ```
 
-## Use Tools & Services without LLMs
+## Secure Tool use with LLMs
 
 You can direcrly use the underlying tools and services without using LLMs such as search through emails and calendar events.
 
@@ -122,7 +90,6 @@ messages = gmail.search_messages(query="from:github.com", limit=10)
 ## Building Public Applications with OAuth
 
 If you are building an application which is used by multiple public users, it's recommended to authenticate them using OAuth to access their data. For example, you can build a public application which allows users to search through their emails and calendar events.
-
 
 ```python
 from agentor.integrations.google import CredentialRecord, UserProviderMetadata, UserInfo
@@ -151,29 +118,6 @@ user_creds = CredentialRecord(
 gmail = GmailService(user_creds)
 ```
 
-
-## 🔧 Configuration
-
-### CLI Options
-
-You can use the following CLI options to configure the Agentor CLI.
-
-```bash
-agentor chat --help
-```
-
-### Environment Variables
-
-```bash
-# Optional: Set default model
-export OPENAI_MODEL=gpt-4o
-
-# Optional: Custom credential paths
-agentor setup-google --credentials-file /path/to/creds.json
-agentor setup-google --user-storage /path/to/user-creds.json
-```
-
-
 ## 🔐 Security & Privacy
 
 **🛡️ Your data stays yours:**
@@ -190,7 +134,6 @@ agentor setup-google --user-storage /path/to/user-creds.json
 - Per-user isolation
 - Configurable file paths
 
-
 ## 🛣️ Roadmap
 
 | Feature | Status | Description |
@@ -203,10 +146,10 @@ agentor setup-google --user-storage /path/to/user-creds.json
 | Calendar Management | ✅ | Create, update events |
 | **Email Actions** | 🔜 | Draft, reply, send emails |
 | **Slack Integration** | 🔜 | Team communication |
+| **HubSpot Integration** | 🔜 | HubSpot CRM integration |
 | **Document AI** | 🔜 | Google Docs, Sheets analysis |
 | **Multi-user Support** | 🔜 | Team deployments |
-| **Plugin System** | 🔮 | Custom integrations |
-
+| **Community plugins** | 🔮 | Custom integrations |
 
 ## 🤝 Contributing
 
