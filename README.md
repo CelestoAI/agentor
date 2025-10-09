@@ -41,7 +41,7 @@ pip install agentor
 
 ## Examples
 
-### Chat with email and calendar (2 minutes)
+### Chat with email and calendar
 
 1. **Start chatting with your data**:
 
@@ -66,7 +66,7 @@ The `agentor setup-google` command guides you through:
 1. **Browser authentication** (automatic)
 1. **Credential storage** (secure, local)
 
-**First run:**
+**1. First run:**
 
 ```bash
 agentor setup-google
@@ -75,7 +75,7 @@ agentor setup-google
 # ✅ Ready to use!
 ```
 
-**Already set up:**
+**2. Already set up:**
 
 ```bash
 agentor setup-google
@@ -100,7 +100,7 @@ print(result)
 result = agents.run_sync(
     "What's my schedule conflicts next week?",
     tools=["list_calendar_events", "search_gmail"],
-    model="gpt-4o",  # Optional model override
+    model="gpt-5-mini",  # Optional model override
 )
 ```
 
@@ -151,7 +151,6 @@ user_creds = CredentialRecord(
 gmail = GmailService(user_creds)
 ```
 
----
 
 ## 🔧 Configuration
 
@@ -174,7 +173,6 @@ agentor setup-google --credentials-file /path/to/creds.json
 agentor setup-google --user-storage /path/to/user-creds.json
 ```
 
----
 
 ## 🔐 Security & Privacy
 
@@ -192,7 +190,6 @@ agentor setup-google --user-storage /path/to/user-creds.json
 - Per-user isolation
 - Configurable file paths
 
----
 
 ## 🛣️ Roadmap
 
@@ -210,64 +207,10 @@ agentor setup-google --user-storage /path/to/user-creds.json
 | **Multi-user Support** | 🔜 | Team deployments |
 | **Plugin System** | 🔮 | Custom integrations |
 
----
 
 ## 🤝 Contributing
 
-We'd love your help making Agentor even better!
-
-### Quick Contribution Guide
-
-1. **🍴 Fork & Clone**
-
-   ```bash
-   git clone https://github.com/CelestoAI/agentor.git
-   cd agentor
-   ```
-
-1. **🔧 Development Setup**
-
-   ```bash
-   # Create virtual environment
-   python -m venv .venv
-   source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
-
-   # Install in development mode
-   pip install -e .
-
-   # Install development dependencies
-   pip install pytest ruff black
-   ```
-
-1. **🧪 Run Tests**
-
-   ```bash
-   pytest tests/
-   ```
-
-1. **🎯 Make Changes & Test**
-
-   ```bash
-   # Test your changes
-   agentor setup-google
-   agentor chat
-
-   # Run linters
-   ruff check .
-   black .
-   ```
-
-1. **📝 Submit PR**
-
-### Areas We Need Help
-
-- **🔌 New integrations** (Slack, Linear, Notion)
-- **🎨 UI improvements** (better formatting, themes)
-- **📚 Documentation** (examples, guides)
-- **🧪 Testing** (edge cases, error handling)
-- **🌍 Internationalization** (non-English support)
-
----
+We'd love your help making Agentor even better! Please read our [Contributing Guidelines](.github/CONTRIBUTING.md) and [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
 ## 🙏 Acknowledgments
 
@@ -282,8 +225,6 @@ We'd love your help making Agentor even better!
 
 - The open-source community for inspiration and contributions
 - Early beta testers for valuable feedback
-
-______________________________________________________________________
 
 ## 📄 License
 
