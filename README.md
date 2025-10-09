@@ -36,14 +36,7 @@ It lets you connect LLMs to tools — like Gmail, Google Calendar, and your CRM 
 pip install agentor
 ```
 
-## 🚀 Features
-
-✅ Pre-built agents with ready-to-use tools\
-🔐 Secure integrations with email, calendar, CRMs, and more\
-☁️ Easy agent deployment\
-🧩 OpenAI App SDK for rapid development
-
-## Examples
+## Example
 
 ### Chat with email and calendar
 
@@ -59,7 +52,7 @@ pip install agentor
    - *"What meetings do I have this week?"*
    - *"Find invoices from Stripe in my Gmail"*
 
-## API Usage
+### API Usage
 
 Use Agentor using the API in your applications:
 
@@ -79,6 +72,14 @@ result = agents.run_sync(
     model="gpt-5-mini",  # Optional model override
 )
 ```
+
+## 🚀 Features
+
+✅ Pre-built agents with ready-to-use tools\
+🔐 Secure integrations with email, calendar, CRMs, and more\
+☁️ Easy agent deployment\
+🦾 AgentMCP - Tool routing
+🧩 OpenAI App SDK for rapid development
 
 ### Tool Routing with AgentMCP
 
