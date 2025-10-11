@@ -7,7 +7,7 @@
 <h2>Fastest way to build, prototype and deploy AI Agents.</h2>
 Connect AI Agents with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
 
-<img src="/assets/Agentor.png" alt="banner" width="640" />
+<img src="/assets/celesto.png" alt="banner" width="640" />
 
 [![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)
 
