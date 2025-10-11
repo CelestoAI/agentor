@@ -13,7 +13,7 @@ def client():
     return CelestoSDK(CELESTO_API_TOKEN, base_url="http://localhost:8500/v1")
 
 
-@pytest.mark.skipif(not CELESTO_API_TOKEN)
+@pytest.mark.skipif(not CELESTO_API_TOKEN, reason="API token not set")
 def test_list_tools(client):
     response = client.toolhub.list_tools()
     assert len(response["tools"]) > 1, f"No tools found - {response}"
