@@ -9,11 +9,12 @@
 <p align="center">
 
 [![💻 Try Celesto AI](https://img.shields.io/badge/💻_Try_CelestoAI-Click_Here-ff6b2c?style=flat)](https://celesto.ai)
-[![PyPI version](https://img.shields.io/pypi/v/agentor.svg?color=brightgreen&label=PyPI&style=flat)](https://badge.fury.io/py/agentor)
+[![PyPI version](https://img.shields.io/pypi/v/agentor.svg?color=brightgreen&label=PyPI&style=flat)](https://pypi.org/project/agentor/)
+[![Tests](https://github.com/CelestoAI/agentor/actions/workflows/test.yml/badge.svg)](https://github.com/CelestoAI/agentor/actions/workflows/test.yml)
+[![Downloads](https://img.shields.io/pypi/dm/agentor.svg?label=Downloads&color=ff6b2c&style=flat)](https://pypi.org/project/agentor/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-yellow?style=flat)](https://opensource.org/licenses/Apache-2.0)
 
 </p>
-
 
 ## What is Agentor?
 
