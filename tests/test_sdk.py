@@ -14,5 +14,5 @@ def client():
 
 
 def test_list_tools(client):
-    response = client.list_tools()
+    response = client.toolhub.list_tools()
     assert len(response["tools"]) > 1, f"No tools found - {response}"
