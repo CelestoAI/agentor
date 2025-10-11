@@ -1,18 +1,19 @@
 <center>
 
 <div align="center">
-  <h1>✴️ Agentor</h1>
-  <p>Connect AI Agents with tools <b>securely</b> — Gmail, Calendar, CRMs, and more — in minutes.</p>
+  <h1>Fastest way to build, prototype and deploy AI Agents with tools <mark><i>securely</i></mark></h1>
   <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/celesto.png" alt="banner" />
-<h2>Fastest way to build, prototype and deploy AI Agents.</h2>
-
-[![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)
-
-[![PyPI version](https://badge.fury.io/py/agentor.svg)](https://badge.fury.io/py/agentor)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
-
 </div>
 </center>
+
+<p align="center">
+
+[![💻 Try Celesto AI](https://img.shields.io/badge/💻_Try_CelestoAI-Click_Here-ff6b2c?style=flat)](https://celesto.ai)
+[![PyPI version](https://img.shields.io/pypi/v/agentor.svg?color=brightgreen&label=PyPI&style=flat)](https://badge.fury.io/py/agentor)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-yellow?style=flat)](https://opensource.org/licenses/Apache-2.0)
+
+</p>
+
 
 ## What is Agentor?
 
@@ -75,7 +76,7 @@ result = agents.run_sync(
 ✅ Pre-built agents with ready-to-use tools\
 🔐 Secure integrations with email, calendar, CRMs, and more\
 ☁️ Easy agent deployment\
-🦾 AgentMCP - Tool routing
+🦾 AgentMCP - Tool routing\
 🧩 OpenAI App SDK for rapid development
 
 ### Tool Routing with AgentMCP
