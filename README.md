@@ -1,12 +1,10 @@
 <center>
 
 <div align="center">
-<h1>Agentor</h1>
+  <h1>✴️ Agentor</h1>
+  <p>Connect AI Agents with tools <b>securely</b> — Gmail, Calendar, CRMs, and more — in minutes.</p>
+  <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/celesto.png" alt="banner" />
 <h2>Fastest way to build, prototype and deploy AI Agents.</h2>
-
-<p>Connect AI Agents with tools <b>securely</b> — Gmail, Calendar, CRMs, and more — in minutes.</p>
-
-<img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/celesto.png" alt="banner" />
 
 [![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB%20Try%20CelestoAI-Click%20Here-blue?style=for-the-badge)](https://celesto.ai)
 
@@ -16,7 +14,7 @@
 </div>
 </center>
 
-## ✴️ What is Agentor?
+## What is Agentor?
 
 Agentor is an open-source framework that makes it easy to build multi-agent pipelines with secure integrations across email, calendars, CRMs, and more.
 
