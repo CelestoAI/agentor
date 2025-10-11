@@ -1,11 +1,10 @@
 <center>
 
 <div align="center">
-
 <h1>Agentor</h1>
-
 <h2>Fastest way to build, prototype and deploy AI Agents.</h2>
-Connect AI Agents with your everyday tools — Gmail, Calendar, CRMs, and more — in minutes.
+
+<p>Connect AI Agents with tools <b>securely</b> — Gmail, Calendar, CRMs, and more — in minutes.</p>
 
 <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/celesto.png" alt="banner" />
 
