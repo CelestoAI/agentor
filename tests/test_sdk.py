@@ -19,6 +19,7 @@ def test_list_tools(client):
     assert len(response["tools"]) > 1, f"No tools found - {response}"
 
 
+@pytest.mark.skipif(not CELESTO_API_TOKEN, reason="API token not set")
 def test_current_weather(client):
     response = client.toolhub.run_weather_tool("London")
     assert response["error"] is None, f"error - {response['error']}"
