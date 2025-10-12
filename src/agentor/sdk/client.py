@@ -10,6 +10,8 @@ class _BaseConnection:
         self.base_url = base_url or self._BASE_URL
         if not api_key:
             raise ValueError("token is required.")
+        self.api_key = api_key
+        self.session = httpx.Client(cookies={"access_token": api_key})
 
 
 class _BaseClient:
@@ -20,14 +22,24 @@ class _BaseClient:
     def base_url(self):
         return self._base_connection.base_url
 
+    @property
+    def api_key(self):
+        return self._base_connection.api_key
+
+    @property
+    def session(self):
+        return self._base_connection.session
+
 
 class ToolHub(_BaseClient):
     def list_tools(self) -> List[dict[str, str]]:
-        return httpx.get(f"{self.base_url}/toolhub/list").json()
+        return self.session.get(f"{self.base_url}/toolhub/list").json()
 
     def run_weather_tool(self, city: str) -> dict:
-        return httpx.get(
-            f"{self.base_url}/toolhub/current-weather", params={"city": city}
+        return self.session.get(
+            f"{self.base_url}/toolhub/current-weather",
+            params={"city": city},
+            cookies={"access_token": f"Bearer {self.api_key}"},
         ).json()
 
 
