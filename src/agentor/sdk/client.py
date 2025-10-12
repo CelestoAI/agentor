@@ -25,6 +25,11 @@ class ToolHub(_BaseClient):
     def list_tools(self) -> List[dict[str, str]]:
         return httpx.get(f"{self.base_url}/toolhub/list").json()
 
+    def run_weather_tool(self, city: str) -> dict:
+        return httpx.get(
+            f"{self.base_url}/toolhub/current-weather", params={"city": city}
+        ).json()
+
 
 class CelestoSDK(_BaseConnection):
     """
@@ -32,6 +37,7 @@ class CelestoSDK(_BaseConnection):
         >> from agentor import CelestoSDK
         >> client = CelestoSDK(CELESTO_API_KEY)
         >> client.toolhub.list_tools()
+        >> client.toolhub.run_current_weather_tool("London")
     """
 
     def __init__(self, api_key: str, base_url: str = None):
