@@ -43,9 +43,22 @@ class ToolHub(_BaseClient):
             params={"city": city},
         ).json()
 
-    def run_list_emails(self, limit: int = 10) -> List[dict[str, str]]:
+    def run_list_google_emails(self, limit: int = 10) -> List[dict[str, str]]:
         return self.session.get(
             f"{self.base_url}/toolhub/list_google_emails", params={"limit": limit}
+        ).json()
+
+    def run_send_google_email(
+        self, to: str, subject: str, body: str, content_type: str = "text/plain"
+    ) -> dict:
+        return self.session.post(
+            f"{self.base_url}/toolhub/send_google_email",
+            {
+                "to": to,
+                "subject": subject,
+                "body": body,
+                "content_type": content_type,
+            },
         ).json()
 
 
