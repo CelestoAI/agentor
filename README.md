@@ -1,4 +1,4 @@
-<center>
+from markdown_it.common.normalize_url import validateLink<center>
 
 <div align="center">
   <h1>Fastest way to build, prototype and deploy AI Agents with tools <mark><i>securely</i></mark></h1>
@@ -8,7 +8,7 @@
 
 <p align="center">
 
-[![💻 Try Celesto AI](https://img.shields.io/badge/💻_Try_CelestoAI-Click_Here-ff6b2c?style=flat)](https://celesto.ai)
+[![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB_Try_CelestoAI-Click_Here-ff6b2c?style=flat)](https://celesto.ai)
 [![PyPI version](https://img.shields.io/pypi/v/agentor.svg?color=brightgreen&label=PyPI&style=flat)](https://pypi.org/project/agentor/)
 [![Tests](https://github.com/CelestoAI/agentor/actions/workflows/test.yml/badge.svg)](https://github.com/CelestoAI/agentor/actions/workflows/test.yml)
 [![Downloads](https://img.shields.io/pypi/dm/agentor.svg?label=Downloads&color=ff6b2c&style=flat)](https://pypi.org/project/agentor/)
@@ -35,23 +35,9 @@ It lets you connect LLMs to tools — like Gmail, Google Calendar, and your CRM 
 pip install agentor
 ```
 
-## Example
+## Examples
 
-### Chat with email and calendar
-
-1. **Start chatting with your data**:
-
-   ```bash
-   agentor chat
-   ```
-
-1. **Ask questions like**:
-
-   - *"Show me emails from GitHub about security alerts"*
-   - *"What meetings do I have this week?"*
-   - *"Find invoices from Stripe in my Gmail"*
-
-### API Usage
+### Agents API
 
 Use Agentor using the API in your applications:
 
@@ -70,6 +56,25 @@ result = agents.run_sync(
     tools=["list_calendar_events", "search_gmail"],
     model="gpt-5-mini",  # Optional model override
 )
+```
+
+### Tool Hub (ready-to-use collection of tools)
+
+Use Celesto Tool Hub for a realtime access to weather data and 100+ tools.
+
+```python
+from agentor import CelestoSDK
+
+client = CelestoSDK(CELESTOAI_API_KEY)
+
+# List all available tools
+client.toolhub.list_tools()
+
+# Run the weather tool for a specific location
+client.toolhub.run_weather_tool("London")
+
+# Run the Google email tool
+client.toolhub.run_list_google_emails(limit=5)
 ```
 
 ## 🚀 Features
