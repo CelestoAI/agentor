@@ -11,7 +11,9 @@ class _BaseConnection:
         if not api_key:
             raise ValueError("token is required.")
         self.api_key = api_key
-        self.session = httpx.Client(cookies={"access_token": api_key})
+        self.session = httpx.Client(
+            cookies={"access_token": f"Bearer {self.api_key}"},
+        )
 
 
 class _BaseClient:
@@ -39,7 +41,11 @@ class ToolHub(_BaseClient):
         return self.session.get(
             f"{self.base_url}/toolhub/current-weather",
             params={"city": city},
-            cookies={"access_token": f"Bearer {self.api_key}"},
+        ).json()
+
+    def run_list_emails(self, limit: int = 10) -> List[dict[str, str]]:
+        return self.session.get(
+            f"{self.base_url}/toolhub/list_google_emails", params={"limit": limit}
         ).json()
 
 
