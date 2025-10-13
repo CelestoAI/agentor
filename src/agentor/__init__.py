@@ -5,6 +5,8 @@ from .proxy import create_proxy
 from .utils import AppContext
 from agentor.sdk.client import CelestoSDK
 
+__version__ = "0.0.2"
+
 __all__ = [
     "app",
     "create_proxy",

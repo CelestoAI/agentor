@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentor"
-version = "0.0.1"
 description = "Fastest way to build, prototype and deploy AI Agents."
+dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -50,6 +50,9 @@ agentor="agentor.cli:app"
 models = [
     "sentence-transformers>=5.1.0",
 ]
+
+[tool.hatch.version]
+path = "src/agentor/__init__.py"
 
 [tool.uv]
 package = true
