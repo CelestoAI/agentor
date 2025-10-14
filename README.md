@@ -1,5 +1,3 @@
-from markdown_it.common.normalize_url import validateLink<center>
-
 <div align="center">
   <h1>Fastest way to build, prototype and deploy AI Agents with tools <mark><i>securely</i></mark></h1>
   <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/celesto.png" alt="banner" />
