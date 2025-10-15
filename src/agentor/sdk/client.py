@@ -9,7 +9,10 @@ class _BaseConnection:
     def __init__(self, api_key: str, base_url: str = None):
         self.base_url = base_url or self._BASE_URL
         if not api_key:
-            raise ValueError("token is required.")
+            raise ValueError(
+                "API token not found. Log in to https://celesto.ai, navigate to Settings → Security, "
+                "and copy your API key to authenticate requests."
+            )
         self.api_key = api_key
         self.session = httpx.Client(
             cookies={"access_token": f"Bearer {self.api_key}"},
