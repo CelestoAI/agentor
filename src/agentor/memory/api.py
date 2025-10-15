@@ -1,9 +1,9 @@
-from typing import TypedDict
+from typing import List
+from typing import Literal, TypedDict
 
 import lancedb
 import pandas as pd
 from typeguard import typechecked
-
 
 import pyarrow as pa
 from lancedb.embeddings import (
@@ -15,10 +15,10 @@ from lancedb.embeddings import (
 from lancedb.schema import vector as vector_type
 
 
-DEFAULT_MODEL_NAME = "all-MiniLM-L6-v2"
-DEFAULT_EMBEDDING_DIM = 384
-SOURCE_COLUMN = "text"
-VECTOR_COLUMN = "embedding"
+_DEFAULT_MODEL_NAME = "all-MiniLM-L6-v2"
+_DEFAULT_EMBEDDING_DIM = 384
+_SOURCE_COLUMN = "text"
+_VECTOR_COLUMN = "embedding"
 
 
 @register("sentence-transformers")
@@ -27,7 +27,7 @@ class SentenceTransformerEmbeddings(TextEmbeddingFunction):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._ndims = DEFAULT_EMBEDDING_DIM
+        self._ndims = _DEFAULT_EMBEDDING_DIM
         self._model = None
 
     @typechecked
@@ -45,7 +45,7 @@ class SentenceTransformerEmbeddings(TextEmbeddingFunction):
         return self._model
 
 
-def get_embedding(text: str, name: str = DEFAULT_MODEL_NAME):
+def get_embedding(text: str, name: str = _DEFAULT_MODEL_NAME):
     func = get_registry().get("sentence-transformers").create(name=name)
     return func.embed_query(text)
 
@@ -55,16 +55,16 @@ def get_chat_schema() -> pa.Schema:
         [
             pa.field("user", pa.string()),
             pa.field("agent", pa.string()),
-            pa.field(SOURCE_COLUMN, pa.string()),
-            pa.field(VECTOR_COLUMN, vector_type(DEFAULT_EMBEDDING_DIM)),
+            pa.field(_SOURCE_COLUMN, pa.string()),
+            pa.field(_VECTOR_COLUMN, vector_type(_DEFAULT_EMBEDDING_DIM)),
         ]
     )
 
 
-def get_embedding_config(name: str = DEFAULT_MODEL_NAME) -> EmbeddingFunctionConfig:
+def get_embedding_config(name: str = _DEFAULT_MODEL_NAME) -> EmbeddingFunctionConfig:
     return EmbeddingFunctionConfig(
-        vector_column=VECTOR_COLUMN,
-        source_column=SOURCE_COLUMN,
+        vector_column=_VECTOR_COLUMN,
+        source_column=_SOURCE_COLUMN,
         function=get_registry().get("sentence-transformers").create(name=name),
     )
 
@@ -87,9 +87,9 @@ class _VectorDBManager:
         return self._db.table_names()
 
 
-class ChatType(TypedDict):
-    user: str
-    agent: str
+class ChatInput(TypedDict):
+    role: Literal["user", "agent"]
+    content: str
 
 
 class Memory:
@@ -117,13 +117,34 @@ class Memory:
     @typechecked
     def add(
         self,
-        conversation: ChatType | None = None,
+        conversation: List[ChatInput] | None = None,
         user: str | None = None,
         agent: str | None = None,
     ) -> None:
+        """
+        Add a conversation to the memory.
+
+        Args:
+            conversation: List of ChatInput, similar to OpenAI's ChatInput.
+            user: The user's message.
+            agent: The agent's message.
+
+        Example:
+        >>> mem = Memory()
+        >>> mem.add(conversation=[{"role": "user", "content": "How many 'r's in strawberries?"}, {"role": "agent", "content": "there are 0 'r's in strawberries"}])
+        >>> mem.add(user="How many 'r's in strawberries?", agent="there are 0 'r's in strawberries")
+        """
         if conversation is not None:
-            user = conversation["user"]
-            agent = conversation["agent"]
+            for item in conversation:
+                if item["role"] == "user":
+                    user = item["content"]
+                elif item["role"] == "agent":
+                    agent = item["content"]
+                else:
+                    raise ValueError(
+                        f"Invalid role: {item['role']}. Must be 'user' or 'agent'."
+                        "Example: [{'role': 'user', 'content': 'How many 'r's in strawberries?'}, {'role': 'agent', 'content': 'there are 0 'r's in strawberries'}]"
+                    )
         else:
             if user is None:
                 raise ValueError("User must be a string")
@@ -134,7 +155,7 @@ class Memory:
         chat_data = {
             "user": user,
             "agent": agent,
-            SOURCE_COLUMN: text,
+            _SOURCE_COLUMN: text,
         }
         self.tbl.add([chat_data])
 

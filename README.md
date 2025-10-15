@@ -1,18 +1,18 @@
-<div align="center">
-  <h1>Fastest way to build, prototype and deploy AI Agents with tools <mark><i>securely</i></mark></h1>
-  <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/celesto.png" alt="banner" />
-</div>
-</center>
-
 <p align="center">
+  <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/celesto.png" alt="banner" />
+  <br>
+  <strong>Fastest way to build, prototype and deploy AI Agents with tools <mark><i>securely</i></mark></strong>
+</p>
+<p align="center">
+  <a href="https://developers.celesto.ai">Docs</a> |
+  <a href="https://github.com/celestoai/agentor/tree/main/examples">Examples</a>
+</p>
 
 [![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB_Try_CelestoAI-Click_Here-ff6b2c?style=flat)](https://celesto.ai)
 [![PyPI version](https://img.shields.io/pypi/v/agentor.svg?color=brightgreen&label=PyPI&style=flat)](https://pypi.org/project/agentor/)
 [![Tests](https://github.com/CelestoAI/agentor/actions/workflows/test.yml/badge.svg)](https://github.com/CelestoAI/agentor/actions/workflows/test.yml)
 [![Downloads](https://img.shields.io/pypi/dm/agentor.svg?label=Downloads&color=ff6b2c&style=flat)](https://pypi.org/project/agentor/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-yellow?style=flat)](https://opensource.org/licenses/Apache-2.0)
-
-</p>
 
 ## What is Agentor?
 
@@ -22,15 +22,20 @@ It lets you connect LLMs to tools — like Gmail, Google Calendar, and your CRM 
 
 ## 🚅 Quick Start
 
-<p align="center">
-  🔧 <b>DIY with OSS</b> &nbsp; | &nbsp; 
-  🖥️ <a href="https://celesto.ai" target="_blank"><b>Try the CelestoAI web interface</b></a>
-</p>
-
 ### Installation
+
+**Recommended:**
+The recommended method of installing `agentor` is with pip from PyPI.
 
 ```bash
 pip install agentor
+```
+
+**Latest (unstable):**
+You can also install the latest bleeding edge version (could be unstable) of `agentor`, should you feel motivated enough, as follows:
+
+```bash
+pip install git+https://github.com/celestoai/agentor@main
 ```
 
 ## Examples
@@ -76,6 +81,11 @@ client.toolhub.run_list_google_emails(limit=5)
 ```
 
 ## 🚀 Features
+
+<p align="center">
+  🔧 <b>Build with OSS</b> &nbsp; | &nbsp; 
+  🧡 <a href="https://celesto.ai" target="_blank"><b>Managed Multi-Agent Platform</b></a>
+</p>
 
 ✅ Pre-built agents with ready-to-use tools\
 🔐 Secure integrations with email, calendar, CRMs, and more\

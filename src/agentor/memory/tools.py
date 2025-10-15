@@ -3,7 +3,7 @@ from typing import Any
 
 from agents import RunContextWrapper, function_tool
 
-from agentor.memory.api import ChatType
+from agentor.memory.api import ChatInput
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def memory_get_full_conversation(ctx: RunContextWrapper[Any]) -> list[str]:
 
 
 @function_tool
-def memory_add(ctx: RunContextWrapper[Any], conversation: ChatType) -> None:
+def memory_add(ctx: RunContextWrapper[Any], conversation: ChatInput) -> None:
     """Add a conversation to the memory."""
     try:
         memory = ctx.context.core.memory
