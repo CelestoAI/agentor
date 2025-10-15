@@ -4,42 +4,83 @@ import lancedb
 import pandas as pd
 from typeguard import typechecked
 
-from agentor.memory.embedding import (
-    SOURCE_COLUMN,
-    get_chat_schema,
-    get_embedding_config,
+
+import pyarrow as pa
+from lancedb.embeddings import (
+    EmbeddingFunctionConfig,
+    TextEmbeddingFunction,
+    get_registry,
+    register,
 )
-
-CHAT_SCHEMA = get_chat_schema()
-CHAT_FIELD_NAMES = set(CHAT_SCHEMA.names)
+from lancedb.schema import vector as vector_type
 
 
-class DBManager:
+DEFAULT_MODEL_NAME = "all-MiniLM-L6-v2"
+DEFAULT_EMBEDDING_DIM = 384
+SOURCE_COLUMN = "text"
+VECTOR_COLUMN = "embedding"
+
+
+@register("sentence-transformers")
+class SentenceTransformerEmbeddings(TextEmbeddingFunction):
+    name: str = "all-MiniLM-L6-v2"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._ndims = DEFAULT_EMBEDDING_DIM
+        self._model = None
+
+    @typechecked
+    def generate_embeddings(self, texts: list[str]):
+        return self._embedding_model().encode(texts).tolist()
+
+    def ndims(self):
+        return self._ndims
+
+    def _embedding_model(self):
+        import sentence_transformers
+
+        if self._model is None:
+            self._model = sentence_transformers.SentenceTransformer(self.name)
+        return self._model
+
+
+def get_embedding(text: str, name: str = DEFAULT_MODEL_NAME):
+    func = get_registry().get("sentence-transformers").create(name=name)
+    return func.embed_query(text)
+
+
+def get_chat_schema() -> pa.Schema:
+    return pa.schema(
+        [
+            pa.field("user", pa.string()),
+            pa.field("agent", pa.string()),
+            pa.field(SOURCE_COLUMN, pa.string()),
+            pa.field(VECTOR_COLUMN, vector_type(DEFAULT_EMBEDDING_DIM)),
+        ]
+    )
+
+
+def get_embedding_config(name: str = DEFAULT_MODEL_NAME) -> EmbeddingFunctionConfig:
+    return EmbeddingFunctionConfig(
+        vector_column=VECTOR_COLUMN,
+        source_column=SOURCE_COLUMN,
+        function=get_registry().get("sentence-transformers").create(name=name),
+    )
+
+
+class _VectorDBManager:
     def __init__(self, uri: str):
         self.uri = uri
         self._db = lancedb.connect(self.uri)
 
     @typechecked
     def open_or_create_table(self, table_name: str) -> lancedb.table.Table:
-        try:
-            tbl = self._db.open_table(table_name)
-            # Check if the table has the expected schema
-            schema = tbl.schema
-            expected_fields = CHAT_FIELD_NAMES
-            actual_fields = {field.name for field in schema}
-            if not expected_fields.issubset(actual_fields):
-                # Schema mismatch, recreate the table
-                raise ValueError(
-                    f"Schema mismatch for table {table_name}. Expected fields: {expected_fields}, Actual fields: {actual_fields}\n"
-                    "Please delete the table and try again."
-                )
-        except Exception as e:
-            print(e)
-            tbl = self._db.create_table(
-                table_name,
-                schema=CHAT_SCHEMA,
-                embedding_functions=[get_embedding_config()],
-            )
+        tbl = self._db.create_table(
+            table_name,
+            schema=get_chat_schema(),
+            embedding_functions=[get_embedding_config()],
+        )
         return tbl
 
     def table_names(self):
@@ -68,9 +109,9 @@ class Memory:
     """
 
     def __init__(
-        self, db_uri: str = ".zendata/memory", table_name: str = "conversations"
+        self, db_uri: str = ".agentor/memory", table_name: str = "conversations"
     ):
-        self.db = DBManager(db_uri)
+        self.db = _VectorDBManager(db_uri)
         self.tbl = self.db.open_or_create_table(table_name)
 
     @typechecked
