@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/celesto.png" alt="banner" />
+  <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/CelestoAI.png" alt="banner" />
   <br>
   <strong>Fastest way to build, prototype and deploy AI Agents with tools <mark><i>securely</i></mark></strong>
 </p>
@@ -8,7 +8,7 @@
   <a href="https://github.com/celestoai/agentor/tree/main/examples">Examples</a>
 </p>
 
---- 
+______________________________________________________________________
 
 [![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB_Try_CelestoAI-Click_Here-ff6b2c?style=flat)](https://celesto.ai)
 [![PyPI version](https://img.shields.io/pypi/v/agentor.svg?color=brightgreen&label=PyPI&style=flat)](https://pypi.org/project/agentor/)
@@ -16,7 +16,6 @@
 [![Downloads](https://img.shields.io/pypi/dm/agentor.svg?label=Downloads&color=ff6b2c&style=flat)](https://pypi.org/project/agentor/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-yellow?style=flat)](https://opensource.org/licenses/Apache-2.0)
 [![Discord](https://img.shields.io/badge/Join%20Us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/KNb5UkrAmm)
-
 
 ## What is Agentor?
 
