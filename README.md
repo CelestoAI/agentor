@@ -29,6 +29,7 @@ It lets you connect LLMs to tools — like Gmail, Google Calendar, and your CRM 
 ### Installation
 
 **Recommended:**
+
 The recommended method of installing `agentor` is with pip from PyPI.
 
 ```bash
@@ -36,6 +37,7 @@ pip install agentor
 ```
 
 **Latest (unstable):**
+
 You can also install the latest bleeding edge version (could be unstable) of `agentor`, should you feel motivated enough, as follows:
 
 ```bash
@@ -65,9 +67,22 @@ result = agents.run_sync(
 )
 ```
 
-### Tool Hub (ready-to-use collection of tools)
+## 🚀 Features
 
-Use Celesto Tool Hub for a realtime access to weather data and 100+ tools.
+<p align="center">
+  🔧 <b>Build with OSS</b> &nbsp; | &nbsp; 
+  🧡 <a href="https://celesto.ai" target="_blank"><b>Managed Multi-Agent Platform</b></a>
+</p>
+
+✅ Pre-built agents with ready-to-use tools\
+🔐 Secure integrations with email, calendar, CRMs, and more\
+☁️ Easy agent deployment\
+🦾 AgentMCP - Tool routing\
+🧩 OpenAI App SDK for rapid development
+
+### Managed Tool Hub (ready-to-use collection of tools)
+
+Use Celesto [Tool Hub](https://celesto.ai/toolhub) for a realtime access to weather data and 100+ tools.
 
 ```python
 from agentor import CelestoSDK
@@ -83,19 +98,6 @@ client.toolhub.run_weather_tool("London")
 # Run the Google email tool
 client.toolhub.run_list_google_emails(limit=5)
 ```
-
-## 🚀 Features
-
-<p align="center">
-  🔧 <b>Build with OSS</b> &nbsp; | &nbsp; 
-  🧡 <a href="https://celesto.ai" target="_blank"><b>Managed Multi-Agent Platform</b></a>
-</p>
-
-✅ Pre-built agents with ready-to-use tools\
-🔐 Secure integrations with email, calendar, CRMs, and more\
-☁️ Easy agent deployment\
-🦾 AgentMCP - Tool routing\
-🧩 OpenAI App SDK for rapid development
 
 ### Tool Routing with AgentMCP
 
