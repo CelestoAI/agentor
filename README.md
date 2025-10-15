@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/CelestoAI.png" alt="banner" width="500px"/>
 </p>
-<p>
+<p align="center">
   <strong>Fastest way to build, prototype and deploy AI Agents with tools <mark><i>securely</i></mark></strong>
 </p>
 <p align="center">
