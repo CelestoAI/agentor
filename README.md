@@ -8,11 +8,15 @@
   <a href="https://github.com/celestoai/agentor/tree/main/examples">Examples</a>
 </p>
 
+--- 
+
 [![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB_Try_CelestoAI-Click_Here-ff6b2c?style=flat)](https://celesto.ai)
 [![PyPI version](https://img.shields.io/pypi/v/agentor.svg?color=brightgreen&label=PyPI&style=flat)](https://pypi.org/project/agentor/)
 [![Tests](https://github.com/CelestoAI/agentor/actions/workflows/test.yml/badge.svg)](https://github.com/CelestoAI/agentor/actions/workflows/test.yml)
 [![Downloads](https://img.shields.io/pypi/dm/agentor.svg?label=Downloads&color=ff6b2c&style=flat)](https://pypi.org/project/agentor/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-yellow?style=flat)](https://opensource.org/licenses/Apache-2.0)
+[![Discord](https://img.shields.io/badge/Join%20Us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/KNb5UkrAmm)
+
 
 ## What is Agentor?
 
@@ -161,40 +165,9 @@ user_creds = CredentialRecord(
 gmail = GmailService(user_creds)
 ```
 
-## 🛣️ Roadmap
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Gmail Integration | ✅ | Search, read, analyze emails |
-| Google Calendar | ✅ | View events, check availability |
-| Chat Interface | ✅ | Conversational AI with memory |
-| Desktop OAuth | ✅ | One-command authentication |
-| Backend API | ✅ | Programmatic access |
-| Calendar Management | ✅ | Create, update events |
-| **Email Actions** | 🔜 | Draft, reply, send emails |
-| **Slack Integration** | 🔜 | Team communication |
-| **HubSpot Integration** | 🔜 | HubSpot CRM integration |
-| **Document AI** | 🔜 | Google Docs, Sheets analysis |
-| **Multi-user Support** | 🔜 | Team deployments |
-| **Community plugins** | 🔮 | Custom integrations |
-
 ## 🤝 Contributing
 
 We'd love your help making Agentor even better! Please read our [Contributing Guidelines](.github/CONTRIBUTING.md) and [Code of Conduct](.github/CODE_OF_CONDUCT.md).
-
-## 🙏 Acknowledgments
-
-**Built with love using:**
-
-- [OpenAI Agents](https://github.com/openai/agents) - The backbone of our AI system
-- [Typer](https://typer.tiangolo.com/) - Beautiful CLI interfaces
-- [Rich](https://rich.readthedocs.io/) - Rich text and formatting
-- [Google APIs](https://developers.google.com/) - Gmail and Calendar integration
-
-**Special thanks to:**
-
-- The open-source community for inspiration and contributions
-- Early beta testers for valuable feedback
 
 ## 📄 License
 
