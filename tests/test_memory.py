@@ -1,4 +1,4 @@
-from agentor.memory.api import DBManager, Memory
+from agentor.memory.api import _VectorDBManager, Memory
 
 from lancedb.embeddings import register, TextEmbeddingFunction
 import numpy as np
@@ -27,7 +27,7 @@ class DummyEmbeddings(TextEmbeddingFunction):
 
 
 def test_db(tmp_path):
-    db = DBManager(tmp_path / "memory")
+    db = _VectorDBManager(tmp_path / "memory")
     tbl = db.open_or_create_table("conversations")
     assert db.table_names() == ["conversations"]
     assert tbl is not None
