@@ -68,16 +68,17 @@ result = agents.run_sync(
 
 ## 🚀 Features
 
-<p align="center">
+<p >
   🔧 <b>Build with OSS</b> &nbsp; | &nbsp; 
   🧡 <a href="https://celesto.ai" target="_blank"><b>Managed Multi-Agent Platform</b></a>
 </p>
 
-✅ Pre-built agents with ready-to-use tools\
-🔐 Secure integrations with email, calendar, CRMs, and more\
-☁️ Easy agent deployment\
-🦾 AgentMCP - Tool routing\
-🧩 OpenAI App SDK for rapid development
+| Feature | Description |
+|-----------------------------------------------|-----------------------------------------------|
+| ✅ Pre-built agents | Ready-to-use tools |
+| 🔐 Secure integrations | Email, calendar, CRMs, and more |
+| 🦾 AgentMCP | Tool routing |
+| ☁️ Easy agent deployment | Coming soon. |
 
 ### Managed Tool Hub (ready-to-use collection of tools)
 
