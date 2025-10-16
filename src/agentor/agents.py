@@ -1,4 +1,3 @@
-import json
 from typing import (
     Any,
     AsyncGenerator,
@@ -8,11 +7,10 @@ from typing import (
     Literal,
     Optional,
     TypedDict,
-    Union,
 )
-from google.adk.agents import Agent
+from agents import Runner
 
-from google.adk.models.lite_llm import LiteLlm
+from agents import Agent, function_tool
 
 import litellm
 
@@ -50,6 +48,7 @@ class Tool(TypedDict):
     function: ToolFunction
 
 
+@function_tool(name_override="get_weather")
 def get_dummy_weather(city: str) -> str:
     """Returns the dummy weather in the given city."""
     return f"The dummy weather in {city} is sunny"
@@ -61,106 +60,30 @@ class Agentor:
         name: str,
         instructions: Optional[str] = None,
         model: Optional[str] = "gpt-5-nano",
-        tools: list[Callable] = [],
+        tools: list[Callable | Tool] = [],
     ):
         self.name = name
         self.instructions = instructions
         self.model = model
-        self.tools: List[Tool] = list(map(lambda t: _function_to_tool(t), tools))
-        self.tool_registry: Dict[str, Callable] = {
-            tool_dict["function"]["name"]: tool
-            for (tool, tool_dict) in zip(tools, self.tools)
-        }
         self.agent: Agent = Agent(
-            name=name,
-            instructions=instructions,
-            model=LiteLlm(model=model),
-            tools=tools,
+            name=name, instructions=instructions, model=model, tools=tools
         )
+
+    def run(
+        self, input: str, context: Optional[Dict[str, Any]] = None
+    ) -> List[str] | str:
+        return Runner.run_sync(self.agent, input, context=context)
 
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(
             THINKING_PROMPT,
             query=query,
-            instructions=self.instructions,
-            tools=self.tools,
         )
-        messages = [{"role": "user", "content": prompt}]
-        response = litellm.completion(
-            model=self.model,
-            messages=messages,
-            tools=self.tools,
-        )
-        tool_calls = response.choices[0].message.tool_calls
+        return self.run(prompt)
 
-        if not tool_calls:
-            return response.choices[0].message.content
-
-        messages.append(
-            {
-                "role": "assistant",
-                "content": response.choices[0].message.content or "",
-                "tool_calls": [
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
-                        },
-                    }
-                    for tc in tool_calls
-                ],
-            }
-        )
-
-        for tool_call in tool_calls:
-            tool_name = tool_call.function.name
-            tool_args = tool_call.function.arguments
-            tool = self.tool_registry[tool_name]
-            result = tool(**json.loads(tool_args))
-            messages.append(
-                {
-                    "tool_call_id": tool_call.id,
-                    "role": "tool",
-                    "name": tool_name,
-                    "content": result,
-                }
-            )
-
-        return litellm.completion(
-            model=self.model,
-            messages=messages,
-            tools=self.tools,
-        )
-
-    def chat(
+    async def chat(
         self,
-        messages: Union[List[Dict[str, Any]], str],
-        stream: bool = False,
-        max_tokens: Optional[int] = None,
-    ) -> AsyncGenerator | str:
-        if isinstance(messages, str):
-            messages = [
-                {"role": "system", "content": self.instructions},
-                {"role": "user", "content": messages},
-            ]
-        if stream:
-            return litellm.completion(
-                model=self.model,
-                messages=messages,
-                tools=self.tools,
-                stream=True,
-                max_tokens=max_tokens,
-            )
-        else:
-            return (
-                litellm.completion(
-                    model=self.model,
-                    messages=messages,
-                    tools=self.tools,
-                    max_tokens=max_tokens,
-                )
-                .choices[0]
-                .message.content
-            )
+        input: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> AsyncGenerator:
+        return await Runner.run_streamed(self.agent, input=input, context=context)

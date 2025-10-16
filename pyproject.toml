@@ -26,7 +26,7 @@ dependencies = [
     "typeguard>=4.4.4",
     "litellm>=1.78.0",
     "jinja2>=3.1.6",
-    "langchain>=1.0.0a15",
+    "openai-agents>=0.3.3",
 ]
 license-files = ["LICENSE"]
 authors = [

@@ -49,27 +49,6 @@ Response: [
   "Summarize findings in plain language for a general audience"
 ]
 
-{% if instructions %}
-User Instructions:
-{{ instructions }}
-{% endif %}
-
-{% if tools %}
-You have access to the following tools:
-<tools>
-{% for tool in tools %}
-<tool>
-  {% if tool.function.name %}
-    <name>{{ tool.function.name }}</name>
-  {% endif %}
-  {% if tool.function.description %}
-    <description>{{ tool.function.description }}</description>
-  {% endif %}
-</tool>
-{% endfor %}
-</tools>
-{% endif %}
-
 <User query>
 {{ query }}
 </User query>
