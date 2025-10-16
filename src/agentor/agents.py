@@ -80,6 +80,13 @@ class Agentor:
         )
         return self.run(prompt)
 
+    async def chat(
+        self,
+        input: str,
+        context: Optional[Dict[str, Any]] = None,
+    ):
+        return await Runner.run(self.agent, input=input, context=context)
+
     async def stream_chat(
         self,
         input: str,
