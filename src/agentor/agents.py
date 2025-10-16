@@ -8,8 +8,8 @@ from typing import (
 )
 
 from agents import Agent, FunctionTool, Runner, function_tool
-
 from agentor.prompts import THINKING_PROMPT, render_prompt
+from agentor.type_helper import to_jsonable
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -73,7 +73,22 @@ class Agentor:
         self,
         input: str,
         context: Optional[Dict[str, Any]] = None,
+        output_format: Literal["json", "python"] = "python",
     ):
         result = Runner.run_streamed(self.agent, input=input, context=context)
+
         async for event in result.stream_events():
-            yield event
+            if output_format == "python":
+                yield event
+                continue
+
+            if event.type == "agent_updated_stream_event":
+                yield {"type": "agent_updated", "name": event.new_agent.name}
+            elif event.type == "raw_response_event":
+                yield {"type": "raw_response", "data": to_jsonable(event.data)}
+            elif event.type == "run_item_stream_event":
+                yield {"type": "run_item", "item": to_jsonable(event.item)}
+            elif event.type == "error":
+                yield {"type": "error", "error": to_jsonable(event.error)}
+            else:
+                yield {"type": "unknown", "event": to_jsonable(event)}
