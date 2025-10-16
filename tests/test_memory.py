@@ -1,10 +1,11 @@
-from agentor.memory.api import _VectorDBManager, Memory
-
-from lancedb.embeddings import register, TextEmbeddingFunction
-import numpy as np
-from cachetools.func import cached
 import os
 from unittest.mock import patch
+
+import numpy as np
+from cachetools.func import cached
+from lancedb.embeddings import TextEmbeddingFunction, register
+
+from agentor.memory.api import Memory, _VectorDBManager
 
 
 @register("sentence-transformers")

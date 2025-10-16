@@ -1,5 +1,6 @@
-from agentor import pydantic_to_xml
 from pydantic import BaseModel
+
+from agentor import pydantic_to_xml
 
 
 class Address(BaseModel):

@@ -1,7 +1,9 @@
-from agentor import CelestoSDK
 import os
+
 import pytest
 from dotenv import load_dotenv
+
+from agentor import CelestoSDK
 
 load_dotenv(verbose=True)
 
