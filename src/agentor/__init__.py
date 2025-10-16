@@ -1,5 +1,6 @@
 from agentor.agents import Agentor
 from agentor.sdk.client import CelestoSDK
+from agents import function_tool
 
 from .cli import app
 from .memory.api import Memory
@@ -17,6 +18,7 @@ __all__ = [
     "AppContext",
     "Memory",
     "CelestoSDK",
+    "function_tool",
 ]
 
 
