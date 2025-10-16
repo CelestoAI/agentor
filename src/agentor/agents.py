@@ -1,6 +1,5 @@
 from typing import (
     Any,
-    AsyncGenerator,
     Callable,
     Dict,
     List,
@@ -81,9 +80,11 @@ class Agentor:
         )
         return self.run(prompt)
 
-    async def chat(
+    async def stream_chat(
         self,
         input: str,
         context: Optional[Dict[str, Any]] = None,
-    ) -> AsyncGenerator:
-        return await Runner.run_streamed(self.agent, input=input, context=context)
+    ):
+        result = Runner.run_streamed(self.agent, input=input, context=context)
+        async for event in result.stream_events():
+            yield event

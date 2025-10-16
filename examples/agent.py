@@ -1,5 +1,5 @@
 import dotenv
-
+import asyncio
 
 from agentor.agents import Agentor, get_dummy_weather
 
@@ -11,13 +11,13 @@ agent = Agentor(
     tools=[get_dummy_weather],
 )
 
-result = agent.think("How do I measure the angle between the sun and the earth?")
-print(result)
 
-for event in agent.chat(
-    "How do I measure the angle between the sun and the earth?",
-    stream=True,
-    max_tokens=1000,
-):
-    if event.choices[0].delta.content:
-        print(event.choices[0].delta.content, flush=True, end="")
+async def main():
+    async for event in agent.stream_chat(
+        "How do I measure the angle between the sun and the earth?",
+    ):
+        print(event, flush=True)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
