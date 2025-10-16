@@ -8,6 +8,10 @@ from .output_text_formatter import pydantic_to_xml
 from .proxy import create_proxy
 from .utils import AppContext
 
+import warnings
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 __version__ = "0.0.2"
 
 __all__ = [

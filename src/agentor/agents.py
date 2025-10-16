@@ -5,11 +5,14 @@ from typing import (
     Literal,
     Optional,
     TypedDict,
+    Union,
 )
 
+from agentor.tools.registry import ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.type_helper import to_jsonable
+from agentor.tools.registry import CelestoConfig
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -41,8 +44,12 @@ class Agentor:
         name: str,
         instructions: Optional[str] = None,
         model: Optional[str] = "gpt-5-nano",
-        tools: list[FunctionTool] = [],
+        tools: List[Union[FunctionTool, str]] = [],
     ):
+        tools = [
+            ToolRegistry.get(tool)["tool"] if isinstance(tool, str) else tool
+            for tool in tools
+        ]
         self.name = name
         self.instructions = instructions
         self.model = model
@@ -50,32 +57,29 @@ class Agentor:
             name=name, instructions=instructions, model=model, tools=tools
         )
 
-    def run(
-        self, input: str, context: Optional[Dict[str, Any]] = None
-    ) -> List[str] | str:
-        return Runner.run_sync(self.agent, input, context=context)
+    def run(self, input: str) -> List[str] | str:
+        return Runner.run_sync(self.agent, input, context=CelestoConfig())
 
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(
             THINKING_PROMPT,
             query=query,
         )
-        return self.run(prompt).final_output
+        result = Runner.run_sync(self.agent, prompt, context=CelestoConfig())
+        return result.final_output
 
     async def chat(
         self,
         input: str,
-        context: Optional[Dict[str, Any]] = None,
     ):
-        return await Runner.run(self.agent, input=input, context=context)
+        return await Runner.run(self.agent, input=input, context=CelestoConfig())
 
     async def stream_chat(
         self,
         input: str,
-        context: Optional[Dict[str, Any]] = None,
         output_format: Literal["json", "python"] = "python",
     ):
-        result = Runner.run_streamed(self.agent, input=input, context=context)
+        result = Runner.run_streamed(self.agent, input=input, context=CelestoConfig())
 
         async for event in result.stream_events():
             if output_format == "python":

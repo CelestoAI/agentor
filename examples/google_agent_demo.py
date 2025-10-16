@@ -11,7 +11,7 @@ import asyncio
 from agents import Runner
 from rich import print
 
-from agentor.integrations.google.google_agent import build_google_agent_and_context
+from agentor.agenthub.google.google_agent import build_google_agent_and_context
 
 
 async def main():
