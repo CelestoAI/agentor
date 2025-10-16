@@ -48,23 +48,25 @@ pip install git+https://github.com/celestoai/agentor@main
 
 ## Agents API
 
-Use Agentor using the API in your applications:
+Integrate Agentor directly into your applications with just a few lines of code:
 
-```python
-from agentor import agents
+```diff
+from agentor import Agentor, function_tool
 
-# Simple agent usage
-result = agents.run_sync(
-    "Find emails from GitHub about security issues", tools=["search_gmail"], max_turns=3
+@function_tool
+def get_weather(city: str):
+    """Get the weather of city"""
+    return f"Weather in {city} is sunny"
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+-    tools=[get_weather],  # Bring your own tool, or
++    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
 )
+
+result = agent.run("What is the weather in London?")
 print(result)
-
-# Advanced usage with specific tools
-result = agents.run_sync(
-    "What's my schedule conflicts next week?",
-    tools=["list_calendar_events", "search_gmail"],
-    model="gpt-5-mini",  # Optional model override
-)
 ```
 
 ## 🚀 Features
