@@ -1,8 +1,8 @@
 # 🚀 Agent Deployment
 
-This example demonstrates how to deploy a scalable Agent server using LitServe ⚡️ — an open-source Python library optimized for production-scale inference and async streaming.
+This example demonstrates how to deploy a scalable Agent server using [LitServe](https://github.com/Lightning-AI/LitServe) ⚡️ — an open-source Python library optimized for production-scale inference and async streaming.
 
-We’ll integrate Agentor with CelestoSDK tools to create a weather-aware conversational agent.
+We’ll integrate Agentor with [CelestoSDK tools](https://celesto.ai/toolhub) to create a weather-aware conversational agent.
 
 Below is an example of deploying an Agentor instance with a simple weather tool using LitServe.
 
