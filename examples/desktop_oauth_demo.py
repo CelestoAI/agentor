@@ -2,10 +2,10 @@
 import json
 import os
 
-from agentor.integrations.google import (
+from superauth.google import (
     DEFAULT_GOOGLE_OAUTH_SCOPES,
-    GmailService,
     authenticate_user,
+    GmailAPI,
     load_user_credentials,
 )
 
@@ -42,7 +42,7 @@ def main():
         print(f"Authenticated: {creds.user_id}")
 
     # Use Gmail
-    gmail = GmailService(creds)
+    gmail = GmailAPI(creds)
     messages = gmail.search_messages(query="in:inbox", limit=3)
     print(f"Found {len(messages.get('messages', []))} messages")
 

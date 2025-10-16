@@ -106,21 +106,6 @@ Adding multiple tools directly to a single Agent can bloat the LLM’s context a
 
 From the model’s perspective, there’s just one tool; `AgentMCP` automatically routes each request to the appropriate underlying tool based on context.
 
-### Secure Tool use with LLMs
-
-You can direcrly use the underlying tools and services without using LLMs such as search through emails and calendar events.
-
-```python
-from agentor.integrations.google import GmailService, load_user_credentials
-
-# Load your saved credentials
-creds = load_user_credentials("credentials.my_google_account.json")
-
-# Direct tool usage
-gmail = GmailService(creds)
-messages = gmail.search_messages(query="from:github.com", limit=10)
-```
-
 ## 🔐 Security & Privacy
 
 **🛡️ Your data stays yours:**
@@ -136,37 +121,6 @@ messages = gmail.search_messages(query="from:github.com", limit=10)
 - Secure local storage
 - Per-user isolation
 - Configurable file paths
-
-### Tool-use and Security
-
-If you are building an application which is used by multiple public users, it's recommended to authenticate them using OAuth to access their data. For example, you can build a public application which allows users to search through their emails and calendar events.
-
-```python
-from agentor.integrations.google import CredentialRecord, UserProviderMetadata, UserInfo
-
-# Create from your database/API
-user_creds = CredentialRecord(
-    access_token="ya29.xxx",
-    user_provider_metadata=UserProviderMetadata(
-        refresh_token="1//xxx",
-        scope=(
-            "openid "
-            "https://www.googleapis.com/auth/gmail.readonly "
-            "https://www.googleapis.com/auth/calendar "
-            "https://www.googleapis.com/auth/calendar.readonly "
-            "https://www.googleapis.com/auth/userinfo.email "
-            "https://www.googleapis.com/auth/userinfo.profile"
-        ),
-        expires_at=1234567890,
-    ),
-    user_info=UserInfo(email="user@example.com", sub="google_user_id"),
-    client_id="your_oauth_client_id",
-    client_secret="your_oauth_secret",
-)
-
-# Use with any tool
-gmail = GmailService(user_creds)
-```
 
 ## 🤝 Contributing
 

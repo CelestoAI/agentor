@@ -1,23 +1,19 @@
-from .calendar_tool import CalendarService
-from .creds import (
-    DEFAULT_GOOGLE_OAUTH_SCOPES,
-    CredentialRecord,
-    GoogleAccount,
-    UserInfo,
-    UserProviderMetadata,
-    authenticate_user,
-    load_user_credentials,
+from .google_agent import (
+    create_google_context,
+    search_gmail,
+    list_gmail_messages,
+    get_gmail_message,
+    get_gmail_message_body,
+    list_calendar_events,
+    get_calendar_event,
 )
-from .gmail_tool import GmailService
 
 __all__ = [
-    "GmailService",
-    "CalendarService",
-    "GoogleAccount",
-    "CredentialRecord",
-    "UserProviderMetadata",
-    "UserInfo",
-    "authenticate_user",
-    "load_user_credentials",
-    "DEFAULT_GOOGLE_OAUTH_SCOPES",
+    "create_google_context",
+    "search_gmail",
+    "list_gmail_messages",
+    "get_gmail_message",
+    "get_gmail_message_body",
+    "list_calendar_events",
+    "get_calendar_event",
 ]
