@@ -1,6 +1,5 @@
 from typing import (
     Any,
-    Callable,
     Dict,
     List,
     Literal,
@@ -8,7 +7,7 @@ from typing import (
     TypedDict,
 )
 
-from agents import Agent, Runner, function_tool
+from agents import Agent, FunctionTool, Runner, function_tool
 
 from agentor.prompts import THINKING_PROMPT, render_prompt
 
@@ -42,7 +41,7 @@ class Agentor:
         name: str,
         instructions: Optional[str] = None,
         model: Optional[str] = "gpt-5-nano",
-        tools: list[Callable | Tool] = [],
+        tools: list[FunctionTool] = [],
     ):
         self.name = name
         self.instructions = instructions

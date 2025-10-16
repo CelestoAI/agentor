@@ -2,13 +2,14 @@ from dataclasses import dataclass
 
 from agentor.memory.api import Memory
 
-from .integrations.google import CalendarService, GmailService
+
+from superauth.google import GmailAPI, CalendarAPI
 
 
 @dataclass
-class GoogleServices:
-    gmail: GmailService | None = None
-    calendar: CalendarService | None = None
+class GoogleAPIs:
+    gmail: GmailAPI | None = None
+    calendar: CalendarAPI | None = None
 
 
 @dataclass
@@ -19,11 +20,11 @@ class CoreServices:
 @dataclass
 class AppContext:
     user_id: str | None = None
-    services: GoogleServices = None
+    api_providers: GoogleAPIs = None
     core: CoreServices = None
 
     def __post_init__(self):
-        if self.services is None:
-            self.services = GoogleServices()
+        if self.api_providers is None:
+            self.api_providers = GoogleAPIs()
         if self.core is None:
             self.core = CoreServices()
