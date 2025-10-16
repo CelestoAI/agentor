@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 from agents import Agent
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
-from agentor.integrations.google.google_agent import (
+from agentor.agenthub.google.google_agent import (
     create_google_agent,
     create_google_context,
 )
@@ -79,7 +79,7 @@ def get_google_agent_and_context():
                     try:
                         import json
 
-                        from agentor.integrations.google.creds import (
+                        from superauth.google import (
                             DEFAULT_GOOGLE_OAUTH_SCOPES,
                             authenticate_user,
                         )
