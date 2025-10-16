@@ -1,5 +1,6 @@
-from agentor.sdk.client import CelestoSDK
 from agentor.agents import Agentor
+from agentor.sdk.client import CelestoSDK
+
 from .cli import app
 from .memory.api import Memory
 from .output_text_formatter import pydantic_to_xml

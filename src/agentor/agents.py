@@ -7,27 +7,10 @@ from typing import (
     Optional,
     TypedDict,
 )
-from agents import Runner
 
-from agents import Agent, function_tool
-
-import litellm
+from agents import Agent, Runner, function_tool
 
 from agentor.prompts import THINKING_PROMPT, render_prompt
-
-
-def _function_to_tool(func: Callable):
-    # Ensure docstring is a string to avoid dedent(None) -> TypeError
-    if func.__doc__ is None:
-        func.__doc__ = ""
-    result = litellm.utils.function_to_dict(func)
-    return {"type": "function", "function": result}
-
-
-def tool(func: Callable) -> Callable:
-    func_tool: Tool = _function_to_tool(func)  # type: ignore
-    setattr(func, "_tool", func_tool)
-    return func
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -78,7 +61,7 @@ class Agentor:
             THINKING_PROMPT,
             query=query,
         )
-        return self.run(prompt)
+        return self.run(prompt).final_output
 
     async def chat(
         self,
