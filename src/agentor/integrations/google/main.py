@@ -1,5 +1,5 @@
-from creds import desktop_creds_provider_factory
-from gmail_tool import GmailTool
+from superauth.google import desktop_creds_provider_factory
+from superauth.google import GmailAPI
 from rich import print
 
 
@@ -8,7 +8,7 @@ def main():
         credentials_file="credentials.json",  # downloaded from Google Console
         token_file="token.json",
     )
-    gmail = GmailTool(creds_provider)
+    gmail = GmailAPI(creds_provider)
 
     # Example: unread Stripe invoices from last 30 days
     res = gmail.search_messages(

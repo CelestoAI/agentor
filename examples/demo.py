@@ -3,18 +3,16 @@ import asyncio
 
 from agents import function_tool
 from agentor import Agentor
-from agentor.integrations.google.creds import CredentialRecord
-from agentor.integrations.google.gmail_tool import GmailService
+from superauth.google import load_user_credentials
+from superauth.google import GmailAPI
 
-gmail_service = GmailService(
-    credentials=CredentialRecord.load_from_file(("credentials.my_google_account.json"))
-)
+gmail_api = GmailAPI(load_user_credentials("credentials.my_google_account.json"))
 
 
 @function_tool
 def search_gmail(query: str) -> str:
     """Search Gmail for the given query."""
-    return gmail_service.search_messages(query=query, limit=10)
+    return gmail_api.search_messages(query=query, limit=10)
 
 
 agent = Agentor(

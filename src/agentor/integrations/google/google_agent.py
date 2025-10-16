@@ -9,9 +9,7 @@ from openai.types.shared import Reasoning
 
 from agentor.utils import AppContext
 
-from .calendar_tool import CalendarService
-from .creds import load_user_credentials
-from .gmail_tool import GmailService
+from superauth.google import GmailAPI, CalendarAPI, load_user_credentials
 
 
 @function_tool(name_override="search_gmail")
@@ -35,7 +33,7 @@ async def search_gmail(
         limit: Max results (1-50).
     """
     app = ctx.context
-    res = app.services.gmail.search_messages(
+    res = app.api_providers.gmail.search_messages(
         query=query,
         label_ids=label_ids,
         after=after,
@@ -66,7 +64,7 @@ async def list_gmail_messages(
         include_spam_trash: Whether to include spam and trash.
     """
     app = ctx.context
-    res = app.services.gmail.list_messages(
+    res = app.api_providers.gmail.list_messages(
         label_ids=label_ids,
         q=q,
         limit=limit,
@@ -88,7 +86,7 @@ async def get_gmail_message(
         message_id: Gmail message ID.
     """
     app = ctx.context
-    res = app.services.gmail.get_message(
+    res = app.api_providers.gmail.get_message(
         message_id=message_id,
     )
     return json.dumps(res)
@@ -110,7 +108,7 @@ async def get_gmail_message_body(
         limit: Max characters to return for the selected body.
     """
     app = ctx.context
-    data = app.services.gmail.get_message_body(
+    data = app.api_providers.gmail.get_message_body(
         message_id=message_id, prefer=prefer, max_chars=limit
     )
     return json.dumps(data)
@@ -129,7 +127,7 @@ async def list_calendar_events(
     List Google Calendar events.
     """
     app = ctx.context
-    res = app.services.calendar.list_events(
+    res = app.api_providers.calendar.list_events(
         calendar_id=calendar_id,
         time_min=time_min,
         time_max=time_max,
@@ -149,7 +147,9 @@ async def get_calendar_event(
     Get a single Google Calendar event.
     """
     app = ctx.context
-    res = app.services.calendar.get_event(calendar_id=calendar_id, event_id=event_id)
+    res = app.api_providers.calendar.get_event(
+        calendar_id=calendar_id, event_id=event_id
+    )
     return json.dumps(res)
 
 
@@ -263,15 +263,15 @@ def create_google_context(
         )
 
     creds = load_user_credentials(user_creds_file)
-    gmail = GmailService(creds)
-    calendar = CalendarService(creds)
+    gmail = GmailAPI(creds)
+    calendar = CalendarAPI(creds)
 
     effective_user_id = user_id or creds.user_id
-    from agentor.utils import CoreServices, GoogleServices
+    from agentor.utils import CoreServices, GoogleAPIs
 
     return AppContext(
         user_id=effective_user_id,
-        services=GoogleServices(gmail=gmail, calendar=calendar),
+        api_providers=GoogleAPIs(gmail=gmail, calendar=calendar),
         core=CoreServices(memory=None),
     )
 

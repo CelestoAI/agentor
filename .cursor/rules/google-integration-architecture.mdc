@@ -15,19 +15,6 @@ OAuth implementation resides in `src/agentor/integrations/google/creds.py` provi
 - Automatic token refresh handling
 - Separation of desktop and backend OAuth flows
 
-## Service-Specific Tools (Importance Score: 85)
-
-### Gmail Integration
-`src/agentor/integrations/google/gmail_tool.py` implements:
-- Message search and retrieval capabilities
-- Read-only access restrictions
-- Thread-based conversation handling
-
-### Calendar Integration  
-`src/agentor/integrations/google/calendar_tool.py` provides:
-- Event listing and retrieval
-- Calendar availability checking
-- Time zone aware operations
 
 ## Integration Architecture Features (Importance Score: 80)
 

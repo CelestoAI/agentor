@@ -11,8 +11,10 @@ try:
     from agentor import chat
 
     app.add_typer(chat.app)
-except Exception:
+except Exception as e:
     # If chat fails to import due to missing Google credentials, add a placeholder
+    print(f"Error importing chat: {e}")
+
     @app.command("chat")
     def chat_placeholder():
         """Start the chat interface."""
@@ -105,7 +107,7 @@ def setup_google(
     try:
         import json
 
-        from agentor.integrations.google.creds import (
+        from superauth.google import (
             DEFAULT_GOOGLE_OAUTH_SCOPES,
             authenticate_user,
         )
