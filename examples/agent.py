@@ -7,10 +7,17 @@ dotenv.load_dotenv()
 
 agent = Agentor(
     name="Agentor",
-    instructions="Give output like in Haiku format.",
     model="gpt-5-mini",
     tools=[get_dummy_weather],
 )
 
-result = agent.think("What is the weather in Tokyo?")
+result = agent.think("How do I measure the angle between the sun and the earth?")
 print(result)
+
+for event in agent.chat(
+    "How do I measure the angle between the sun and the earth?",
+    stream=True,
+    max_tokens=1000,
+):
+    if event.choices[0].delta.content:
+        print(event.choices[0].delta.content, flush=True, end="")

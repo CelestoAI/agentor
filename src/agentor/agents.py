@@ -1,5 +1,15 @@
 import json
-from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict
+from typing import (
+    Any,
+    AsyncGenerator,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    TypedDict,
+    Union,
+)
 
 import litellm
 
@@ -74,6 +84,9 @@ class Agentor:
         )
         tool_calls = response.choices[0].message.tool_calls
 
+        if not tool_calls:
+            return response.choices[0].message.content
+
         messages.append(
             {
                 "role": "assistant",
@@ -92,24 +105,50 @@ class Agentor:
             }
         )
 
-        if tool_calls:
-            for tool_call in tool_calls:
-                tool_name = tool_call.function.name
-                tool_args = tool_call.function.arguments
-                tool = self.tool_registry[tool_name]
-                result = tool(**json.loads(tool_args))
-                messages.append(
-                    {
-                        "tool_call_id": tool_call.id,
-                        "role": "tool",
-                        "name": tool_name,
-                        "content": result,
-                    }
-                )
+        for tool_call in tool_calls:
+            tool_name = tool_call.function.name
+            tool_args = tool_call.function.arguments
+            tool = self.tool_registry[tool_name]
+            result = tool(**json.loads(tool_args))
+            messages.append(
+                {
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": tool_name,
+                    "content": result,
+                }
+            )
 
-            response = litellm.completion(
+        return litellm.completion(
+            model=self.model,
+            messages=messages,
+            tools=self.tools,
+        )
+
+    def chat(
+        self,
+        messages: Union[List[Dict[str, Any]], str],
+        stream: bool = False,
+        max_tokens: Optional[int] = None,
+    ) -> AsyncGenerator:
+        if isinstance(messages, str):
+            messages = [{"role": "user", "content": messages}]
+        if stream:
+            return litellm.completion(
                 model=self.model,
                 messages=messages,
                 tools=self.tools,
+                stream=True,
+                max_tokens=max_tokens,
             )
-        return response.choices[0].message.content
+        else:
+            return (
+                litellm.completion(
+                    model=self.model,
+                    messages=messages,
+                    tools=self.tools,
+                    max_tokens=max_tokens,
+                )
+                .choices[0]
+                .message.content
+            )
