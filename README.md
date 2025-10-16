@@ -18,11 +18,13 @@ ______________________________________________________________________
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-yellow?style=flat)](https://opensource.org/licenses/Apache-2.0)
 [![Discord](https://img.shields.io/badge/Join%20Us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/KNb5UkrAmm)
 
-## What is Agentor?
+## Agentor
 
-Agentor is an open-source framework that makes it easy to build multi-agent pipelines with secure integrations across email, calendars, CRMs, and more.
+Agentor is an open-source framework that makes it easy to build multi-agent system with secure integrations across email, calendars, CRMs, and more.
 
-It lets you connect LLMs to tools — like Gmail, Google Calendar, and your CRM — securely, in just minutes.
+It lets you connect LLMs to tools — like email, calendar, CRMs, or any data stack.
+
+<!-- > LangGraph’s composability + LiteLLM’s simplicity + Modal's deployability. -->
 
 ## 🚅 Quick Start
 
@@ -44,9 +46,7 @@ You can also install the latest bleeding edge version (could be unstable) of `ag
 pip install git+https://github.com/celestoai/agentor@main
 ```
 
-## Examples
-
-### Agents API
+## Agents API
 
 Use Agentor using the API in your applications:
 
