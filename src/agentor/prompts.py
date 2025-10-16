@@ -55,14 +55,11 @@ You have access to the following tools:
 <tools>
 {% for tool in tools %}
 <tool>
-  {% if tool.name %}
-    <name>{{ tool.name }}</name>
+  {% if tool.function.name %}
+    <name>{{ tool.function.name }}</name>
   {% endif %}
-  {% if tool.description %}
-    <description>{{ tool.description }}</description>
-  {% endif %}
-  {% if tool.parameters %}
-    <parameters>{{ tool.parameters }}</parameters>
+  {% if tool.function.description %}
+    <description>{{ tool.function.description }}</description>
   {% endif %}
 </tool>
 {% endfor %}
