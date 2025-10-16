@@ -14,9 +14,11 @@ def test_tool_decorator():
 
 def test_prompt_rendering():
     prompt = render_prompt(
-        THINKING_PROMPT, query="What is the weather in London?", tools=[]
+        THINKING_PROMPT,
+        query="What is the weather in London?",
+        tools=[get_weather._tool],
     )
-    print(prompt)
-
-
-test_prompt_rendering()
+    assert prompt is not None
+    assert "<tools>" in prompt
+    assert "<tool>" in prompt
+    assert "get_weather" in prompt
