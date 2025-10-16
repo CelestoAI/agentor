@@ -1,32 +1,7 @@
-"""
-from agentor import Agentor
-
-agent = Agentor(
-    name="Agentor",
-    instructions="You are an agent that can run agents.",
-    model="gpt-4o",
-    tools=[get_weather],
-    mcp=[read_email, read_calendar]
-)
-
-result = agent.run("what is the weather in Tokyo?", stream=True)
-for event in result.stream_events():
-    print(event)
-
-
-tasks = agent.plan("I need to book a flight to Tokyo")
-for task in tasks:
-    print(task)
-
-for task in tasks:
-    result = agent.act(task)
-    print(result)
-"""
+import json
+from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict
 
 import litellm
-from typing import Callable, Literal, TypedDict
-from typing import Any, Dict, Optional, List
-
 
 from agentor.prompts import THINKING_PROMPT, render_prompt
 
@@ -69,7 +44,11 @@ def get_dummy_weather(city: str) -> str:
 
 class Agentor:
     def __init__(
-        self, name: str, instructions: str, model: str, tools: list[Callable] = []
+        self,
+        name: str,
+        instructions: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: list[Callable] = [],
     ):
         self.name = name
         self.instructions = instructions
@@ -81,10 +60,56 @@ class Agentor:
         }
 
     def think(self, query: str) -> List[str] | str:
-        prompt = render_prompt(THINKING_PROMPT, query=query, tools=self.tools)
-        response = litellm.completion(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
+        prompt = render_prompt(
+            THINKING_PROMPT,
+            query=query,
+            instructions=self.instructions,
             tools=self.tools,
         )
-        return response
+        messages = [{"role": "user", "content": prompt}]
+        response = litellm.completion(
+            model=self.model,
+            messages=messages,
+            tools=self.tools,
+        )
+        tool_calls = response.choices[0].message.tool_calls
+
+        messages.append(
+            {
+                "role": "assistant",
+                "content": response.choices[0].message.content or "",
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        },
+                    }
+                    for tc in tool_calls
+                ],
+            }
+        )
+
+        if tool_calls:
+            for tool_call in tool_calls:
+                tool_name = tool_call.function.name
+                tool_args = tool_call.function.arguments
+                tool = self.tool_registry[tool_name]
+                result = tool(**json.loads(tool_args))
+                messages.append(
+                    {
+                        "tool_call_id": tool_call.id,
+                        "role": "tool",
+                        "name": tool_name,
+                        "content": result,
+                    }
+                )
+
+            response = litellm.completion(
+                model=self.model,
+                messages=messages,
+                tools=self.tools,
+            )
+        return response.choices[0].message.content

@@ -1,4 +1,4 @@
-from jinja2 import Environment, BaseLoader, StrictUndefined
+from jinja2 import BaseLoader, Environment, StrictUndefined
 
 env = Environment(
     loader=BaseLoader(),
@@ -49,6 +49,10 @@ Response: [
   "Summarize findings in plain language for a general audience"
 ]
 
+{% if instructions %}
+User Instructions:
+{{ instructions }}
+{% endif %}
 
 {% if tools %}
 You have access to the following tools:

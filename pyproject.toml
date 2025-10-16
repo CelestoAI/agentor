@@ -62,6 +62,7 @@ package = true
 [dependency-groups]
 dev = [
     "coverage>=7.10.2",
+    "isort>=7.0.0",
     "jupyterlab>=4.4.9",
     "nb-clean>=4.0.1",
     "pre-commit>=4.2.0",

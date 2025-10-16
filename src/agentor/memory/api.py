@@ -1,10 +1,7 @@
-from typing import List
-from typing import Literal, TypedDict
+from typing import List, Literal, TypedDict
 
 import lancedb
 import pandas as pd
-from typeguard import typechecked
-
 import pyarrow as pa
 from lancedb.embeddings import (
     EmbeddingFunctionConfig,
@@ -13,7 +10,7 @@ from lancedb.embeddings import (
     register,
 )
 from lancedb.schema import vector as vector_type
-
+from typeguard import typechecked
 
 _DEFAULT_MODEL_NAME = "all-MiniLM-L6-v2"
 _DEFAULT_EMBEDDING_DIM = 384
