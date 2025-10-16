@@ -10,6 +10,9 @@ from typing import (
     TypedDict,
     Union,
 )
+from google.adk.agents import Agent
+
+from google.adk.models.lite_llm import LiteLlm
 
 import litellm
 
@@ -57,7 +60,7 @@ class Agentor:
         self,
         name: str,
         instructions: Optional[str] = None,
-        model: Optional[str] = None,
+        model: Optional[str] = "gpt-5-nano",
         tools: list[Callable] = [],
     ):
         self.name = name
@@ -68,6 +71,12 @@ class Agentor:
             tool_dict["function"]["name"]: tool
             for (tool, tool_dict) in zip(tools, self.tools)
         }
+        self.agent: Agent = Agent(
+            name=name,
+            instructions=instructions,
+            model=LiteLlm(model=model),
+            tools=tools,
+        )
 
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(
@@ -130,9 +139,12 @@ class Agentor:
         messages: Union[List[Dict[str, Any]], str],
         stream: bool = False,
         max_tokens: Optional[int] = None,
-    ) -> AsyncGenerator:
+    ) -> AsyncGenerator | str:
         if isinstance(messages, str):
-            messages = [{"role": "user", "content": messages}]
+            messages = [
+                {"role": "system", "content": self.instructions},
+                {"role": "user", "content": messages},
+            ]
         if stream:
             return litellm.completion(
                 model=self.model,

@@ -1,5 +1,5 @@
 from agentor.sdk.client import CelestoSDK
-
+from agentor.agents import Agentor
 from .cli import app
 from .memory.api import Memory
 from .output_text_formatter import pydantic_to_xml
@@ -9,6 +9,7 @@ from .utils import AppContext
 __version__ = "0.0.2"
 
 __all__ = [
+    "Agentor",
     "app",
     "create_proxy",
     "pydantic_to_xml",
