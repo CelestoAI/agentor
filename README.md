@@ -5,7 +5,7 @@
   <strong>Fastest way to build, prototype and deploy AI Agents with tools <mark><i>securely</i></mark></strong>
 </p>
 <p align="center">
-  <a href="https://developers.celesto.ai">Docs</a> |
+  <a href="https://docs.celesto.ai">Docs</a> |
   <a href="https://github.com/celestoai/agentor/tree/main/examples">Examples</a>
 </p>
 
