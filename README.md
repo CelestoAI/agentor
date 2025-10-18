@@ -24,8 +24,6 @@ Agentor is an open-source framework that makes it easy to build multi-agent syst
 
 It lets you connect LLMs to tools — like email, calendar, CRMs, or any data stack.
 
-<!-- > LangGraph’s composability + LiteLLM’s simplicity + Modal's deployability. -->
-
 ## 🚅 Quick Start
 
 ### Installation
