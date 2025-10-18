@@ -1,65 +1,41 @@
-# 🚀 Agent Deployment
+# 🚀 Deploying an Agent with Agentor
 
-This example demonstrates how to deploy a scalable Agent server using [LitServe](https://github.com/Lightning-AI/LitServe) ⚡️ — an open-source Python library optimized for production-scale inference and async streaming.
+This example shows how to deploy a scalable, production-ready Agent server using Agentor ✴️ — an open-source Python framework optimized for high-throughput inference and asynchronous streaming.
 
 We’ll integrate Agentor with [CelestoSDK tools](https://celesto.ai/toolhub) to create a weather-aware conversational agent.
 
-Below is an example of deploying an Agentor instance with a simple weather tool using LitServe.
+Here’s an example of deploying an Agentor instance with a simple weather tool in just three lines of code.
 
 ```python
-import os
-import litserve as ls
-from agentor import Agentor, CelestoSDK, function_tool
+from agentor import Agentor
 
-# Load API token
-CELESTO_API_TOKEN = os.environ.get("CELESTO_API_TOKEN")
+agent = Agentor(
+    name="Agentor",
+    model="gpt-5-mini",
+    tools=["get_weather"],
+)
 
-
-@function_tool
-def get_weather(city: str) -> str:
-    """Returns the weather in the given city."""
-    try:
-        client = CelestoSDK(CELESTO_API_TOKEN)
-        return client.toolhub.run_weather_tool(city)
-    except Exception as e:
-        print(f"Error: {e}")
-        return "Failed to get weather data."
-
-
-class AgentorServer(ls.LitAPI):
-    def setup(self, device):
-        self.agentor = Agentor(name="Agentor", model="gpt-5-mini", tools=[get_weather])
-
-    async def predict(self, request: dict):
-        async for event in self.agentor.stream_chat(
-            request["query"], output_format="json"
-        ):
-            yield event
-
-    async def encode_response(self, output, **kwargs):
-        async for item in output:
-            yield item
-
-
-if __name__ == "__main__":
-    api = AgentorServer(stream=True, enable_async=True, api_path="/chat")
-    server = ls.LitServer(api)
-    server.run(port=8000)
+agent.serve(port=8000)
 ```
 
-## ☁️ Deploying to the Cloud
+## Query the Agent server
 
-To deploy this server, run the following:
+Once the server is running, you can send chat requests using curl or any HTTP client:
 
+```bash
+curl -X 'POST' \
+  'http://localhost:8000/chat' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "input": "What is the weather in London?"
+}'
 ```
-lightning deploy main.py --cloud
-```
 
-Once deployed, your Agent server will be available as a scalable, async-ready API endpoint.
+The Agent server will respond asynchronously — ideal for streaming, scalable, and multi-agent applications.
 
 ## 🔧 Key Features
 
-- Scalable inference powered by LitServe
-- Async streaming responses for real-time interaction
-- Custom tools (like get_weather) via `@function_tool`
-- Simple cloud deployment using lightning deploy
+- ⚡️ Scalable inference powered by `Agentor`
+- 🔄 Async streaming for real-time interaction
+- 🧩 Custom tools via the `@function_tool` decorator (e.g., get_weather, search_docs, or your own functions)
