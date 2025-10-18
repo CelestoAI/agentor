@@ -65,6 +65,9 @@ agent = Agentor(
 
 result = agent.run("What is the weather in London?")
 print(result)
+
+# Serve Agent with a single line of code
+agent.serve()
 ```
 
 ## 🚀 Features
