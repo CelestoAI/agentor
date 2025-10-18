@@ -1,3 +1,6 @@
+import sys
+import json
+import traceback
 from typing import (
     Any,
     Dict,
@@ -8,11 +11,19 @@ from typing import (
     Union,
 )
 
+from litestar.exceptions import HTTPException
+from litestar.openapi.plugins import SwaggerRenderPlugin
+from litestar.openapi.config import OpenAPIConfig
+from litestar import Litestar, Request, post, Response
+
 from agentor.tools.registry import ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.type_helper import to_jsonable
 from agentor.tools.registry import CelestoConfig
+
+
+from pydantic import BaseModel
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -38,14 +49,79 @@ def get_dummy_weather(city: str) -> str:
     return f"The dummy weather in {city} is sunny"
 
 
-class Agentor:
+class APIInputRequest(BaseModel):
+    input: Union[str, List[Dict[str, str]]]
+
+
+class AgentServer:
+    def __init__(self, debug: bool = False) -> None:
+        @post("/chat")
+        async def _chat_handler(data: APIInputRequest) -> str:
+            result = await self.chat(data.input)
+            return result.final_output
+
+        self._app = Litestar(
+            [_chat_handler],
+            openapi_config=OpenAPIConfig(
+                title="Agentor",
+                description="Agentor is a tool for building and deploying AI Agents.",
+                version="0.1.0",
+                path="/",
+            ),
+            plugins=[SwaggerRenderPlugin()],
+            debug=debug,
+            exception_handlers={
+                Exception: self._exception_handler,
+                HTTPException: self._http_exception_handler,
+            },
+        )
+
+    @staticmethod
+    def _exception_handler(request: Request, exc: Exception) -> Response:
+        """Custom exception handler that prints full traceback."""
+        print("\n" + "=" * 80)
+        print("EXCEPTION CAUGHT:")
+        print("=" * 80)
+        traceback.print_exc(file=sys.stdout)
+        print("=" * 80 + "\n")
+        return Response(
+            status_code=500,
+            content=json.dumps(
+                {
+                    "error": str(exc),
+                    "type": type(exc).__name__,
+                    "detail": "Internal server error",
+                }
+            ),
+        )
+
+    @staticmethod
+    def _http_exception_handler(request: Request, exc: HTTPException) -> Response:
+        """Handler for HTTP exceptions."""
+        print(f"\nHTTP Exception: {exc.status_code} - {exc.detail}\n")
+        return Response(
+            status_code=exc.status_code,
+            content=json.dumps({"error": exc.detail, "status_code": exc.status_code}),
+        )
+
+    def serve(self, port: int = 8000):
+        import uvicorn
+
+        uvicorn.run(
+            self._app, host="0.0.0.0", port=port, log_level="debug", access_log=True
+        )
+
+
+class Agentor(AgentServer):
     def __init__(
         self,
         name: str,
         instructions: Optional[str] = None,
         model: Optional[str] = "gpt-5-nano",
         tools: List[Union[FunctionTool, str]] = [],
+        debug: bool = False,
     ):
+        super().__init__(debug=debug)
         tools = [
             ToolRegistry.get(tool)["tool"] if isinstance(tool, str) else tool
             for tool in tools
@@ -71,8 +147,13 @@ class Agentor:
     async def chat(
         self,
         input: str,
+        stream: bool = False,
+        output_format: Literal["json", "python"] = "python",
     ):
-        return await Runner.run(self.agent, input=input, context=CelestoConfig())
+        if stream:
+            return await self.stream_chat(input, output_format=output_format)
+        else:
+            return Runner.run(self.agent, input=input, context=CelestoConfig())
 
     async def stream_chat(
         self,
