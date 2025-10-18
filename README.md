@@ -67,7 +67,7 @@ result = agent.run("What is the weather in London?")
 print(result)
 
 # Serve Agent with a single line of code
-agent.serve()
++ agent.serve()
 ```
 
 Run the following command to query the Agent server:
