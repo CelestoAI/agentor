@@ -1,3 +1,6 @@
+import sys
+import json
+import traceback
 from typing import (
     Any,
     Dict,
@@ -8,9 +11,10 @@ from typing import (
     Union,
 )
 
+from litestar.exceptions import HTTPException
 from litestar.openapi.plugins import SwaggerRenderPlugin
 from litestar.openapi.config import OpenAPIConfig
-from litestar import Litestar, post
+from litestar import Litestar, Request, post, Response
 
 from agentor.tools.registry import ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
@@ -66,6 +70,38 @@ class AgentServer:
             ),
             plugins=[SwaggerRenderPlugin()],
             debug=debug,
+            exception_handlers={
+                Exception: self._exception_handler,
+                HTTPException: self._http_exception_handler,
+            },
+        )
+
+    @staticmethod
+    def _exception_handler(request: Request, exc: Exception) -> Response:
+        """Custom exception handler that prints full traceback."""
+        print("\n" + "=" * 80)
+        print("EXCEPTION CAUGHT:")
+        print("=" * 80)
+        traceback.print_exc(file=sys.stdout)
+        print("=" * 80 + "\n")
+        return Response(
+            status_code=500,
+            content=json.dumps(
+                {
+                    "error": str(exc),
+                    "type": type(exc).__name__,
+                    "detail": "Internal server error",
+                }
+            ),
+        )
+
+    @staticmethod
+    def _http_exception_handler(request: Request, exc: HTTPException) -> Response:
+        """Handler for HTTP exceptions."""
+        print(f"\nHTTP Exception: {exc.status_code} - {exc.detail}\n")
+        return Response(
+            status_code=exc.status_code,
+            content=json.dumps({"error": exc.detail, "status_code": exc.status_code}),
         )
 
     def serve(self, port: int = 8000):
@@ -117,7 +153,7 @@ class Agentor(AgentServer):
         if stream:
             return await self.stream_chat(input, output_format=output_format)
         else:
-            return await Runner.run(self.agent, input=input, context=CelestoConfig())
+            return Runner.run(self.agent, input=input, context=CelestoConfig())
 
     async def stream_chat(
         self,
