@@ -1,6 +1,6 @@
 # 🚀 Deploying an Agent with Agentor
 
-This example shows how to deploy a scalable, production-ready Agent server using Agentor ✴️ — an open-source Python framework optimized for high-throughput inference and asynchronous streaming.
+This example shows how to deploy a **scalable, production-ready Agent server** using `Agentor` ✴️.
 
 We’ll integrate Agentor with [CelestoSDK tools](https://celesto.ai/toolhub) to create a weather-aware conversational agent.
 
