@@ -71,8 +71,13 @@ class Agentor:
     async def chat(
         self,
         input: str,
+        stream: bool = False,
+        output_format: Literal["json", "python"] = "python",
     ):
-        return await Runner.run(self.agent, input=input, context=CelestoConfig())
+        if stream:
+            return await self.stream_chat(input, output_format=output_format)
+        else:
+            return await Runner.run(self.agent, input=input, context=CelestoConfig())
 
     async def stream_chat(
         self,
