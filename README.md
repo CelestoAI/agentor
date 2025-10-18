@@ -70,6 +70,18 @@ print(result)
 agent.serve()
 ```
 
+Run the following command to query the Agent server:
+
+```bash
+curl -X 'POST' \
+  'http://localhost:8000/chat' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "input": "What is the weather in London?"
+}'
+```
+
 ## 🚀 Features
 
 <p>
