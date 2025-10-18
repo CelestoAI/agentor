@@ -153,7 +153,7 @@ class Agentor(AgentServer):
         if stream:
             return await self.stream_chat(input, output_format=output_format)
         else:
-            return Runner.run(self.agent, input=input, context=CelestoConfig())
+            return await Runner.run(self.agent, input=input, context=CelestoConfig())
 
     async def stream_chat(
         self,
