@@ -28,6 +28,8 @@ dependencies = [
     "jinja2>=3.1.6",
     "openai-agents>=0.3.3",
     "superauth>=0.0.1",
+    "uvicorn>=0.37.0",
+    "litestar>=2.18.0",
 ]
 license-files = ["LICENSE"]
 authors = [
