@@ -127,6 +127,9 @@ class Deployment(_BaseClient):
         finally:
             bundle.unlink()
 
+    def list(self) -> List[dict]:
+        return self.session.get(f"{self.base_url}/deploy/apps").json()
+
 
 class CelestoSDK(_BaseConnection):
     """

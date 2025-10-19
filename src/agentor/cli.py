@@ -3,11 +3,16 @@ from rich import print
 from rich.console import Console
 
 from agentor import proxy
-from agentor.deployment import deploy
+from agentor.deployment import deploy, list as list_deployments
 
 app = typer.Typer()
 app.add_typer(proxy.app)
+
+# Add deployment commands at top level
 app.command("deploy")(deploy)
+app.command("list")(list_deployments)
+app.command("ls")(list_deployments)  # Alias for list
+
 console = Console()
 
 # Conditionally add chat app - this will fail gracefully if Google creds not set up
