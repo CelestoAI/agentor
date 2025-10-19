@@ -1,13 +1,19 @@
-from typing import List
+import os
+import json
+from pathlib import Path
+import tempfile
+from typing import List, Optional
+import zipfile
 
 import httpx
 
 
-class _BaseConnection:
-    _BASE_URL = "https://api.celesto.ai/v1"
+_BASE_URL = os.environ.get("CELESTO_BASE_URL", "https://api.celesto.ai/v1")
 
+
+class _BaseConnection:
     def __init__(self, api_key: str, base_url: str = None):
-        self.base_url = base_url or self._BASE_URL
+        self.base_url = base_url or _BASE_URL
         if not api_key:
             raise ValueError(
                 "API token not found. Log in to https://celesto.ai, navigate to Settings → Security, "
@@ -65,6 +71,63 @@ class ToolHub(_BaseClient):
         ).json()
 
 
+class Deployment(_BaseClient):
+    def _create_deployment(
+        self, bundle: Path, name: str, description: str, envs: dict[str, str]
+    ) -> dict:
+        if bundle.exists() and not bundle.is_file():
+            raise ValueError(f"Bundle {bundle} is not a file")
+
+        # multi part form data where bundle is the file upload
+        config = {"env": envs or {}}
+
+        # JSON encode the config since multipart form data doesn't support nested dicts
+        data = {
+            "name": name,
+            "description": description,
+            "config": json.dumps(config),
+        }
+
+        # Multipart form data with file upload
+        with open(bundle, "rb") as f:
+            files = {"code_bundle": ("app_bundle.zip", f.read(), "application/zip")}
+
+            response = self.session.post(
+                f"{self.base_url}/deploy/agent",
+                files=files,
+                data=data,
+            )
+
+        if response.status_code not in (200, 201):
+            raise Exception(response.text)
+
+        return response.json()
+
+    def deploy(
+        self,
+        folder: Path,
+        name: str,
+        description: Optional[str] = None,
+        envs: Optional[dict[str, str]] = None,
+    ) -> dict:
+        if not folder.exists():
+            raise ValueError(f"Folder {folder} does not exist")
+        if not folder.is_dir():
+            raise ValueError(f"Folder {folder} is not a directory")
+
+        # zip the folder in a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as temp_file:
+            with zipfile.ZipFile(temp_file.name, "w") as zipf:
+                for file in folder.iterdir():
+                    zipf.write(file, file.name)
+            bundle = Path(temp_file.name)
+
+        try:
+            return self._create_deployment(bundle, name, description, envs)
+        finally:
+            bundle.unlink()
+
+
 class CelestoSDK(_BaseConnection):
     """
     Example:
@@ -72,8 +135,10 @@ class CelestoSDK(_BaseConnection):
         >> client = CelestoSDK(CELESTO_API_KEY)
         >> client.toolhub.list_tools()
         >> client.toolhub.run_current_weather_tool("London")
+        >> client.deployment.deploy(folder=Path("./my-app"), name="My App", description="Description", envs={})
     """
 
     def __init__(self, api_key: str, base_url: str = None):
         super().__init__(api_key, base_url)
         self.toolhub = ToolHub(self)
+        self.deployment = Deployment(self)

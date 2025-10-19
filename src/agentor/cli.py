@@ -1,10 +1,14 @@
 import typer
 from rich import print
+from rich.console import Console
 
 from agentor import proxy
+from agentor.deployment import deploy
 
 app = typer.Typer()
 app.add_typer(proxy.app)
+app.command("deploy")(deploy)
+console = Console()
 
 # Conditionally add chat app - this will fail gracefully if Google creds not set up
 try:
