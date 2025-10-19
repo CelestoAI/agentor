@@ -4,6 +4,15 @@ This example shows how to deploy a **scalable, production-ready Agent server** u
 
 We’ll integrate Agentor with [CelestoSDK tools](https://celesto.ai/toolhub) to create a weather-aware conversational agent.
 
+## 🔧 Key Features
+
+- ⚡️ Scalable inference powered by `Agentor`
+- 🔄 Async streaming for real-time interaction
+- 🧩 Custom tools via the `@function_tool` decorator (e.g., get_weather, search_docs, or your own functions)
+- ☁️ Deploy on cloud
+
+## Example
+
 Here’s an example of deploying an Agentor instance with a simple weather tool in just three lines of code.
 
 ```python
@@ -34,8 +43,12 @@ curl -X 'POST' \
 
 The Agent server will respond asynchronously — ideal for streaming, scalable, and multi-agent applications.
 
-## 🔧 Key Features
+## Deploy on cloud
 
-- ⚡️ Scalable inference powered by `Agentor`
-- 🔄 Async streaming for real-time interaction
-- 🧩 Custom tools via the `@function_tool` decorator (e.g., get_weather, search_docs, or your own functions)
+```
+# Deploy the Agent to cloud
+agentor deploy --folder ./
+
+# List the deployed API
+agentor ls
+```

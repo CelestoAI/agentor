@@ -86,7 +86,22 @@ def deploy(
             folder=folder_path, name=name, description=description, envs=env_dict
         )
         console.print("✅ [bold green]Deployment successful![/bold green]")
-        console.print(f"📦 Result: {result}")
+
+        # Show deployment details
+        deployment_id = result.get("id")
+        status = result.get("status")
+        console.print(f"\n[bold]Deployment ID:[/bold] {deployment_id}")
+        console.print(f"[bold]Status:[/bold] {status}")
+
+        # Show URL once ready
+        if status == "READY":
+            cloud_url = f"https://api.celesto.ai/v1/deploy/apps/{deployment_id}/chat"
+            console.print(f"[bold]URL:[/bold] [link={cloud_url}]{cloud_url}[/link]")
+        else:
+            console.print(
+                "[yellow]⏳ Building... Run 'agentor ls' to check status[/yellow]"
+            )
+
     except Exception as e:
         console.print(f"❌ [bold red]Deployment failed:[/bold red] {e}")
         raise typer.Exit(1)
@@ -124,14 +139,25 @@ def list(
         table.add_column("URL", style="blue")
 
         for deployment in deployments:
+            # Construct the cloud URL
+            deployment_id = deployment.get("id", "N/A")
+            if deployment_id != "N/A" and deployment.get("status") == "READY":
+                cloud_url = (
+                    f"https://api.celesto.ai/v1/deploy/apps/{deployment_id}/chat"
+                )
+            else:
+                cloud_url = "Pending"
+
             table.add_row(
                 deployment.get("name", "N/A"),
-                deployment.get("id", "N/A")[:8] + "...",  # Shorten ID
+                deployment_id[:8] + "..."
+                if deployment_id != "N/A"
+                else "N/A",  # Shorten ID
                 deployment.get("status", "N/A"),
                 deployment.get("created_at", "N/A").split("T")[0]
                 if deployment.get("created_at")
                 else "N/A",  # Just date
-                deployment.get("runtime_url", "N/A") or "Pending",
+                cloud_url,
             )
 
         console.print(table)

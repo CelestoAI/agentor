@@ -1,9 +1,9 @@
 import os
 import json
 from pathlib import Path
+import tarfile
 import tempfile
 from typing import List, Optional
-import zipfile
 
 import httpx
 
@@ -90,7 +90,7 @@ class Deployment(_BaseClient):
 
         # Multipart form data with file upload
         with open(bundle, "rb") as f:
-            files = {"code_bundle": ("app_bundle.zip", f.read(), "application/zip")}
+            files = {"code_bundle": ("app_bundle.tar.gz", f.read(), "application/gzip")}
 
             response = self.session.post(
                 f"{self.base_url}/deploy/agent",
@@ -115,11 +115,11 @@ class Deployment(_BaseClient):
         if not folder.is_dir():
             raise ValueError(f"Folder {folder} is not a directory")
 
-        # zip the folder in a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as temp_file:
-            with zipfile.ZipFile(temp_file.name, "w") as zipf:
-                for file in folder.iterdir():
-                    zipf.write(file, file.name)
+        # Create tar.gz archive (Nixpacks expects tar.gz format)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.gz") as temp_file:
+            with tarfile.open(temp_file.name, "w:gz") as tar:
+                for item in folder.iterdir():
+                    tar.add(item, arcname=item.name)
             bundle = Path(temp_file.name)
 
         try:
