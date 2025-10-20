@@ -12,7 +12,7 @@ import warnings
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-__version__ = "0.0.4"
+__version__ = "0.0.5.dev0"
 
 __all__ = [
     "Agentor",
