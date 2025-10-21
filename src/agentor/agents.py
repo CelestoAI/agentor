@@ -11,10 +11,11 @@ from typing import (
     Union,
 )
 
+
 from litestar.exceptions import HTTPException
 from litestar.openapi.plugins import SwaggerRenderPlugin
 from litestar.openapi.config import OpenAPIConfig
-from litestar import Litestar, Request, post, Response
+from litestar import Litestar, Request, get, post, Response
 
 from agentor.tools.registry import ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
@@ -60,8 +61,12 @@ class AgentServer:
             result = await self.chat(data.input)
             return result.final_output
 
+        @get("/health")
+        def health_handler() -> Response:
+            return Response(status_code=200, content="OK")
+
         self._app = Litestar(
-            [_chat_handler],
+            [_chat_handler, health_handler],
             openapi_config=OpenAPIConfig(
                 title="Agentor",
                 description="Agentor is a tool for building and deploying AI Agents.",
