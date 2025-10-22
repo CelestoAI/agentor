@@ -1,9 +1,11 @@
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 import typer
 from rich.console import Console
+from typing_extensions import Annotated
 
 from agentor.sdk.client import CelestoSDK
 
@@ -29,10 +31,24 @@ def _get_api_key(api_key: Optional[str] = None) -> str:
 
 @app.command()
 def deploy(
-    folder: str = typer.Option(
-        ..., "--folder", "-f", help="Path to the folder containing your agent code"
-    ),
-    name: str = typer.Option(..., "--name", "-n", help="Name for your deployment"),
+    folder: Annotated[
+        str,
+        typer.Argument(
+            ...,
+            help="Path to the folder containing your agent code",
+            default_factory=lambda: os.getcwd(),
+        ),
+    ],
+    name: Annotated[
+        str,
+        typer.Option(
+            ...,
+            "--name",
+            "-n",
+            help="Name for your deployment",
+            default_factory=lambda: f"my-agent-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        ),
+    ],
     description: Optional[str] = typer.Option(
         None, "--description", "-d", help="Description of your agent"
     ),
@@ -43,7 +59,11 @@ def deploy(
         help='Environment variables as comma-separated key=value pairs (e.g., "API_KEY=xyz,DEBUG=true")',
     ),
     api_key: Optional[str] = typer.Option(
-        None, "--api-key", "-k", help="Celesto API key (or set CELESTO_API_KEY env var)"
+        None,
+        "--api-key",
+        "-k",
+        help="Celesto API key (or set CELESTO_API_KEY env var)",
+        default_factory=lambda: os.environ.get("CELESTO_API_KEY"),
     ),
 ):
     """Deploy an agent to Celesto."""
