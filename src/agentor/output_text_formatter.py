@@ -170,6 +170,10 @@ async def format_stream_events(
                 )
             elif item_type == "reasoning_item":
                 reasoning_text = getattr(getattr(item, "raw_item", None), "content", "")
+                if reasoning_text is None:
+                    reasoning_text = ""
+                else:
+                    reasoning_text = str(reasoning_text)
                 yield AgentOutput(
                     type="run_item_stream_event",
                     reasoning=reasoning_text,
