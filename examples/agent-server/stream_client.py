@@ -13,7 +13,10 @@ headers = {
 
 response = requests.post(
     URL,
-    json={"input": "how are you?"},
+    json={"input": "how are you?", "stream": True},
     headers=headers,
+    stream=True,
 )
-print(response.content)
+for line in response.iter_lines(decode_unicode=True):
+    if line:
+        print(line, flush=True)

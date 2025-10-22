@@ -4,6 +4,7 @@ import dataclasses
 import datetime as dt
 import enum
 from decimal import Decimal
+import json
 from pathlib import Path
 from typing import Any, Mapping, Iterable
 from uuid import UUID
@@ -16,13 +17,14 @@ except Exception:  # numpy not installed
     np = None  # type: ignore
 
 
-def to_jsonable(
+def serialize(
     obj: Any,
     *,
     convert_keys_to_str: bool = True,
     decimal_to_str: bool = True,
     max_depth: int | None = None,
-) -> Any:
+    dump_json: bool = False,
+) -> Any | str | bytes:
     """
     Recursively convert `obj` into JSON-serializable Python primitives.
 
@@ -41,9 +43,11 @@ def to_jsonable(
         convert_keys_to_str: If True, mapping keys are stringified (JSON requires string keys).
         decimal_to_str: If True, Decimal -> str, else float.
         max_depth: Optional recursion cap; when reached, returns a stub string.
-
+        dump_json: If True, dump the object to a JSON string.
     Returns:
         A structure of only {dict, list, str, int, float, bool, None} suitable for json.dumps.
+        If dump_json is True, returns a JSON string.
+        Otherwise, returns the object.
     """
     seen: set[int] = set()
 
@@ -133,4 +137,7 @@ def to_jsonable(
         # Fallback: string representation
         return str(o)
 
-    return _convert(obj, depth=0)
+    if dump_json:
+        return json.dumps(_convert(obj, depth=0))
+    else:
+        return _convert(obj, depth=0)

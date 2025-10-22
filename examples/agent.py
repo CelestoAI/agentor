@@ -14,7 +14,7 @@ agent = Agentor(
 
 async def main():
     async for event in agent.stream_chat(
-        "How do I measure the angle between the sun and the earth?",
+        "How is the weather in Tokyo?",
     ):
         print(event, flush=True)
 

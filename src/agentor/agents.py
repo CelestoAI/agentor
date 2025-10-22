@@ -11,18 +11,17 @@ from typing import (
     Union,
 )
 
-
 from litestar.exceptions import HTTPException
 from litestar.openapi.plugins import SwaggerRenderPlugin
 from litestar.openapi.config import OpenAPIConfig
-from litestar import Litestar, Request, get, post, Response
+from litestar import Litestar, Request, get, post
+from litestar.response import Stream, Response
 
-from agentor.tools.registry import ToolRegistry
+from agentor.tools.registry import CelestoConfig, ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
 from agentor.prompts import THINKING_PROMPT, render_prompt
-from agentor.type_helper import to_jsonable
-from agentor.tools.registry import CelestoConfig
 
+from agentor.output_text_formatter import format_stream_events
 
 from pydantic import BaseModel
 
@@ -52,17 +51,23 @@ def get_dummy_weather(city: str) -> str:
 
 class APIInputRequest(BaseModel):
     input: Union[str, List[Dict[str, str]]]
+    stream: bool = False
 
 
 class AgentServer:
     def __init__(self, debug: bool = False) -> None:
         @post("/chat")
         async def _chat_handler(data: APIInputRequest) -> str:
-            result = await self.chat(data.input)
-            return result.final_output
+            if data.stream:
+                return Stream(
+                    self.stream_chat(data.input, dump_json=True),
+                    media_type="text/event-stream",
+                )
+            else:
+                return await self.chat(data.input)
 
         @get("/health")
-        def health_handler() -> Response:
+        async def health_handler() -> Response:
             return Response(status_code=200, content="OK")
 
         self._app = Litestar(
@@ -109,11 +114,21 @@ class AgentServer:
             content=json.dumps({"error": exc.detail, "status_code": exc.status_code}),
         )
 
-    def serve(self, port: int = 8000):
+    def serve(
+        self,
+        host: Literal["0.0.0.0", "127.0.0.1", "localhost"] = "0.0.0.0",
+        port: int = 8000,
+        log_level: Literal["debug", "info", "warning", "error"] = "info",
+        access_log: bool = True,
+    ):
+        if host not in ("0.0.0.0", "127.0.0.1", "localhost"):
+            raise ValueError(
+                f"Invalid host: {host}. Must be 0.0.0.0, 127.0.0.1, or localhost."
+            )
         import uvicorn
 
         uvicorn.run(
-            self._app, host="0.0.0.0", port=port, log_level="debug", access_log=True
+            self._app, host=host, port=port, log_level=log_level, access_log=access_log
         )
 
 
@@ -163,22 +178,11 @@ class Agentor(AgentServer):
     async def stream_chat(
         self,
         input: str,
-        output_format: Literal["json", "python"] = "python",
+        dump_json: bool = False,
     ):
         result = Runner.run_streamed(self.agent, input=input, context=CelestoConfig())
-
-        async for event in result.stream_events():
-            if output_format == "python":
-                yield event
-                continue
-
-            if event.type == "agent_updated_stream_event":
-                yield {"type": "agent_updated", "name": event.new_agent.name}
-            elif event.type == "raw_response_event":
-                yield {"type": "raw_response", "data": to_jsonable(event.data)}
-            elif event.type == "run_item_stream_event":
-                yield {"type": "run_item", "item": to_jsonable(event.item)}
-            elif event.type == "error":
-                yield {"type": "error", "error": to_jsonable(event.error)}
-            else:
-                yield {"type": "unknown", "event": to_jsonable(event)}
+        async for agent_output in format_stream_events(
+            result.stream_events(),
+            allowed_events=["run_item_stream_event"],
+        ):
+            yield agent_output.serialize(dump_json=dump_json)
