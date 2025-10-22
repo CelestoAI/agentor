@@ -2,7 +2,7 @@ import os
 import requests
 
 # When deployed to Celesto (agentor deploy --folder ./examples/agent-server)
-# URL = "http://localhost:8500/v1/deploy/apps/APP_ID/chat"
+# URL = "https://api.celesto.ai/v1/deploy/apps/[APP_ID]/chat"
 URL = "http://localhost:8000/chat"
 CELESTO_API_KEY = os.environ.get("CELESTO_API_KEY")
 
@@ -19,4 +19,4 @@ response = requests.post(
 )
 for line in response.iter_lines():
     if line:
-        print(line, flush=True)
+        print(line.decode("utf-8"), flush=True)
