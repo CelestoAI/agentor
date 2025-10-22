@@ -182,12 +182,10 @@ class Agentor(AgentServer):
     async def stream_chat(
         self,
         input: str,
-        output_format: Literal["json", "dict", "python"] = "python",
     ):
         result = Runner.run_streamed(self.agent, input=input, context=CelestoConfig())
         async for event in format_stream_events(
             result.stream_events(),
-            output_format=output_format,
-            allowed_events=["run_item"],
+            allowed_events=["run_item_stream_event"],
         ):
             yield event

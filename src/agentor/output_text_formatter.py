@@ -1,13 +1,14 @@
 from typing import Any, AsyncIterator, List, Literal, Optional, Union
 from xml.etree.ElementTree import Element, SubElement, tostring
 
+from attr import dataclass
 from pydantic import BaseModel
-from agentor.type_helper import serialize
 from agents import (
     StreamEvent,
     RawResponsesStreamEvent,
     RunItemStreamEvent,
     AgentUpdatedStreamEvent,
+    ItemHelpers,
 )
 
 
@@ -37,28 +38,127 @@ def pydantic_to_xml(obj: BaseModel) -> str:
     return tostring(root, "utf-8").decode()
 
 
+@dataclass
+class ToolAction:
+    name: str
+    type: Literal[
+        "tool_called",
+        "tool_output",
+        "handoff_requested",
+        "handoff_occured",
+        "mcp_approval_requested",
+        "mcp_list_tools",
+    ]
+
+
+@dataclass
+class AgentOutput:
+    type: Literal[
+        "agent_updated_stream_event", "raw_response_event", "run_item_stream_event"
+    ]
+    message: Optional[str] = None
+    chunk: Optional[str] = None
+    tool_action: Optional[ToolAction] = None
+    reasoning: Optional[str] = None
+    raw_event: Optional[RawResponsesStreamEvent] = None
+
+
 async def format_stream_events(
     events: AsyncIterator[StreamEvent],
-    output_format: Literal["json", "dict", "python"] = "python",
     allowed_events: Optional[
-        List[Literal["agent_updated", "raw_response", "run_item"]]
+        List[
+            Literal[
+                "agent_updated_stream_event",
+                "raw_response_event",
+                "run_item_stream_event",
+            ]
+        ]
     ] = None,
 ) -> AsyncIterator[Union[str, dict, StreamEvent]]:
-    dump_json = output_format == "json"
     async for event in events:
         stream_event = format_event(event)
 
         if allowed_events is not None:
             if stream_event.type not in allowed_events:
                 continue
-        if dump_json:
-            yield serialize(stream_event, dump_json=dump_json)
-        elif output_format == "dict":
-            yield serialize(stream_event)
-        elif output_format == "python":
-            yield stream_event
+
+        if stream_event.type == "agent_updated_stream_event":
+            yield AgentOutput(
+                type="agent_updated_stream_event",
+                message=stream_event.new_agent.name,
+            )
+
+        elif stream_event.type == "raw_response_event":
+            yield AgentOutput(
+                type="raw_response_event",
+                raw_event=stream_event.data,
+            )
+
+        elif stream_event.type == "run_item_stream_event":
+            if stream_event.name == "message_output_created":
+                yield AgentOutput(
+                    type="run_item_stream_event",
+                    message=ItemHelpers.text_message_output(stream_event.item),
+                )
+            elif stream_event.name == "tool_called":
+                yield AgentOutput(
+                    type="run_item_stream_event",
+                    tool_action=ToolAction(
+                        name=stream_event.item.raw_item.name, type="tool_called"
+                    ),
+                )
+            elif stream_event.name == "tool_output":
+                yield AgentOutput(
+                    type="run_item_stream_event",
+                    tool_action=ToolAction(
+                        name=stream_event.item.raw_item, type="tool_output"
+                    ),
+                )
+            elif stream_event.name == "handoff_requested":
+                yield AgentOutput(
+                    type="run_item_stream_event",
+                    tool_action=ToolAction(
+                        name=stream_event.item.name, type="handoff_requested"
+                    ),
+                )
+            elif stream_event.name == "handoff_occured":
+                yield AgentOutput(
+                    type="run_item_stream_event",
+                    tool_action=ToolAction(
+                        name=stream_event.item.name, type="handoff_occured"
+                    ),
+                )
+            elif stream_event.name == "mcp_approval_requested":
+                yield AgentOutput(
+                    type="run_item_stream_event",
+                    tool_action=ToolAction(
+                        name=stream_event.item.name, type="mcp_approval_requested"
+                    ),
+                )
+            elif stream_event.name == "mcp_list_tools":
+                yield AgentOutput(
+                    type="run_item_stream_event",
+                    tool_action=ToolAction(
+                        name=stream_event.item.name, type="mcp_list_tools"
+                    ),
+                )
+            elif stream_event.name == "reasoning_item_created":
+                yield AgentOutput(
+                    type="run_item_stream_event",
+                    reasoning=stream_event.item.raw_item.content,
+                )
+            elif stream_event.name == "mcp_approval_response":
+                yield AgentOutput(
+                    type="run_item_stream_event",
+                    tool_action=ToolAction(
+                        name=stream_event.item.name, type="mcp_approval_response"
+                    ),
+                )
+            else:
+                print(f"Unhandled event name: {stream_event.name}")
+
         else:
-            raise ValueError(f"Invalid output format: {output_format}")
+            raise ValueError(f"Invalid event type: {stream_event.type}")
 
 
 def format_event(event: Union[StreamEvent, dict]) -> StreamEvent:
