@@ -19,5 +19,4 @@ response = requests.post(
 )
 for line in response.iter_lines(decode_unicode=True):
     if line:
-        data = line
-        print(data, flush=True)
+        print(line, flush=True)
