@@ -17,7 +17,7 @@ except Exception:  # numpy not installed
     np = None  # type: ignore
 
 
-def to_jsonable(
+def serialize(
     obj: Any,
     *,
     convert_keys_to_str: bool = True,

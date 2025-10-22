@@ -11,20 +11,17 @@ from typing import (
     Union,
 )
 
-import uvicorn
-
 from litestar.exceptions import HTTPException
 from litestar.openapi.plugins import SwaggerRenderPlugin
 from litestar.openapi.config import OpenAPIConfig
 from litestar import Litestar, Request, get, post
 from litestar.response import Stream, Response
 
-from agentor.tools.registry import ToolRegistry
+from agentor.tools.registry import CelestoConfig, ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
 from agentor.prompts import THINKING_PROMPT, render_prompt
-from agentor.type_helper import to_jsonable
-from agentor.tools.registry import CelestoConfig
 
+from agentor.output_text_formatter import format_stream_events
 
 from pydantic import BaseModel
 
@@ -132,6 +129,8 @@ class AgentServer:
             raise ValueError(
                 f"Invalid host: {host}. Must be 0.0.0.0, 127.0.0.1, or localhost."
             )
+        import uvicorn
+
         uvicorn.run(
             self._app, host=host, port=port, log_level=log_level, access_log=access_log
         )
@@ -186,29 +185,9 @@ class Agentor(AgentServer):
         output_format: Literal["json", "dict", "python"] = "python",
     ):
         result = Runner.run_streamed(self.agent, input=input, context=CelestoConfig())
-        dump_json = output_format == "json"
-
-        async for event in result.stream_events():
-            if output_format == "python":
-                yield event
-                continue
-
-            if event.type == "agent_updated_stream_event":
-                v = {"type": "agent_updated", "name": event.new_agent.name}
-                yield to_jsonable(v, dump_json=dump_json)
-            elif event.type == "raw_response_event":
-                yield to_jsonable(
-                    {"type": "raw_response", "data": event.data}, dump_json=dump_json
-                )
-            elif event.type == "run_item_stream_event":
-                yield to_jsonable(
-                    {"type": "run_item", "item": event.item}, dump_json=dump_json
-                )
-            elif event.type == "error":
-                yield to_jsonable(
-                    {"type": "error", "error": event.error}, dump_json=dump_json
-                )
-            else:
-                yield to_jsonable(
-                    {"type": "unknown", "event": event}, dump_json=dump_json
-                )
+        async for event in format_stream_events(
+            result.stream_events(),
+            output_format=output_format,
+            allowed_events=["run_item"],
+        ):
+            yield event
