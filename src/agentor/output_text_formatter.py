@@ -1,3 +1,4 @@
+import json
 from typing import Any, AsyncIterator, List, Literal, Optional, Union
 from xml.etree.ElementTree import Element, SubElement, tostring
 
@@ -11,6 +12,8 @@ from agents import (
     AgentUpdatedStreamEvent,
     ItemHelpers,
 )
+
+from agentor.type_helper import serialize
 
 
 def pydantic_to_xml(obj: BaseModel) -> str:
@@ -64,6 +67,11 @@ class AgentOutput:
     reasoning: Optional[str] = None
     raw_event: Optional[RawResponsesStreamEvent] = None
 
+    def serialize(self, dump_json: bool = False) -> str:
+        if dump_json:
+            return json.dumps(serialize(self), indent=2) + "\n"
+        return serialize(self)
+
 
 def _extract_tool_name(raw_item: Any) -> Optional[str]:
     if raw_item is None:
@@ -104,7 +112,7 @@ async def format_stream_events(
             ]
         ]
     ] = None,
-) -> AsyncIterator[Union[str, dict, StreamEvent]]:
+) -> AsyncIterator[AgentOutput]:
     async for event in events:
         stream_event = format_event(event)
 

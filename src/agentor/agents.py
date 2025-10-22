@@ -59,12 +59,8 @@ class AgentServer:
         @post("/chat")
         async def _chat_handler(data: APIInputRequest) -> str:
             if data.stream:
-                # async def stream_events():
-                # result = await self.stream_chat(data.input)
-                # async for event in result.stream_events():
-                #     yield event
                 return Stream(
-                    self.stream_chat(data.input, output_format="json"),
+                    self.stream_chat(data.input, dump_json=True),
                     media_type="text/event-stream",
                 )
             else:
@@ -182,10 +178,11 @@ class Agentor(AgentServer):
     async def stream_chat(
         self,
         input: str,
+        dump_json: bool = False,
     ):
         result = Runner.run_streamed(self.agent, input=input, context=CelestoConfig())
-        async for event in format_stream_events(
+        async for agent_output in format_stream_events(
             result.stream_events(),
             allowed_events=["run_item_stream_event"],
         ):
-            yield event
+            yield agent_output.serialize(dump_json=dump_json)
