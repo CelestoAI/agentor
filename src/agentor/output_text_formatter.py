@@ -2,6 +2,7 @@ from typing import Any, AsyncIterator, List, Literal, Optional, Union
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 from attr import dataclass
+from openai.types.responses import ResponseTextDeltaEvent
 from pydantic import BaseModel
 from agents import (
     StreamEvent,
@@ -47,6 +48,7 @@ class ToolAction:
         "handoff_requested",
         "handoff_occured",
         "mcp_approval_requested",
+        "mcp_approval_response",
         "mcp_list_tools",
     ]
 
@@ -61,6 +63,34 @@ class AgentOutput:
     tool_action: Optional[ToolAction] = None
     reasoning: Optional[str] = None
     raw_event: Optional[RawResponsesStreamEvent] = None
+
+
+def _extract_tool_name(raw_item: Any) -> Optional[str]:
+    if raw_item is None:
+        return None
+
+    if isinstance(raw_item, BaseModel):
+        data = raw_item.model_dump()
+        for key in ("name", "tool_name", "call_id", "id", "type"):
+            value = data.get(key)
+            if value:
+                return str(value)
+        return raw_item.__class__.__name__
+
+    for attr in ("name", "tool_name", "call_id", "id", "type"):
+        value = getattr(raw_item, attr, None)
+        if value:
+            return str(value)
+
+    return raw_item.__class__.__name__
+
+
+def _stringify_output(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, BaseModel):
+        return pydantic_to_xml(value)
+    return str(value)
 
 
 async def format_stream_events(
@@ -85,77 +115,116 @@ async def format_stream_events(
         if stream_event.type == "agent_updated_stream_event":
             yield AgentOutput(
                 type="agent_updated_stream_event",
-                message=stream_event.new_agent.name,
+                message=f"=== Agent changed: {stream_event.new_agent.name}",
             )
 
         elif stream_event.type == "raw_response_event":
-            yield AgentOutput(
-                type="raw_response_event",
-                raw_event=stream_event.data,
-            )
+            data = stream_event.data
+            if isinstance(data, ResponseTextDeltaEvent):
+                chunk_text = data.delta or ""
+                yield AgentOutput(
+                    type="raw_response_event",
+                    chunk=chunk_text,
+                    raw_event=stream_event,
+                )
+            else:
+                yield AgentOutput(
+                    type="raw_response_event",
+                    raw_event=stream_event,
+                )
 
         elif stream_event.type == "run_item_stream_event":
-            if stream_event.name == "message_output_created":
+            item = stream_event.item
+            item_type = getattr(item, "type", None)
+
+            if item_type == "message_output_item":
                 yield AgentOutput(
                     type="run_item_stream_event",
-                    message=ItemHelpers.text_message_output(stream_event.item),
+                    message=ItemHelpers.text_message_output(item).strip(),
                 )
-            elif stream_event.name == "tool_called":
+            elif item_type == "tool_call_item":
+                tool_name = _extract_tool_name(getattr(item, "raw_item", None))
                 yield AgentOutput(
                     type="run_item_stream_event",
+                    message=(
+                        f"Tool was called: {tool_name}"
+                        if tool_name
+                        else "Tool was called"
+                    ),
                     tool_action=ToolAction(
-                        name=stream_event.item.raw_item.name, type="tool_called"
+                        name=tool_name or "tool_call_item", type="tool_called"
                     ),
                 )
-            elif stream_event.name == "tool_output":
+            elif item_type == "tool_call_output_item":
+                tool_name = _extract_tool_name(getattr(item, "raw_item", None))
+                output_text = _stringify_output(getattr(item, "output", None))
                 yield AgentOutput(
                     type="run_item_stream_event",
+                    message=f"Tool output: {output_text}",
                     tool_action=ToolAction(
-                        name=stream_event.item.raw_item, type="tool_output"
+                        name=tool_name or "tool_call_output_item", type="tool_output"
                     ),
                 )
-            elif stream_event.name == "handoff_requested":
+            elif item_type == "reasoning_item":
+                reasoning_text = getattr(getattr(item, "raw_item", None), "content", "")
+                yield AgentOutput(
+                    type="run_item_stream_event",
+                    reasoning=reasoning_text,
+                )
+            elif item_type == "handoff_call_item":
+                target_name = _extract_tool_name(getattr(item, "raw_item", None))
                 yield AgentOutput(
                     type="run_item_stream_event",
                     tool_action=ToolAction(
-                        name=stream_event.item.name, type="handoff_requested"
+                        name=target_name or "handoff_request",
+                        type="handoff_requested",
                     ),
                 )
-            elif stream_event.name == "handoff_occured":
+            elif item_type == "handoff_output_item":
+                source_agent = getattr(getattr(item, "source_agent", None), "name", "")
+                target_agent = getattr(getattr(item, "target_agent", None), "name", "")
+                action_name = " -> ".join(
+                    part for part in (source_agent, target_agent) if part
+                )
                 yield AgentOutput(
                     type="run_item_stream_event",
                     tool_action=ToolAction(
-                        name=stream_event.item.name, type="handoff_occured"
+                        name=action_name or "handoff",
+                        type="handoff_occured",
                     ),
                 )
-            elif stream_event.name == "mcp_approval_requested":
+            elif item_type == "mcp_approval_request_item":
+                request_name = _extract_tool_name(getattr(item, "raw_item", None))
                 yield AgentOutput(
                     type="run_item_stream_event",
                     tool_action=ToolAction(
-                        name=stream_event.item.name, type="mcp_approval_requested"
+                        name=request_name or "mcp_approval_request",
+                        type="mcp_approval_requested",
                     ),
                 )
-            elif stream_event.name == "mcp_list_tools":
+            elif item_type == "mcp_approval_response_item":
+                response_name = _extract_tool_name(getattr(item, "raw_item", None))
                 yield AgentOutput(
                     type="run_item_stream_event",
                     tool_action=ToolAction(
-                        name=stream_event.item.name, type="mcp_list_tools"
+                        name=response_name or "mcp_approval_response",
+                        type="mcp_approval_response",
                     ),
                 )
-            elif stream_event.name == "reasoning_item_created":
-                yield AgentOutput(
-                    type="run_item_stream_event",
-                    reasoning=stream_event.item.raw_item.content,
-                )
-            elif stream_event.name == "mcp_approval_response":
+            elif item_type == "mcp_list_tools_item":
+                list_tools_name = _extract_tool_name(getattr(item, "raw_item", None))
                 yield AgentOutput(
                     type="run_item_stream_event",
                     tool_action=ToolAction(
-                        name=stream_event.item.name, type="mcp_approval_response"
+                        name=list_tools_name or "mcp_list_tools",
+                        type="mcp_list_tools",
                     ),
                 )
             else:
-                print(f"Unhandled event name: {stream_event.name}")
+                yield AgentOutput(
+                    type="run_item_stream_event",
+                    message=f"Unhandled run item type: {item_type or stream_event.name}",
+                )
 
         else:
             raise ValueError(f"Invalid event type: {stream_event.type}")
