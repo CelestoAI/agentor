@@ -6,7 +6,7 @@
 </p>
 <p align="center">
   <a href="https://docs.celesto.ai">Docs</a> |
-  <a href="https://github.com/celestoai/agentor/tree/main/examples">Examples</a>
+  <a href="https://github.com/celestoai/agentor/tree/main/docs/examples">Examples</a>
 </p>
 
 ______________________________________________________________________
@@ -94,7 +94,7 @@ curl -X 'POST' \
 | ✅ Pre-built agents | Ready-to-use tools |
 | 🔐 Secure integrations | Email, calendar, CRMs, and more |
 | 🦾 AgentMCP | Tool routing |
-| ☁️ Easy agent deployment | `agentor deploy FOLDER_PATH` |
+| ☁️ [Easy agent deployment](https://github.com/CelestoAI/agentor/tree/main/docs/examples/agent-server) | `agentor deploy FOLDER_PATH` |
 
 ### Managed Tool Hub (ready-to-use collection of tools)
 
