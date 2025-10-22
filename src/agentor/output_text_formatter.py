@@ -123,7 +123,7 @@ async def format_stream_events(
         if stream_event.type == "agent_updated_stream_event":
             yield AgentOutput(
                 type="agent_updated_stream_event",
-                message=f"=== Agent changed: {stream_event.new_agent.name}",
+                message=stream_event.new_agent.name,
             )
 
         elif stream_event.type == "raw_response_event":
@@ -154,11 +154,6 @@ async def format_stream_events(
                 tool_name = _extract_tool_name(getattr(item, "raw_item", None))
                 yield AgentOutput(
                     type="run_item_stream_event",
-                    message=(
-                        f"Tool was called: {tool_name}"
-                        if tool_name
-                        else "Tool was called"
-                    ),
                     tool_action=ToolAction(
                         name=tool_name or "tool_call_item", type="tool_called"
                     ),
@@ -168,7 +163,7 @@ async def format_stream_events(
                 output_text = _stringify_output(getattr(item, "output", None))
                 yield AgentOutput(
                     type="run_item_stream_event",
-                    message=f"Tool output: {output_text}",
+                    message=output_text,
                     tool_action=ToolAction(
                         name=tool_name or "tool_call_output_item", type="tool_output"
                     ),
