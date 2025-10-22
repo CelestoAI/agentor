@@ -94,7 +94,7 @@ curl -X 'POST' \
 | ✅ Pre-built agents | Ready-to-use tools |
 | 🔐 Secure integrations | Email, calendar, CRMs, and more |
 | 🦾 AgentMCP | Tool routing |
-| ☁️ Easy agent deployment | `agentor deploy --folder PATH` |
+| ☁️ Easy agent deployment | `agentor deploy FOLDER_PATH` |
 
 ### Managed Tool Hub (ready-to-use collection of tools)
 
