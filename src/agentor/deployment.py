@@ -63,7 +63,6 @@ def deploy(
         "--api-key",
         "-k",
         help="Celesto API key (or set CELESTO_API_KEY env var)",
-        default_factory=lambda: os.environ.get("CELESTO_API_KEY"),
     ),
 ):
     """Deploy an agent to Celesto."""
