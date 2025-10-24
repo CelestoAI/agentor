@@ -16,8 +16,6 @@ from dataclasses import dataclass
 
 @dataclass
 class ToolMetadata:
-    """Metadata for a registered tool"""
-
     func: Callable
     name: str
     description: str
@@ -26,8 +24,6 @@ class ToolMetadata:
 
 @dataclass
 class ResourceMetadata:
-    """Metadata for a registered resource"""
-
     func: Callable
     uri: str
     name: str
@@ -37,8 +33,6 @@ class ResourceMetadata:
 
 @dataclass
 class PromptMetadata:
-    """Metadata for a registered prompt"""
-
     func: Callable
     name: str
     description: Optional[str]
@@ -75,12 +69,13 @@ class MCPAPIRouter:
         self.prompts: Dict[str, PromptMetadata] = {}
 
         self._fastapi_router = APIRouter()
-
-        # Register default handlers
         self._register_default_handlers()
+        self._register_endpoint()
 
-        # Register the main MCP endpoint
-        @self._fastapi_router.post(prefix)
+    def _register_endpoint(self):
+        """Register the main MCP endpoint"""
+
+        @self._fastapi_router.post(self.prefix)
         async def mcp_handler(request: Request):
             body = await request.json()
             method = body.get("method")
@@ -90,10 +85,8 @@ class MCPAPIRouter:
 
             if method in self.method_handlers:
                 try:
-                    # Call the handler and get the result
                     result = await self.method_handlers[method](body)
 
-                    # Auto-wrap in JSON-RPC format if not already wrapped
                     if isinstance(result, dict) and "jsonrpc" in result:
                         response = result
                     else:
@@ -107,7 +100,6 @@ class MCPAPIRouter:
                     return response
 
                 except Exception as e:
-                    # Return JSON-RPC error
                     return {
                         "jsonrpc": "2.0",
                         "id": request_id,
@@ -123,8 +115,14 @@ class MCPAPIRouter:
                     "error": {"code": -32601, "message": "Method not found"},
                 }
 
-    def _python_type_to_json_schema(self, python_type: type) -> str:
-        """Convert Python type to JSON schema type"""
+    def _generate_schema_from_function(self, func: Callable) -> Dict[str, Any]:
+        """Generate JSON schema from function signature"""
+        sig = inspect.signature(func)
+        type_hints = get_type_hints(func)
+
+        properties = {}
+        required = []
+
         type_map = {
             str: "string",
             int: "integer",
@@ -133,39 +131,21 @@ class MCPAPIRouter:
             list: "array",
             dict: "object",
         }
-        return type_map.get(python_type, "string")
-
-    def _generate_schema_from_function(self, func: Callable) -> Dict[str, Any]:
-        """Generate JSON schema from function signature and type hints"""
-        sig = inspect.signature(func)
-        type_hints = get_type_hints(func)
-
-        properties = {}
-        required = []
 
         for param_name, param in sig.parameters.items():
             if param_name == "self":
                 continue
 
             param_type = type_hints.get(param_name, str)
-            json_type = self._python_type_to_json_schema(param_type)
+            properties[param_name] = {
+                "type": type_map.get(param_type, "string"),
+                "description": f"Parameter: {param_name}",
+            }
 
-            properties[param_name] = {"type": json_type}
-
-            # Add description from docstring if available
-            if func.__doc__:
-                # Simple docstring parsing (could be enhanced)
-                properties[param_name]["description"] = f"Parameter: {param_name}"
-
-            # If no default value, it's required
             if param.default == inspect.Parameter.empty:
                 required.append(param_name)
 
-        schema = {
-            "type": "object",
-            "properties": properties,
-        }
-
+        schema = {"type": "object", "properties": properties}
         if required:
             schema["required"] = required
 
@@ -177,7 +157,6 @@ class MCPAPIRouter:
         @self.method("initialize")
         async def default_initialize(body: dict):
             params = body.get("params", {})
-
             result = InitializeResult(
                 protocolVersion=params.get("protocolVersion"),
                 capabilities=ServerCapabilities(
@@ -197,7 +176,6 @@ class MCPAPIRouter:
                 ),
                 instructions=self.instructions,
             )
-
             return result.model_dump(exclude_none=True)
 
         @self.method("notifications/initialized")
@@ -209,19 +187,19 @@ class MCPAPIRouter:
         async def default_ping(body: dict):
             return {}
 
-        # Tools handlers
+        # Tool handlers
         @self.method("tools/list")
         async def default_tools_list(body: dict):
-            tools_list = []
-            for tool_name, tool_meta in self.tools.items():
-                tools_list.append(
+            return {
+                "tools": [
                     {
-                        "name": tool_meta.name,
-                        "description": tool_meta.description,
-                        "inputSchema": tool_meta.input_schema,
+                        "name": meta.name,
+                        "description": meta.description,
+                        "inputSchema": meta.input_schema,
                     }
-                )
-            return {"tools": tools_list}
+                    for meta in self.tools.values()
+                ]
+            }
 
         @self.method("tools/call")
         async def default_tools_call(body: dict):
@@ -238,22 +216,19 @@ class MCPAPIRouter:
             try:
                 tool_meta = self.tools[tool_name]
 
-                # Call the tool function
                 if inspect.iscoroutinefunction(tool_meta.func):
                     result = await tool_meta.func(**arguments)
                 else:
                     result = tool_meta.func(**arguments)
 
-                # Format the result
                 if isinstance(result, str):
                     content = [{"type": "text", "text": result}]
                 elif isinstance(result, list):
                     content = result
                 elif isinstance(result, dict):
-                    if "content" in result:
-                        content = result["content"]
-                    else:
-                        content = [{"type": "text", "text": json.dumps(result)}]
+                    content = result.get(
+                        "content", [{"type": "text", "text": json.dumps(result)}]
+                    )
                 else:
                     content = [{"type": "text", "text": str(result)}]
 
@@ -265,20 +240,20 @@ class MCPAPIRouter:
                     "isError": True,
                 }
 
-        # Resources handlers
+        # Resource handlers
         @self.method("resources/list")
         async def default_resources_list(body: dict):
-            resources_list = []
-            for uri, resource_meta in self.resources.items():
-                resources_list.append(
+            return {
+                "resources": [
                     {
-                        "uri": resource_meta.uri,
-                        "name": resource_meta.name,
-                        "description": resource_meta.description,
-                        "mimeType": resource_meta.mime_type,
+                        "uri": meta.uri,
+                        "name": meta.name,
+                        "description": meta.description,
+                        "mimeType": meta.mime_type,
                     }
-                )
-            return {"resources": resources_list}
+                    for meta in self.resources.values()
+                ]
+            }
 
         @self.method("resources/read")
         async def default_resources_read(body: dict):
@@ -296,7 +271,6 @@ class MCPAPIRouter:
                 else:
                     result = resource_meta.func(uri)
 
-                # Format result as resource contents
                 if isinstance(result, str):
                     contents = [
                         {
@@ -319,19 +293,19 @@ class MCPAPIRouter:
         async def default_resources_templates_list(body: dict):
             return {"resourceTemplates": []}
 
-        # Prompts handlers
+        # Prompt handlers
         @self.method("prompts/list")
         async def default_prompts_list(body: dict):
-            prompts_list = []
-            for prompt_name, prompt_meta in self.prompts.items():
-                prompts_list.append(
+            return {
+                "prompts": [
                     {
-                        "name": prompt_meta.name,
-                        "description": prompt_meta.description,
-                        "arguments": prompt_meta.arguments or [],
+                        "name": meta.name,
+                        "description": meta.description,
+                        "arguments": meta.arguments or [],
                     }
-                )
-            return {"prompts": prompts_list}
+                    for meta in self.prompts.values()
+                ]
+            }
 
         @self.method("prompts/get")
         async def default_prompts_get(body: dict):
@@ -350,7 +324,6 @@ class MCPAPIRouter:
                 else:
                     result = prompt_meta.func(**arguments)
 
-                # Format as prompt messages
                 if isinstance(result, str):
                     messages = [
                         {"role": "user", "content": {"type": "text", "text": result}}
@@ -371,7 +344,7 @@ class MCPAPIRouter:
         description: Optional[str] = None,
         input_schema: Optional[Dict[str, Any]] = None,
     ):
-        """Decorator to register a tool (inspired by FastMCP)"""
+        """Decorator to register a tool"""
 
         def decorator(func: Callable):
             tool_name = name or func.__name__
@@ -386,7 +359,6 @@ class MCPAPIRouter:
                 description=tool_description,
                 input_schema=schema,
             )
-
             return func
 
         return decorator
@@ -411,7 +383,6 @@ class MCPAPIRouter:
                 description=resource_description.strip(),
                 mime_type=mime_type,
             )
-
             return func
 
         return decorator
@@ -430,19 +401,17 @@ class MCPAPIRouter:
                 description or (func.__doc__ or f"Prompt: {prompt_name}").strip()
             )
 
-            # Generate arguments schema from function if not provided
-            if arguments is None and func:
+            if arguments is None:
                 sig = inspect.signature(func)
-                args_list = []
-                for param_name, param in sig.parameters.items():
-                    if param_name != "self":
-                        args_list.append(
-                            {
-                                "name": param_name,
-                                "description": f"Parameter: {param_name}",
-                                "required": param.default == inspect.Parameter.empty,
-                            }
-                        )
+                args_list = [
+                    {
+                        "name": param_name,
+                        "description": f"Parameter: {param_name}",
+                        "required": param.default == inspect.Parameter.empty,
+                    }
+                    for param_name, param in sig.parameters.items()
+                    if param_name != "self"
+                ]
                 prompt_arguments = args_list if args_list else None
             else:
                 prompt_arguments = arguments
@@ -453,7 +422,6 @@ class MCPAPIRouter:
                 description=prompt_description,
                 arguments=prompt_arguments,
             )
-
             return func
 
         return decorator
