@@ -9,7 +9,6 @@
   <a href="https://github.com/celestoai/agentor/tree/main/docs/examples">Examples</a>
 </p>
 
-
 [![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB_Try_CelestoAI-Click_Here-ff6b2c?style=flat)](https://celesto.ai)
 [![PyPI version](https://img.shields.io/pypi/v/agentor.svg?color=brightgreen&label=PyPI&style=flat)](https://pypi.org/project/agentor/)
 [![Tests](https://github.com/CelestoAI/agentor/actions/workflows/test.yml/badge.svg)](https://github.com/CelestoAI/agentor/actions/workflows/test.yml)
@@ -92,7 +91,7 @@ curl -X 'POST' \
 |-----------------------------------------------|-----------------------------------------------|
 | ✅ Pre-built agents | Ready-to-use tools |
 | 🔐 Secure integrations | Email, calendar, CRMs, and more |
-| 🦾 AgentMCP | Tool routing |
+| 🦾 AgentMCP | [Code](https://github.com/CelestoAI/agentor/tree/main/docs/tools-and-mcp.md) |
 | ☁️ [Easy agent deployment](https://github.com/CelestoAI/agentor/tree/main/docs/examples/agent-server) | `agentor deploy FOLDER_PATH` |
 
 ### Managed Tool Hub (ready-to-use collection of tools)
