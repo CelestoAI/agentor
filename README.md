@@ -2,14 +2,13 @@
   <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/CelestoAI.png" alt="banner" width="500px"/>
 </p>
 <p align="center">
-  <strong>Fastest way to build, prototype and deploy AI Agents with tools <mark><i>securely</i></mark></strong>
+  Fastest way to build, prototype and deploy AI Agents with tools <mark><i>securely</i></mark>
 </p>
 <p align="center">
   <a href="https://docs.celesto.ai">Docs</a> |
   <a href="https://github.com/celestoai/agentor/tree/main/docs/examples">Examples</a>
 </p>
 
-______________________________________________________________________
 
 [![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB_Try_CelestoAI-Click_Here-ff6b2c?style=flat)](https://celesto.ai)
 [![PyPI version](https://img.shields.io/pypi/v/agentor.svg?color=brightgreen&label=PyPI&style=flat)](https://pypi.org/project/agentor/)
