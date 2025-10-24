@@ -14,6 +14,9 @@ import json
 from dataclasses import dataclass
 import logging
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass
 class ToolMetadata:
     func: Callable
@@ -81,7 +84,7 @@ class MCPAPIRouter:
             method = body.get("method")
             request_id = body.get("id")
 
-            print(f"Received request: {body}")
+            logger.debug("Received request: %s", body)
 
             if method in self.method_handlers:
                 try:
@@ -96,11 +99,15 @@ class MCPAPIRouter:
                             "result": result,
                         }
 
-                    print(f"Sending response: {response}")
+                    logger.debug("Sending response: %s", response)
                     return response
 
-                    logging.exception("Exception occurred processing MCP method '%s' (id=%s):", method, request_id)
-                except Exception as e:
+                except Exception:
+                    logger.exception(
+                        "Exception occurred processing MCP method '%s' (id=%s):",
+                        method,
+                        request_id,
+                    )
                     return {
                         "jsonrpc": "2.0",
                         "id": request_id,
@@ -181,7 +188,7 @@ class MCPAPIRouter:
 
         @self.method("notifications/initialized")
         async def default_initialized_notification(body: dict):
-            print("Client initialized")
+            logger.debug("Client initialized")
             return {}
 
         @self.method("ping")
@@ -236,6 +243,7 @@ class MCPAPIRouter:
                 return {"content": content}
 
             except Exception as e:
+                logger.exception("Error executing tool '%s': %s", tool_name, str(e))
                 return {
                     "content": [{"type": "text", "text": f"Error: {str(e)}"}],
                     "isError": True,
@@ -287,7 +295,8 @@ class MCPAPIRouter:
 
                 return {"contents": contents}
 
-            except Exception:
+            except Exception as e:
+                logger.exception("Error reading resource '%s': %s", uri, str(e))
                 return {"contents": [], "isError": True}
 
         @self.method("resources/templates/list")
@@ -336,7 +345,8 @@ class MCPAPIRouter:
 
                 return {"description": prompt_meta.description, "messages": messages}
 
-            except Exception:
+            except Exception as e:
+                logger.exception("Error executing prompt '%s': %s", prompt_name, str(e))
                 return {"messages": [], "isError": True}
 
     def tool(
