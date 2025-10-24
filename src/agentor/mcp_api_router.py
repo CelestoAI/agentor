@@ -12,7 +12,7 @@ from typing import Callable, Dict, Optional, List, Any, get_type_hints
 import inspect
 import json
 from dataclasses import dataclass
-
+import logging
 
 @dataclass
 class ToolMetadata:
@@ -99,13 +99,14 @@ class MCPAPIRouter:
                     print(f"Sending response: {response}")
                     return response
 
+                    logging.exception("Exception occurred processing MCP method '%s' (id=%s):", method, request_id)
                 except Exception as e:
                     return {
                         "jsonrpc": "2.0",
                         "id": request_id,
                         "error": {
                             "code": -32603,
-                            "message": f"Internal error: {str(e)}",
+                            "message": "Internal error",
                         },
                     }
             else:
