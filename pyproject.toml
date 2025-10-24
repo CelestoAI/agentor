@@ -30,6 +30,8 @@ dependencies = [
     "superauth>=0.0.1",
     "uvicorn>=0.37.0",
     "litestar>=2.18.0",
+    "fastapi>=0.120.0",
+    "mcp>=1.16.0",
 ]
 license-files = ["LICENSE"]
 authors = [
