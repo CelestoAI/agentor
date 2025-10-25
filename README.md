@@ -94,6 +94,7 @@ curl -X 'POST' \
 | 🦾 AgentMCP | [Code](https://github.com/CelestoAI/agentor/tree/main/docs/tools-and-mcp.mdx) |
 | ☁️ [Easy agent deployment](https://github.com/CelestoAI/agentor/tree/main/docs/examples/agent-server) | `agentor deploy FOLDER_PATH` |
 
+
 ### Managed Tool Hub (ready-to-use collection of tools)
 
 Use Celesto [Tool Hub](https://celesto.ai/toolhub) for a realtime access to weather data and 100+ tools.
@@ -112,28 +113,6 @@ client.toolhub.run_weather_tool("London")
 # Run the Google email tool
 client.toolhub.run_list_google_emails(limit=5)
 ```
-
-### Tool Routing with AgentMCP
-
-Adding multiple tools directly to a single Agent can bloat the LLM’s context and degrade performance. Agentor solves this with `AgentMCP` — a unified interface that aggregates all your tools under one connection to the LLM.
-
-From the model’s perspective, there’s just one tool; `AgentMCP` automatically routes each request to the appropriate underlying tool based on context.
-
-## 🔐 Security & Privacy
-
-**🛡️ Your data stays yours:**
-
-- **Local credentials** - Stored securely on your machine
-- **No data collection** - We don't see your emails or calendar
-- **Open source** - Audit the code yourself
-- **Standard OAuth** - Uses Google's official authentication
-
-**🔒 Credential management:**
-
-- Automatic token refresh
-- Secure local storage
-- Per-user isolation
-- Configurable file paths
 
 ## 🤝 Contributing
 
