@@ -1,4 +1,6 @@
-# LiteMCP - ASGI-Compatible MCP Server
+______________________________________________________________________
+
+## title: "LiteMCP - Lightweigth MCP server" sidebarTitle: "LiteMCP"
 
 `LiteMCP` is a lightweight, ASGI-compatible MCP (Model Context Protocol) server built on top of FastAPI. It provides a simple, decorator-based API for creating MCP servers that can be deployed with any ASGI server.
 
@@ -6,9 +8,60 @@
 
 - ✅ **ASGI Compatible**: Works with uvicorn, hypercorn, daphne, and other ASGI servers
 - ✅ **FastAPI-like Decorators**: Familiar `@app.tool()`, `@app.prompt()`, `@app.resource()` syntax
-- ✅ **Built-in CORS**: Optional CORS middleware for web-based clients
-- ✅ **Type Safety**: Full type hints and automatic schema generation
-- ✅ **Logging**: Proper logging with configurable levels
+
+## LiteMCP vs FastMCP
+
+| Feature | LiteMCP | FastMCP |
+|---------|---------|---------|
+| Integration Pattern | Native ASGI app | Requires mounting |
+| FastAPI Primitives | ✅ Standard patterns | ⚠️ Diverges (sub-app) |
+| With Existing Backend | ✅ Easy | ⚠️ Complex |
+| Decorator API | ✅ Yes | ✅ Yes |
+| Custom Methods | ✅ Full support | ⚠️ Limited |
+| Lightweight | ✅ Minimal deps | ⚠️ More deps |
+| ASGI Compatible | ✅ Yes | ✅ Yes |
+
+### Key Architectural Difference
+
+**LiteMCP** is a native ASGI application that integrates directly with your existing FastAPI/Starlette app using standard routing patterns. You can use it standalone or include it in your app naturally.
+
+**FastMCP** requires mounting as a sub-application, which means you diverge from standard FastAPI primitives when serving MCP tools alongside your regular backend:
+
+```python
+# FastMCP - Requires mounting as sub-app
+from starlette.applications import Starlette
+from starlette.routing import Mount
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("My App")
+app = Starlette(
+    routes=[
+        Mount("/mcp", app=mcp.streamable_http_app())  # Separate ASGI app
+    ]
+)
+
+# LiteMCP - Native ASGI integration
+from agentor.mcp import LiteMCP
+
+app = LiteMCP(name="My App")  # IS the ASGI app
+# or easily include in existing FastAPI:
+# fastapi_app.include_router(app.get_fastapi_router())
+```
+
+### When to Use Each
+
+**Use LiteMCP when:**
+
+- You want to serve MCP tools alongside your existing FastAPI/Starlette backend
+- You prefer standard FastAPI patterns and routing
+- You want full control over custom JSON-RPC methods
+- You want minimal dependencies
+
+**Use FastMCP when:**
+
+- You're building a standalone MCP server
+- You want the official SDK implementation
+- You don't need to integrate with existing web services
 
 ## Quick Start
 
@@ -16,7 +69,7 @@
 from agentor.mcp import LiteMCP
 
 # Create the app
-app = LiteMCP(name="my-server", version="1.0.0", instructions="My MCP server")
+app = LiteMCP()
 
 
 # Register a tool
@@ -28,45 +81,6 @@ def get_weather(location: str) -> str:
 # Run the server
 if __name__ == "__main__":
     app.run()
-```
-
-## Usage Methods
-
-### 1. Direct Run (Simplest)
-
-```python
-app = LiteMCP()
-app.run()
-```
-
-### 2. Custom Uvicorn Settings
-
-```python
-app = LiteMCP()
-app.run(reload=True, log_level="debug", workers=4)
-```
-
-### 3. Uvicorn CLI
-
-```bash
-# Save your app in server.py
-uvicorn server:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### 4. Programmatic Uvicorn
-
-```python
-import uvicorn
-
-app = LiteMCP()
-uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
-### 5. Run with Gunicorn
-
-```bash
-# Gunicorn with uvicorn workers
-gunicorn server:app --workers 4 --worker-class uvicorn.workers.UvicornWorker
 ```
 
 ## Configuration
@@ -143,6 +157,45 @@ async def custom_handler(body: dict):
     return {"result": "success"}
 ```
 
+## Usage Methods
+
+### 1. Direct Run (Simplest)
+
+```python
+app = LiteMCP()
+app.run()
+```
+
+### 2. Custom Uvicorn Settings
+
+```python
+app = LiteMCP()
+app.run(reload=True, log_level="debug", workers=4)
+```
+
+### 3. Uvicorn CLI
+
+```bash
+# Save your app in server.py
+uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 4. Programmatic Uvicorn
+
+```python
+import uvicorn
+
+app = LiteMCP()
+uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+### 5. Run with Gunicorn
+
+```bash
+# Gunicorn with uvicorn workers
+gunicorn server:app --workers 4 --worker-class uvicorn.workers.UvicornWorker
+```
+
 ## Production Deployment
 
 ### With Gunicorn + Uvicorn Workers
@@ -183,68 +236,3 @@ response = client.post(
 )
 assert response.status_code == 200
 ```
-
-## Comparison with FastMCP
-
-### Key Architectural Difference
-
-**LiteMCP** is a native ASGI application that integrates directly with your existing FastAPI/Starlette app using standard routing patterns. You can use it standalone or include it in your app naturally.
-
-**FastMCP** requires mounting as a sub-application, which means you diverge from standard FastAPI primitives when serving MCP tools alongside your regular backend:
-
-```python
-# FastMCP - Requires mounting as sub-app
-from starlette.applications import Starlette
-from starlette.routing import Mount
-from mcp.server.fastmcp import FastMCP
-
-mcp = FastMCP("My App")
-app = Starlette(
-    routes=[
-        Mount("/mcp", app=mcp.streamable_http_app())  # Separate ASGI app
-    ]
-)
-
-# LiteMCP - Native ASGI integration
-from agentor.mcp import LiteMCP
-
-app = LiteMCP(name="My App")  # IS the ASGI app
-# or easily include in existing FastAPI:
-# fastapi_app.include_router(app.get_fastapi_router())
-```
-
-### Feature Comparison
-
-| Feature | LiteMCP | FastMCP |
-|---------|---------|---------|
-| ASGI Compatible | ✅ Yes | ✅ Yes |
-| Integration Pattern | Native ASGI app | Requires mounting |
-| FastAPI Primitives | ✅ Standard patterns | ⚠️ Diverges (sub-app) |
-| Decorator API | ✅ Yes | ✅ Yes |
-| Custom Methods | ✅ Full support | ⚠️ Limited |
-| CORS Support | ✅ Built-in | ❌ Manual setup |
-| Lightweight | ✅ Minimal deps | ⚠️ More deps |
-| Use with Existing Backend | ✅ Easy | ⚠️ Requires mounting |
-
-### When to Use Each
-
-**Use LiteMCP when:**
-
-- You want to serve MCP tools alongside your existing FastAPI/Starlette backend
-- You prefer standard FastAPI patterns and routing
-- You want full control over custom JSON-RPC methods
-- You want minimal dependencies
-
-**Use FastMCP when:**
-
-- You're building a standalone MCP server
-- You want the official SDK implementation
-- You don't need to integrate with existing web services
-
-## Examples
-
-See `docs/examples/lite_mcp_example.py` for a complete working example.
-
-## License
-
-Apache 2.0
