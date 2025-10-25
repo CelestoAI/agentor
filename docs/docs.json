@@ -10,5 +10,57 @@
     "index",
     "tools-and-mcp"
     ]
+  },
+  "global": {
+      "anchors": [
+        {
+          "anchor": "Documentation",
+          "href": "https://mintlify.com/docs",
+          "icon": "book-open-cover"
+        },
+        {
+          "anchor": "Blog",
+          "href": "https://mintlify.com/blog",
+          "icon": "newspaper"
+        }
+      ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Contact Us",
+        "href": "mailto:hello@celesto.ai"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://celesto.ai/dashboard"
+    }
+  },
+  "contextual": {
+    "options": [
+     "copy",
+     "view",
+     "chatgpt",
+     "claude",
+     "perplexity",
+     "mcp",
+     "cursor",
+     "vscode"
+   ]
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/celestoai",
+      "github": "https://github.com/celestoai",
+      "linkedin": "https://linkedin.com/company/celestoai"
+    }
+  },
+  "redirects": [
+  {
+    "source": "/docs/*",
+    "destination": "/"
   }
+]
 }
