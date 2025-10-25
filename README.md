@@ -80,6 +80,38 @@ curl -X 'POST' \
 }'
 ```
 
+## LiteMCP
+
+Lightweight [Model Context Protocol](https://modelcontextprotocol.io) server with FastAPI-like decorators:
+
+```python
+from agentor.mcp import LiteMCP
+
+app = LiteMCP(name="my-server", version="1.0.0")
+
+
+@app.tool(description="Get weather")
+def get_weather(location: str) -> str:
+    return f"Weather in {location}: Sunny, 72°F"
+
+
+if __name__ == "__main__":
+    app.run()  # or: uvicorn server:app
+```
+
+### LiteMCP vs FastMCP
+
+| Feature | LiteMCP | FastMCP |
+|---------|---------|---------|
+| ASGI Compatible | ✅ | ✅ |
+| Decorator API | ✅ | ✅ |
+| Built-in CORS | ✅ | ❌ |
+| Custom Methods | ✅ | ⚠️ Limited |
+| Dependencies | Minimal | More |
+| Production Ready | ✅ | ✅ |
+
+📖 [Documentation](docs/lite-mcp-guide.md) | 💡 [Examples](docs/examples/lite_mcp_example.py)
+
 ## 🚀 Features
 
 <p>
@@ -92,6 +124,7 @@ curl -X 'POST' \
 | ✅ Pre-built agents | Ready-to-use tools |
 | 🔐 Secure integrations | Email, calendar, CRMs, and more |
 | 🦾 AgentMCP | [Code](https://github.com/CelestoAI/agentor/tree/main/docs/tools-and-mcp.md) |
+| 🚀 LiteMCP | ASGI-compatible MCP server with decorator API |
 | ☁️ [Easy agent deployment](https://github.com/CelestoAI/agentor/tree/main/docs/examples/agent-server) | `agentor deploy` |
 
 ### Managed Tool Hub (ready-to-use collection of tools)
