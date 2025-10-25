@@ -111,7 +111,7 @@ if __name__ == "__main__":
 | Custom Methods | ✅ Full | ⚠️ Limited |
 | With Existing Backend | ✅ Easy | ⚠️ Complex |
 
-📖 [Documentation](docs/lite-mcp-guide.md) | 💡 [Examples](docs/examples/lite_mcp_example.py)
+📖 [Learn more](https://docs.celesto.ai/agentor/02-LiteMCP)
 
 ## 🚀 Features
 
