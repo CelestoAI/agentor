@@ -1,22 +1,22 @@
 [
   {
     "fileName": "main-overview.mdc",
-    "description": "Complete system overview covering the agent hub architecture, key components, and high-level interaction patterns between agents, memory system, and Google integrations"
+    "description": "Complete system overview documenting the hierarchical agent architecture, core components, and high-level data flow between systems"
   },
   {
-    "fileName": "agent-system-architecture.mdc",
-    "description": "Detailed documentation of the agent system architecture, including agent types, handoff mechanisms, tool integration patterns, and the triage system for routing requests"
+    "fileName": "agent-delegation-model.mdc",
+    "description": "Detailed documentation of the agent delegation system, including role hierarchies, task routing algorithms, and inter-agent communication patterns"
   },
   {
-    "fileName": "memory-system-implementation.mdc",
-    "description": "Comprehensive documentation of the memory system, including embedding generation, LanceDB integration, semantic search algorithms, and conversation storage/retrieval mechanisms"
+    "fileName": "memory-system-architecture.mdc",
+    "description": "Comprehensive documentation of the vector database implementation, semantic search algorithms, embedding processes, and conversation context management"
   },
   {
-    "fileName": "google-integration-architecture.mdc",
-    "description": "Detailed documentation of Google service integrations, covering OAuth implementation, credential management, and the implementation of Gmail and Calendar tools"
+    "fileName": "google-integration-flow.mdc",
+    "description": "Detailed documentation of the privacy-aware Gmail/Calendar integration, including authentication flows, data access patterns, and security measures"
   },
   {
-    "fileName": "data-flow-patterns.mdc",
-    "description": "Documentation of data flow patterns between components, including agent communication, memory system interactions, and integration with external services"
+    "fileName": "data-flow-diagrams.mdc",
+    "description": "Detailed data flow documentation showing how information moves between agents, memory systems, and external integrations, including sequence diagrams for key operations"
   }
 ]
