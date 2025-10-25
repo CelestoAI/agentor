@@ -92,8 +92,7 @@ curl -X 'POST' \
 | ✅ Pre-built agents | Ready-to-use tools |
 | 🔐 Secure integrations | Email, calendar, CRMs, and more |
 | 🦾 AgentMCP | [Code](https://github.com/CelestoAI/agentor/tree/main/docs/tools-and-mcp.md) |
-| ☁️ [Easy agent deployment](https://github.com/CelestoAI/agentor/tree/main/docs/examples/agent-server) | `agentor deploy FOLDER_PATH` |
-
+| ☁️ [Easy agent deployment](https://github.com/CelestoAI/agentor/tree/main/docs/examples/agent-server) | `agentor deploy` |
 
 ### Managed Tool Hub (ready-to-use collection of tools)
 
