@@ -186,14 +186,60 @@ assert response.status_code == 200
 
 ## Comparison with FastMCP
 
+### Key Architectural Difference
+
+**LiteMCP** is a native ASGI application that integrates directly with your existing FastAPI/Starlette app using standard routing patterns. You can use it standalone or include it in your app naturally.
+
+**FastMCP** requires mounting as a sub-application, which means you diverge from standard FastAPI primitives when serving MCP tools alongside your regular backend:
+
+```python
+# FastMCP - Requires mounting as sub-app
+from starlette.applications import Starlette
+from starlette.routing import Mount
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("My App")
+app = Starlette(
+    routes=[
+        Mount("/mcp", app=mcp.streamable_http_app())  # Separate ASGI app
+    ]
+)
+
+# LiteMCP - Native ASGI integration
+from agentor.mcp import LiteMCP
+
+app = LiteMCP(name="My App")  # IS the ASGI app
+# or easily include in existing FastAPI:
+# fastapi_app.include_router(app.get_fastapi_router())
+```
+
+### Feature Comparison
+
 | Feature | LiteMCP | FastMCP |
 |---------|---------|---------|
 | ASGI Compatible | ✅ Yes | ✅ Yes |
-| FastAPI Integration | ✅ Built-in | ✅ Built-in |
+| Integration Pattern | Native ASGI app | Requires mounting |
+| FastAPI Primitives | ✅ Standard patterns | ⚠️ Diverges (sub-app) |
 | Decorator API | ✅ Yes | ✅ Yes |
-| Custom Methods | ✅ Yes | ⚠️ Limited |
-| CORS Support | ✅ Built-in | ❌ Manual |
+| Custom Methods | ✅ Full support | ⚠️ Limited |
+| CORS Support | ✅ Built-in | ❌ Manual setup |
 | Lightweight | ✅ Minimal deps | ⚠️ More deps |
+| Use with Existing Backend | ✅ Easy | ⚠️ Requires mounting |
+
+### When to Use Each
+
+**Use LiteMCP when:**
+
+- You want to serve MCP tools alongside your existing FastAPI/Starlette backend
+- You prefer standard FastAPI patterns and routing
+- You want full control over custom JSON-RPC methods
+- You want minimal dependencies
+
+**Use FastMCP when:**
+
+- You're building a standalone MCP server
+- You want the official SDK implementation
+- You don't need to integrate with existing web services
 
 ## Examples
 

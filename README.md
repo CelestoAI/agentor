@@ -101,14 +101,15 @@ if __name__ == "__main__":
 
 ### LiteMCP vs FastMCP
 
+**Key Difference:** LiteMCP is a native ASGI app that integrates directly with FastAPI using standard patterns. FastMCP requires mounting as a sub-application, diverging from standard FastAPI primitives.
+
 | Feature | LiteMCP | FastMCP |
 |---------|---------|---------|
-| ASGI Compatible | ✅ | ✅ |
-| Decorator API | ✅ | ✅ |
+| Integration | Native ASGI | Requires mounting |
+| FastAPI Patterns | ✅ Standard | ⚠️ Diverges |
 | Built-in CORS | ✅ | ❌ |
-| Custom Methods | ✅ | ⚠️ Limited |
-| Dependencies | Minimal | More |
-| Production Ready | ✅ | ✅ |
+| Custom Methods | ✅ Full | ⚠️ Limited |
+| With Existing Backend | ✅ Easy | ⚠️ Complex |
 
 📖 [Documentation](docs/lite-mcp-guide.md) | 💡 [Examples](docs/examples/lite_mcp_example.py)
 
