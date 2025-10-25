@@ -1,0 +1,14 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Agentor",
+  "colors": {
+    "primary": "#ff0000"
+  },
+  "navigation": {
+    "pages": [
+    "index",
+    "tools-and-mcp"
+    ]
+  }
+}
