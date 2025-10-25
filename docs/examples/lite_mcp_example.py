@@ -7,7 +7,7 @@ This example shows three ways to use LiteMCP:
 3. Programmatic uvicorn usage
 """
 
-from src.agentor.mcp.server import LiteMCP
+from agentor.mcp.server import LiteMCP
 
 # Create the ASGI app
 app = LiteMCP(
