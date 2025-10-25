@@ -7,8 +7,8 @@
   },
   "navigation": {
     "pages": [
-    "index",
-    "tools-and-mcp"
+    "tools-and-mcp",
+    "google_oauth_setup_guide"
     ]
   },
   "global": {
