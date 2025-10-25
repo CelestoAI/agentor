@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Agentor",
+  "name": "Celesto AI",
   "colors": {
     "primary": "#ff0000"
   },
@@ -10,20 +10,6 @@
     "tools-and-mcp",
     "google_oauth_setup_guide"
     ]
-  },
-  "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
   },
   "navbar": {
     "links": [
@@ -35,7 +21,7 @@
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://celesto.ai/dashboard"
+      "href": "https://celesto.ai"
     }
   },
   "contextual": {
@@ -58,9 +44,17 @@
     }
   },
   "redirects": [
-  {
-    "source": "/docs/*",
-    "destination": "/"
+      {
+        "source": "/docs/*",
+        "destination": "/"
+      }
+    ],
+  
+  "errors": {
+    "404": {
+      "redirect": false,
+      "title": "I can't be found",
+      "description": "What ever **happened** to this _page_?"
+    }
   }
-]
 }
