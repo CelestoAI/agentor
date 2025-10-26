@@ -5,7 +5,7 @@ Agentor provides a way to build MCP Servers with a lite SDK.
 ````python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from agentor.mcp_api_router import MCPAPIRouter
+from agentor.mcp import MCPAPIRouter
 import uvicorn
 
 # Create FastAPI app
