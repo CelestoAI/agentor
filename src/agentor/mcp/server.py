@@ -2,6 +2,7 @@ from .api_router import MCPAPIRouter
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+from rich import print as print_rich
 from typing import Any
 
 
@@ -23,22 +24,14 @@ class LiteMCP(MCPAPIRouter):
 
     def __init__(
         self,
-        host: str = "0.0.0.0",
-        port: int = 8000,
-        enable_cors: bool = True,
         **kwargs,
     ):
         """Initialize LiteMCP server
 
         Args:
-            host: Host to bind to when using run()
-            port: Port to bind to when using run()
-            enable_cors: Whether to enable CORS middleware
             **kwargs: Additional arguments passed to MCPAPIRouter
         """
         super().__init__(**kwargs)
-        self.host = host
-        self.port = port
 
         # Create FastAPI app
         self.app = FastAPI(
@@ -46,17 +39,6 @@ class LiteMCP(MCPAPIRouter):
             version=self.version,
             description=self.instructions,
         )
-
-        # Add CORS middleware if enabled
-        if enable_cors:
-            self.app.add_middleware(
-                CORSMiddleware,
-                allow_origins=["*"],
-                allow_credentials=True,
-                allow_methods=["*"],
-                allow_headers=["*"],
-            )
-
         # Include the MCP router
         self.app.include_router(self._fastapi_router)
 
@@ -68,11 +50,26 @@ class LiteMCP(MCPAPIRouter):
         """
         await self.app(scope, receive, send)
 
-    def run(self, **uvicorn_kwargs):
+    def run(
+        self,
+        host: str = "0.0.0.0",
+        port: int = 8000,
+        enable_cors: bool = True,
+        **uvicorn_kwargs,
+    ):
         """Run the server with uvicorn
 
         Args:
             **uvicorn_kwargs: Additional arguments passed to uvicorn.run()
         """
-        uvicorn_config = {"host": self.host, "port": self.port, **uvicorn_kwargs}
+        if enable_cors:
+            self.app.add_middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+        uvicorn_config = {"host": host, "port": port, **uvicorn_kwargs}
+        print_rich(f"Running MCP server at http://{host}:{port}{self.prefix}")
         uvicorn.run(self.app, **uvicorn_config)
