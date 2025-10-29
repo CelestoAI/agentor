@@ -111,7 +111,7 @@ if __name__ == "__main__":
 | Custom Methods | ✅ Full | ⚠️ Limited |
 | With Existing Backend | ✅ Easy | ⚠️ Complex |
 
-📖 [Learn more](https://docs.celesto.ai/agentor/02-LiteMCP)
+📖 [Learn more](https://docs.celesto.ai/agentor/tools/LiteMCP)
 
 ## 🚀 Features
 
@@ -124,9 +124,9 @@ if __name__ == "__main__":
 |-----------------------------------------------|-----------------------------------------------|
 | ✅ Pre-built agents | Ready-to-use tools |
 | 🔐 Secure integrations | Email, calendar, CRMs, and more |
-| 🦾 AgentMCP | [Code](https://github.com/CelestoAI/agentor/tree/main/docs/tools-and-mcp.md) |
-| 🚀 LiteMCP | ASGI-compatible MCP server with decorator API |
-| ☁️ [Easy agent deployment](https://github.com/CelestoAI/agentor/tree/main/docs/examples/agent-server) | `agentor deploy` |
+| 🦾 AgentMCP | [Docs](https://docs.celesto.ai/agentor/tools/overview) |
+| 🚀 LiteMCP | The only **full FastAPI compatible** MCP Server with decorator API |
+| ☁️ [Easy agent deployment](https://github.com/CelestoAI/agentor/tree/main/examples/agent-server) | `agentor deploy` |
 
 ### Managed Tool Hub (ready-to-use collection of tools)
 
