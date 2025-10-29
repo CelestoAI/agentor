@@ -1,14 +1,3 @@
-"""
-agent = Agentor(
-    name="Agentor",
-    model="gpt-5-mini",
-    tools=["celestoai/get_weather"]
-)
-
-result = agent.run("What is the weather in London?")
-print(result)
-"""
-
 from typing import Callable, List, Union
 from agentor.sdk.client import CelestoSDK
 from agents import FunctionTool, RunContextWrapper, function_tool
@@ -87,6 +76,8 @@ def current_datetime(wrapper: RunContextWrapper[CelestoConfig]) -> str:
 
 
 class ToolRegistry:
+    """Registry for tools."""
+
     @staticmethod
     def get(name: str) -> Union[FunctionTool, Callable]:
         try:

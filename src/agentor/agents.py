@@ -1,3 +1,4 @@
+import os
 import sys
 import json
 import traceback
@@ -149,6 +150,10 @@ class Agentor(AgentServer):
         self.name = name
         self.instructions = instructions
         self.model = model
+
+        if os.environ.get("OPENAI_API_KEY") is None:
+            raise ValueError("""OPENAI_API_KEY is required to use the Agentor.
+            Please set the OPENAI_API_KEY environment variable.""")
         self.agent: Agent = Agent(
             name=name, instructions=instructions, model=model, tools=tools
         )
