@@ -1,12 +1,3 @@
-"""
-Example of using LiteMCP - a lightweight ASGI-compatible MCP server
-
-This example shows three ways to use LiteMCP:
-1. Direct run() method
-2. As an ASGI app with uvicorn CLI
-3. Programmatic uvicorn usage
-"""
-
 from agentor.mcp.server import LiteMCP
 
 # Create the ASGI app
@@ -14,9 +5,6 @@ app = LiteMCP(
     name="my-mcp-server",
     version="1.0.0",
     instructions="A simple MCP server example",
-    host="0.0.0.0",
-    port=8000,
-    enable_cors=True,
 )
 
 
