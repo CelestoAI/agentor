@@ -364,7 +364,7 @@ class AgentCard(BaseModel):
     )
 
     defaultInputModes: List[str] = Field(
-        default=["text/event-stream", "application/json"],
+        default=["application/json"],
         description="Default set of supported input MIME types for all skills, which can be overridden on a per-skill basis",
     )
 

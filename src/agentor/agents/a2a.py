@@ -43,9 +43,9 @@ class A2AController(APIRouter):
         if description is None:
             description = "Agentor is a framework for building, prototyping and deploying AI Agents."
         if url is None:
-            url = "https://docs.celesto.ai"
+            url = "http://0.0.0.0:8000"
 
-        super().__init__(prefix="/a2a", tags=["a2a"])
+        super().__init__(tags=["a2a"])
 
         self.agent_card = AgentCard(
             name=name,
@@ -57,7 +57,7 @@ class A2AController(APIRouter):
             additionalInterfaces=[],
             securitySchemes={},
             security=[],
-            defaultInputModes=["text/plain", "application/json"],
+            defaultInputModes=["application/json"],
             defaultOutputModes=[],
             supportsAuthenticatedExtendedCard=False,
             signatures=[],
