@@ -107,37 +107,15 @@ class A2AController(APIRouter):
         """
 
         async def event_generator() -> AsyncGenerator[str, None]:
-            try:
-                # Send initial response
-                response = JSONRPCResponse(
-                    id=a2a_request.id,
-                    result={
-                        "status": "processing",
-                        "message": "Message received and processing started",
-                    },
-                )
-                yield f"data: {json.dumps(response.model_dump())}\n\n"
-
-                # Process the message (implement your logic here)
-                # For now, we'll send a simple completion message
-                final_response = JSONRPCResponse(
-                    id=a2a_request.id,
-                    result={
-                        "status": "completed",
-                        "message": "This is a placeholder response. Implement your agent logic here.",
-                        "content": "Hello! I received your message.",
-                    },
-                )
-                yield f"data: {json.dumps(final_response.model_dump())}\n\n"
-
-            except Exception as e:
-                error_response = JSONRPCResponse(
-                    id=a2a_request.id,
-                    error=JSONRPCError(
-                        code=-32603, message=f"Internal error: {str(e)}"
-                    ),
-                )
-                yield f"data: {json.dumps(error_response.model_dump())}\n\n"
+            final_response = JSONRPCResponse(
+                id=a2a_request.id,
+                result={
+                    "status": "completed",
+                    "message": "This is a placeholder response. Implement your agent logic here.",
+                    "content": "Hello! I received your message.",
+                },
+            )
+            yield f"data: {json.dumps(final_response.model_dump())}\n\n"
 
         return StreamingResponse(
             event_generator(),
