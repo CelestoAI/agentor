@@ -13,13 +13,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         include:
           - os: ubuntu-latest
             uv-cache: ~/.cache/uv
           - os: macos-latest
             uv-cache: ~/Library/Caches/uv
+          - os: windows-latest
+            uv-cache: ~\AppData\Local\uv\cache
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python-version }}
@@ -45,22 +47,19 @@ jobs:
         run: |
           pip install uv
           uv venv
-          source .venv/bin/activate
           uv pip install coverage pytest pytest-cov
           uv sync
           uv pip list
 
       - name: Run Tests
         run: |
-          source .venv/bin/activate
-          coverage erase
-          coverage run -m pytest
+          uv run coverage erase
+          uv run coverage run -m pytest
 
       - name: Generate Coverage Report
         run: |
-          source .venv/bin/activate
-          coverage report -m -i
-          coverage xml -i
+          uv run coverage report -m -i
+          uv run coverage xml -i
 
       - name: Upload Coverage to Codecov
         if: runner.os != 'macOS'
