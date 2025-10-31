@@ -1,22 +1,22 @@
 [
   {
     "fileName": "main-overview.mdc",
-    "description": "Complete system overview documenting the hierarchical agent architecture, core components, and high-level data flow between systems"
+    "description": "Complete system overview documenting the multi-agent orchestration architecture, core components, and their interactions"
   },
   {
-    "fileName": "agent-delegation-model.mdc",
-    "description": "Detailed documentation of the agent delegation system, including role hierarchies, task routing algorithms, and inter-agent communication patterns"
+    "fileName": "agent-orchestration-system.mdc",
+    "description": "Detailed documentation of the agent orchestration system, including agent specialization, initialization patterns, and inter-agent communication"
   },
   {
     "fileName": "memory-system-architecture.mdc",
-    "description": "Comprehensive documentation of the vector database implementation, semantic search algorithms, embedding processes, and conversation context management"
+    "description": "Comprehensive documentation of the vector-based memory system, including embedding schemas, conversation storage patterns, and semantic search implementation"
   },
   {
-    "fileName": "google-integration-flow.mdc",
-    "description": "Detailed documentation of the privacy-aware Gmail/Calendar integration, including authentication flows, data access patterns, and security measures"
+    "fileName": "data-flow-models.mdc",
+    "description": "Documentation of data flow between components, focusing on agent handoffs, memory operations, and tool interactions"
   },
   {
-    "fileName": "data-flow-diagrams.mdc",
-    "description": "Detailed data flow documentation showing how information moves between agents, memory systems, and external integrations, including sequence diagrams for key operations"
+    "fileName": "model-context-protocol.mdc",
+    "description": "Detailed documentation of the Model Context Protocol implementation, including prompt templates and AI model interaction patterns"
   }
 ]

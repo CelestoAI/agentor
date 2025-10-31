@@ -1,50 +1,55 @@
 ---
-description: Memory management, conversation context, and vector database implementation for AI agent systems
+description: Defines the vector-based memory architecture for storing, retrieving and searching conversation history and agent interactions.
 ---
 
 
 # memory-system-architecture
 
-## Core Memory Components
+The memory system implements a vector-based conversation storage architecture using the following key components:
 
-The memory system architecture implements specialized conversation storage and retrieval through vector databases and semantic search capabilities.
+## Core Memory Components (Importance Score: 75)
+Path: src/agentor/memory/api.py
 
-### Vector Database Implementation (src/agentor/memory/api.py)
-- Custom schema for storing conversation embeddings
-- Semantic search implementation using sentence transformers
-- Conversation context retention logic
-Importance Score: 85/100
+1. Vector Storage Engine
+- LanceDB-based conversation history storage
+- Custom embedding schema for dialog chunks
+- Versioned conversation context handling
+- Semantic retrieval capabilities
 
-### Memory Management System
-Core functionalities:
-- Conversation history maintenance with embeddings
-- Context-aware semantic search over past conversations
-- Integration with vector storage (LanceDB)
-Importance Score: 80/100
+2. Embedding Management
+- Sentence transformer model: google/embeddinggemma-300M
+- Conversation chunk vectorization
+- Custom Words model for vector operations
 
-## Business Workflows
+## Memory Operations (Importance Score: 70)
 
-### Conversation Context Management
-- Implements conversation storage with semantic understanding
-- Handles context retention across multiple interactions
-- Maintains hierarchical conversation structure
-Importance Score: 75/100
+1. Conversation Management
+- Semantic search across conversation history
+- Complete context retrieval functions
+- Incremental memory updates
+- Contextual relevance scoring
 
-### Memory Access Patterns
-- Custom memory agent instructions for retrieval operations
-- Domain-specific memory search and update workflows
-- Conversation embedding processes
-Importance Score: 70/100
+2. Storage Patterns
+- Vector-based conversation indexing
+- Dialog chunk segmentation
+- Context window management
+- Conversation version control
 
-## Integration Points
+## Memory Integration Points (Importance Score: 80)
 
-### Semantic Search Integration
-- Specialized query processing for conversation retrieval
-- Context-aware filtering of memory results
-- Custom response formatting for memory lookups
-Importance Score: 80/100
+1. Agent Memory Interface
+- Conversation context injection
+- Memory-aware agent initialization
+- Historical context retrieval
+- Semantic search capabilities
 
-Overall Memory System Importance Score: 80/100
+2. Memory Persistence
+- Embedding schema versioning
+- Conversation state management
+- Context retention policies
+- Memory pruning rules
+
+The memory architecture prioritizes semantic understanding and contextual relevance while maintaining conversation history integrity through vector-based storage and retrieval mechanisms.
 
 $END$
 
