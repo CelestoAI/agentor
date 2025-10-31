@@ -1,12 +1,14 @@
-from typing import Optional
-from typing import List
-from fastapi import APIRouter
+from typing import Optional, List, AsyncGenerator
+import json
+from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
 from .schema import (
     AgentCard,
     AgentCapabilities,
     AgentSkill,
     JSONRPCError,
     JSONRPCRequest,
+    JSONRPCResponse,
 )
 
 
@@ -75,31 +77,109 @@ class A2AController(APIRouter):
         """
         return self.agent_card
 
-    async def run(self, a2a_request: JSONRPCRequest):
+    async def run(self, a2a_request: JSONRPCRequest, request: Request):
+        """
+        Main JSON-RPC endpoint for A2A protocol operations.
+        Supports both streaming and non-streaming responses.
+        """
         method = a2a_request.method
+
+        # Check if client wants streaming via Accept header
+        accept_header = request.headers.get("accept", "")
+        wants_streaming = "text/event-stream" in accept_header
+
         if method == "message/send":
-            return await self.message_send(a2a_request)
+            if wants_streaming:
+                return await self.message_send_stream(a2a_request)
+            else:
+                return await self.message_send(a2a_request)
         elif method == "tasks/get":
             return await self.tasks_get(a2a_request)
         elif method == "tasks/cancel":
             return await self.tasks_cancel(a2a_request)
         else:
-            raise NotImplementedError(f"Method {method} not implemented.")
+            return JSONRPCResponse(
+                id=a2a_request.id,
+                error=JSONRPCError(
+                    code=-32601,
+                    message=f"Method not found: {method}",
+                ),
+            )
+
+    async def message_send_stream(self, a2a_request: JSONRPCRequest):
+        """
+        Streaming implementation of message/send using Server-Sent Events.
+        """
+
+        async def event_generator() -> AsyncGenerator[str, None]:
+            try:
+                # Send initial response
+                response = JSONRPCResponse(
+                    id=a2a_request.id,
+                    result={
+                        "status": "processing",
+                        "message": "Message received and processing started",
+                    },
+                )
+                yield f"data: {json.dumps(response.model_dump())}\n\n"
+
+                # Process the message (implement your logic here)
+                # For now, we'll send a simple completion message
+                final_response = JSONRPCResponse(
+                    id=a2a_request.id,
+                    result={
+                        "status": "completed",
+                        "message": "This is a placeholder response. Implement your agent logic here.",
+                        "content": "Hello! I received your message.",
+                    },
+                )
+                yield f"data: {json.dumps(final_response.model_dump())}\n\n"
+
+            except Exception as e:
+                error_response = JSONRPCResponse(
+                    id=a2a_request.id,
+                    error=JSONRPCError(
+                        code=-32603, message=f"Internal error: {str(e)}"
+                    ),
+                )
+                yield f"data: {json.dumps(error_response.model_dump())}\n\n"
+
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            },
+        )
 
     async def message_send(self, a2a_request: JSONRPCRequest):
-        return JSONRPCError(
-            code=-32601,
-            message="Not implemented yet!",
+        """
+        Non-streaming implementation of message/send.
+        """
+        return JSONRPCResponse(
+            id=a2a_request.id,
+            result={
+                "status": "completed",
+                "message": "This is a placeholder response. Implement your agent logic here.",
+                "content": "Hello! I received your message.",
+            },
         )
 
     async def tasks_get(self, a2a_request: JSONRPCRequest):
-        return JSONRPCError(
-            code=-32601,
-            message="Not implemented yet!",
+        return JSONRPCResponse(
+            id=a2a_request.id,
+            error=JSONRPCError(
+                code=-32601,
+                message="tasks/get not implemented yet",
+            ),
         )
 
     async def tasks_cancel(self, a2a_request: JSONRPCRequest):
-        return JSONRPCError(
-            code=-32601,
-            message="Not implemented yet!",
+        return JSONRPCResponse(
+            id=a2a_request.id,
+            error=JSONRPCError(
+                code=-32601,
+                message="tasks/cancel not implemented yet",
+            ),
         )
