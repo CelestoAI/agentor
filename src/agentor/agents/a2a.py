@@ -10,14 +10,12 @@ router = APIRouter(prefix="/a2a")
 class A2AController(APIRouter):
     def __init__(
         self,
-        name: str,
-        description: str,
-        url: str,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        url: Optional[str] = None,
         version: str = "0.0.1",
         skills: Optional[List[AgentSkill]] = None,
-        capabilities: Optional[AgentCapabilities] = AgentCapabilities(
-            streaming=True, statefulness=True, asyncProcessing=True
-        ),
+        capabilities: Optional[AgentCapabilities] = None,
     ):
         if skills is None:
             skills = []
@@ -31,45 +29,46 @@ class A2AController(APIRouter):
         if description is None:
             description = "Agentor is a framework for building, prototyping and deploying AI Agents."
         if url is None:
-            url = "https://agentor.ai"
+            url = "https://docs.celesto.ai"
 
-        # @router.get("/.well-known/agent-card.json", response_model=AgentCard)
         super().__init__(prefix="/a2a", tags=["a2a"])
-        self.name = name
-        self.description = description
-        self.url = url
-        self.version = version
-        self.skills = skills
-        self.capabilities = capabilities
+
+        self.agent_card = AgentCard(
+            name=name,
+            description=description,
+            url=url,
+            version=version,
+            skills=skills,
+            capabilities=capabilities,
+            additionalInterfaces=[],
+            securitySchemes={},
+            security=[],
+            defaultInputModes=["text/plain", "application/json"],
+            defaultOutputModes=[],
+            supportsAuthenticatedExtendedCard=False,
+            signatures=[],
+        )
+
         self.add_api_route(
             "/.well-known/agent-card.json",
-            self.agent_card,
+            self._agent_card_endpoint,
             methods=["GET", "HEAD", "OPTIONS"],
             response_model=AgentCard,
         )
         self.add_api_route("", self.run, methods=["POST", "GET"])
 
-    async def agent_card(self) -> AgentCard:
+    async def _agent_card_endpoint(self) -> AgentCard:
         """
         Returns the agent card manifest for this agent following the A2A protocol v0.3.0.
         """
-        return AgentCard(
-            name=self.name,
-            description=self.description,
-            url=self.url,
-            version=self.version,
-            skills=self.skills,
-            capabilities=self.capabilities,
-        )
+        return self.agent_card
 
     async def run(self, request: Request):
         request_data = await request.body()
         return
         print(request_data)
-        breakpoint()
         method = request.method
         params = request.params
-        id = request.id
         if method == "message/send":
             return await self.message_send(params)
         elif method == "tasks/get":
