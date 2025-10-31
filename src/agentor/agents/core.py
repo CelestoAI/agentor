@@ -17,7 +17,7 @@ from agentor.output_text_formatter import format_stream_events
 
 from pydantic import BaseModel
 
-from .a2a import AgentServer
+from .server import AgentServer
 
 
 class ToolFunctionParameters(TypedDict, total=False):
