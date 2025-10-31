@@ -1,7 +1,7 @@
 from typing import Optional, List, AsyncGenerator
 import json
 from fastapi import APIRouter, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from .schema import (
     AgentCard,
     AgentCapabilities,
@@ -69,13 +69,13 @@ class A2AController(APIRouter):
             methods=["GET", "HEAD", "OPTIONS"],
             response_model=AgentCard,
         )
-        self.add_api_route("", self.run, methods=["POST"])
+        self.add_api_route("/", self.run, methods=["POST"])
 
     async def _agent_card_endpoint(self) -> AgentCard:
         """
         Returns the agent card manifest for this agent following the A2A protocol v0.3.0.
         """
-        return self.agent_card
+        return JSONResponse(content=self.agent_card.model_dump())
 
     async def run(self, a2a_request: JSONRPCRequest, request: Request):
         """
