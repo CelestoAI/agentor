@@ -84,15 +84,10 @@ class A2AController(APIRouter):
         """
         method = a2a_request.method
 
-        # Check if client wants streaming via Accept header
-        accept_header = request.headers.get("accept", "")
-        wants_streaming = "text/event-stream" in accept_header
-
         if method == "message/send":
-            if wants_streaming:
-                return await self.message_send_stream(a2a_request)
-            else:
-                return await self.message_send(a2a_request)
+            return await self.message_send(a2a_request)
+        elif method == "message/stream":
+            return await self.message_stream(a2a_request)
         elif method == "tasks/get":
             return await self.tasks_get(a2a_request)
         elif method == "tasks/cancel":
@@ -106,7 +101,7 @@ class A2AController(APIRouter):
                 ),
             )
 
-    async def message_send_stream(self, a2a_request: JSONRPCRequest):
+    async def message_stream(self, a2a_request: JSONRPCRequest):
         """
         Streaming implementation of message/send using Server-Sent Events.
         """
