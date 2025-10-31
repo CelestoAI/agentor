@@ -123,7 +123,7 @@ class MessageSendConfiguration(BaseModel):
     acceptedOutputModes: Optional[List[str]] = Field(
         None,
         description="A list of output MIME types the client is prepared to accept in the response",
-        examples=[["text/plain", "application/json"]],
+        examples=[["text/event-stream", "application/json"]],
     )
     historyLength: Optional[int] = Field(
         None,
@@ -241,6 +241,16 @@ class AgentSkill(BaseModel):
     description: str = Field(
         ..., description="A human-readable description of what the skill does"
     )
+    id: Optional[str] = Field(
+        None,
+        description="A unique identifier for this skill within the agent. If not provided, will be auto-generated from the name",
+        examples=["search_recipes", "send_email", "analyze_data"],
+    )
+    tags: List[str] = Field(
+        default_factory=list,
+        description="Tags for categorizing and organizing skills",
+        examples=[["search", "cooking"], ["communication", "email"]],
+    )
     inputModes: Optional[List[str]] = Field(
         None,
         description="Supported input MIME types for this skill (overrides default)",
@@ -255,6 +265,18 @@ class AgentSkill(BaseModel):
     examples: Optional[List[Dict[str, Any]]] = Field(
         None, description="Example invocations of the skill"
     )
+
+    def model_post_init(self, __context) -> None:
+        """Auto-generate id from name if not provided."""
+        if self.id is None:
+            # Convert name to snake_case for id
+            self.id = (
+                self.name.lower()
+                .replace(" ", "_")
+                .replace("-", "_")
+                .replace("'", "")
+                .replace('"', "")
+            )
 
 
 class AgentCardSignature(BaseModel):
@@ -342,7 +364,7 @@ class AgentCard(BaseModel):
     )
 
     defaultInputModes: List[str] = Field(
-        default=["text/plain", "application/json"],
+        default=["text/event-stream", "application/json"],
         description="Default set of supported input MIME types for all skills, which can be overridden on a per-skill basis",
     )
 

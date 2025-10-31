@@ -1,13 +1,25 @@
 from typing import Optional
 from typing import List
-from fastapi import APIRouter, Request
-from .schema import AgentCard, AgentCapabilities, AgentSkill, JSONRPCError
+from fastapi import APIRouter
+from .schema import (
+    AgentCard,
+    AgentCapabilities,
+    AgentSkill,
+    JSONRPCError,
+    JSONRPCRequest,
+)
 
 
 router = APIRouter(prefix="/a2a")
 
 
 class A2AController(APIRouter):
+    """
+    A2A Controller for the Agentor framework.
+
+    http://0.0.0.0:8000/a2a/.well-known/agent-card.json will return the agent card manifest for this agent following the A2A protocol v0.3.0.
+    """
+
     def __init__(
         self,
         name: Optional[str] = None,
@@ -55,7 +67,7 @@ class A2AController(APIRouter):
             methods=["GET", "HEAD", "OPTIONS"],
             response_model=AgentCard,
         )
-        self.add_api_route("", self.run, methods=["POST", "GET"])
+        self.add_api_route("", self.run, methods=["POST"])
 
     async def _agent_card_endpoint(self) -> AgentCard:
         """
@@ -63,15 +75,31 @@ class A2AController(APIRouter):
         """
         return self.agent_card
 
-    async def run(self, request: Request):
-        request_data = await request.body()
-        return
-        print(request_data)
-        method = request.method
-        params = request.params
+    async def run(self, a2a_request: JSONRPCRequest):
+        method = a2a_request.method
         if method == "message/send":
-            return await self.message_send(params)
+            return await self.message_send(a2a_request)
         elif method == "tasks/get":
-            return await self.tasks_get(params)
+            return await self.tasks_get(a2a_request)
+        elif method == "tasks/cancel":
+            return await self.tasks_cancel(a2a_request)
         else:
-            return JSONRPCError(code=-32601, message="Method not found")
+            raise NotImplementedError(f"Method {method} not implemented.")
+
+    async def message_send(self, a2a_request: JSONRPCRequest):
+        return JSONRPCError(
+            code=-32601,
+            message="Not implemented yet!",
+        )
+
+    async def tasks_get(self, a2a_request: JSONRPCRequest):
+        return JSONRPCError(
+            code=-32601,
+            message="Not implemented yet!",
+        )
+
+    async def tasks_cancel(self, a2a_request: JSONRPCRequest):
+        return JSONRPCError(
+            code=-32601,
+            message="Not implemented yet!",
+        )
