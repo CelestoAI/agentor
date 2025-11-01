@@ -150,7 +150,8 @@ class Agentor:
                 media_type="text/event-stream",
             )
         else:
-            return await self.chat(data.input)
+            result = await self.chat(data.input)
+            return result.final_output
 
     async def _health_check_handler(self) -> Response:
         return Response(status_code=200, content="OK")
