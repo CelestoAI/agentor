@@ -2,23 +2,27 @@ import os
 from fastapi.responses import Response, StreamingResponse
 import uvicorn
 from typing import (
-    Any,
-    Dict,
     List,
     Literal,
     Optional,
-    TypedDict,
     Union,
 )
 
 from fastapi import FastAPI
 
 from agentor.agents.a2a import A2AController
+from agentor.agents.schema import AgentSkill
 from agentor.tools.registry import CelestoConfig, ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
 from agentor.prompts import THINKING_PROMPT, render_prompt
 
 from agentor.output_text_formatter import format_stream_events
+from typing import (
+    Any,
+    Dict,
+    TypedDict,
+)
+
 
 from pydantic import BaseModel
 
@@ -60,7 +64,7 @@ class Agentor:
         tools: List[Union[FunctionTool, str]] = [],
         debug: bool = False,
     ):
-        tools = [
+        self.tools: List[FunctionTool] = [
             ToolRegistry.get(tool)["tool"] if isinstance(tool, str) else tool
             for tool in tools
         ]
@@ -72,7 +76,7 @@ class Agentor:
             raise ValueError("""OPENAI_API_KEY is required to use the Agentor.
             Please set the OPENAI_API_KEY environment variable.""")
         self.agent: Agent = Agent(
-            name=name, instructions=instructions, model=model, tools=tools
+            name=name, instructions=instructions, model=model, tools=self.tools
         )
 
     def run(self, input: str) -> List[str] | str:
@@ -131,9 +135,18 @@ class Agentor:
         )
 
     def _create_app(self, host: str, port: int) -> FastAPI:
+        skills = (
+            [
+                AgentSkill(name=tool.name, description=tool.description)
+                for tool in self.tools
+            ]
+            if self.tools
+            else []
+        )
         a2a_controller = A2AController(
             name=self.name,
             description=self.instructions,
+            skills=skills,
             url=f"http://{host}:{port}",
             prefix="/a2a",
         )
