@@ -10,8 +10,7 @@ from typing import (
 
 from fastapi import FastAPI
 
-from agentor.agents.a2a import A2AController
-from agentor.agents.schema import AgentSkill
+from agentor.agents.a2a import A2AController, AgentSkill
 from agentor.tools.registry import CelestoConfig, ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
 from agentor.prompts import THINKING_PROMPT, render_prompt
@@ -128,7 +127,7 @@ class Agentor:
         app = self._create_app(host, port)
         print(f"Running Agentor at http://{host}:{port}")
         print(
-            f"Agent card available at http://{host}:{port}/a2a/.well-known/agent-card.json"
+            f"Agent card available at http://{host}:{port}/.well-known/agent-card.json"
         )
         uvicorn.run(
             app, host=host, port=port, log_level=log_level, access_log=access_log
@@ -137,7 +136,12 @@ class Agentor:
     def _create_app(self, host: str, port: int) -> FastAPI:
         skills = (
             [
-                AgentSkill(name=tool.name, description=tool.description)
+                AgentSkill(
+                    id=f"tool_{tool.name.lower().replace(' ', '_')}",
+                    name=tool.name,
+                    description=tool.description,
+                    tags=[],
+                )
                 for tool in self.tools
             ]
             if self.tools
@@ -148,7 +152,6 @@ class Agentor:
             description=self.instructions,
             skills=skills,
             url=f"http://{host}:{port}",
-            prefix="/a2a",
         )
         app = FastAPI()
         app.include_router(a2a_controller)
