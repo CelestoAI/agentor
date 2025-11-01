@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 import os
+import uuid
 from a2a.types import JSONRPCResponse, Message, Part, Task, TaskState, TaskStatus
 from fastapi.responses import Response, StreamingResponse
 import uvicorn
@@ -191,8 +192,8 @@ class Agentor:
         self, request: a2a_types.SendStreamingMessageRequest
     ) -> StreamingResponse:
         async def event_generator() -> AsyncGenerator[str, None]:
-            task_id = f"task_{int(datetime.utcnow().timestamp())}"
-            context_id = f"ctx_{int(datetime.utcnow().timestamp())}"
+            task_id = f"task_{uuid.uuid4()}"
+            context_id = f"ctx_{uuid.uuid4()}"
 
             # 1. Send initial task creation
             task = Task(
@@ -204,6 +205,13 @@ class Agentor:
             yield f"data: {json.dumps(response.model_dump())}\n\n"
 
             # 2. Send message response
+            if (
+                request.params.message.parts is None
+                or len(request.params.message.parts) == 0
+            ):
+                raise ValueError(
+                    f"Message parts are required but got {request.params.message.parts}."
+                )
             part = request.params.message.parts[0].root
             if part.kind != "text":
                 raise ValueError(f"Invalid part kind: {part.kind}. Must be 'text'.")

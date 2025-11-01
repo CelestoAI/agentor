@@ -101,18 +101,22 @@ def _stringify_output(value: Any) -> str:
     return str(value)
 
 
+AllowedEventTypes = Literal[
+    "agent_updated_stream_event", "raw_response_event", "run_item_stream_event"
+]
+
+
 async def format_stream_events(
     events: AsyncIterator[StreamEvent],
-    allowed_events: Optional[
-        List[
-            Literal[
-                "agent_updated_stream_event",
-                "raw_response_event",
-                "run_item_stream_event",
-            ]
-        ]
-    ] = None,
+    allowed_events: Optional[List[AllowedEventTypes]] = None,
 ) -> AsyncIterator[AgentOutput]:
+    """
+    Formats a stream of events into a stream of AgentOutput objects.
+
+    - raw_response_event: Events directly from the OpenAI Response API.
+    - agent_updated_stream_event: Events from the Agent updated stream.
+    - run_item_stream_event: Events from the Run Item stream.
+    """
     async for event in events:
         stream_event = format_event(event)
 
