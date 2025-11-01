@@ -26,25 +26,26 @@ It lets you connect LLMs to tools — like email, calendar, CRMs, or any data st
 
 ### Installation
 
-**Recommended:**
-
 The recommended method of installing `agentor` is with pip from PyPI.
 
 ```bash
 pip install agentor
 ```
 
-**Latest (unstable):**
+<details>
+  <summary>More ways...</summary>
 
-You can also install the latest bleeding edge version (could be unstable) of `agentor`, should you feel motivated enough, as follows:
+  You can also install the latest bleeding edge version (could be unstable) of `agentor`, should you feel motivated enough, as follows:
+  
+  ```bash
+  pip install git+https://github.com/celestoai/agentor@main
+  ```
+</details>
 
-```bash
-pip install git+https://github.com/celestoai/agentor@main
-```
 
 ## Agents API
 
-Integrate Agentor directly into your applications with just a few lines of code:
+Build an Agent, connect external tools or MCP Server and serve as an API in just few lines of code:
 
 ```diff
 from agentor import Agentor, function_tool
@@ -61,7 +62,7 @@ agent = Agentor(
 +    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
 )
 
-result = agent.run("What is the weather in London?")
+result = agent.run("What is the weather in London?")  # Run the Agent
 print(result)
 
 # Serve Agent with a single line of code
