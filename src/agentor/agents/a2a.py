@@ -10,6 +10,7 @@ from .schema import (
     JSONRPCError,
     JSONRPCRequest,
     JSONRPCResponse,
+    JSONRPCReturnCodes,
     Message,
     MessagePart,
     Task,
@@ -101,7 +102,7 @@ class A2AController(APIRouter):
             return JSONRPCResponse(
                 id=a2a_request.id,
                 error=JSONRPCError(
-                    code=-32601,
+                    code=JSONRPCReturnCodes.METHOD_NOT_FOUND,
                     message=f"Method not found: {method}",
                 ),
             )
@@ -180,7 +181,7 @@ class A2AController(APIRouter):
         return JSONRPCResponse(
             id=a2a_request.id,
             error=JSONRPCError(
-                code=-32601,
+                code=JSONRPCReturnCodes.SERVER_ERROR_NOT_IMPLEMENTED,
                 message="tasks/get not implemented yet",
             ),
         )
@@ -189,7 +190,7 @@ class A2AController(APIRouter):
         return JSONRPCResponse(
             id=a2a_request.id,
             error=JSONRPCError(
-                code=-32601,
+                code=JSONRPCReturnCodes.SERVER_ERROR_NOT_IMPLEMENTED,
                 message="tasks/cancel not implemented yet",
             ),
         )
