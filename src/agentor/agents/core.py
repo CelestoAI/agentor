@@ -1,4 +1,5 @@
 import os
+import uvicorn
 from typing import (
     Any,
     Dict,
@@ -9,6 +10,9 @@ from typing import (
     Union,
 )
 
+from fastapi import FastAPI
+
+from agentor.agents.a2a import A2AController
 from agentor.tools.registry import CelestoConfig, ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
 from agentor.prompts import THINKING_PROMPT, render_prompt
@@ -16,8 +20,6 @@ from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.output_text_formatter import format_stream_events
 
 from pydantic import BaseModel
-
-from .server import AgentServer
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -48,7 +50,7 @@ class APIInputRequest(BaseModel):
     stream: bool = False
 
 
-class Agentor(AgentServer):
+class Agentor:
     def __init__(
         self,
         name: str,
@@ -57,7 +59,6 @@ class Agentor(AgentServer):
         tools: List[Union[FunctionTool, str]] = [],
         debug: bool = False,
     ):
-        super().__init__(debug=debug)
         tools = [
             ToolRegistry.get(tool)["tool"] if isinstance(tool, str) else tool
             for tool in tools
@@ -106,3 +107,35 @@ class Agentor(AgentServer):
             allowed_events=["run_item_stream_event"],
         ):
             yield agent_output.serialize(dump_json=dump_json)
+
+    def serve(
+        self,
+        host: Literal["0.0.0.0", "127.0.0.1", "localhost"] = "0.0.0.0",
+        port: int = 8000,
+        log_level: Literal["debug", "info", "warning", "error"] = "info",
+        access_log: bool = True,
+    ):
+        if host not in ("0.0.0.0", "127.0.0.1", "localhost"):
+            raise ValueError(
+                f"Invalid host: {host}. Must be 0.0.0.0, 127.0.0.1, or localhost."
+            )
+
+        app = self._create_app(host, port)
+        print(f"Running Agentor at http://{host}:{port}")
+        print(
+            f"Agent card available at http://{host}:{port}/a2a/.well-known/agent-card.json"
+        )
+        uvicorn.run(
+            app, host=host, port=port, log_level=log_level, access_log=access_log
+        )
+
+    def _create_app(self, host: str, port: int) -> FastAPI:
+        a2a_controller = A2AController(
+            name=self.name,
+            description=self.instructions,
+            url=f"http://{host}:{port}",
+            prefix="/a2a",
+        )
+        app = FastAPI()
+        app.include_router(a2a_controller)
+        return app

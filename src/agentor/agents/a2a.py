@@ -19,9 +19,6 @@ from .schema import (
 )
 
 
-router = APIRouter(prefix="/a2a")
-
-
 class A2AController(APIRouter):
     """
     A2A Controller for the Agentor framework.
@@ -37,6 +34,7 @@ class A2AController(APIRouter):
         version: str = "0.0.1",
         skills: Optional[List[AgentSkill]] = None,
         capabilities: Optional[AgentCapabilities] = None,
+        **kwargs,
     ):
         if skills is None:
             skills = []
@@ -52,7 +50,7 @@ class A2AController(APIRouter):
         if url is None:
             url = "http://0.0.0.0:8000"
 
-        super().__init__(tags=["a2a"])
+        super().__init__(tags=["a2a"], **kwargs)
 
         self.agent_card = AgentCard(
             name=name,
