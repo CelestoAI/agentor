@@ -1,8 +1,7 @@
-from typing import Optional, List, AsyncGenerator
-import json
-from datetime import datetime
+from typing import Callable, Literal, Optional, List
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
+
 from .schema import (
     JSONRPCReturnCodes,
 )
@@ -14,13 +13,8 @@ from a2a.types import (
     JSONRPCRequest,
     JSONRPCResponse,
     JSONRPCError,
-    Message,
-    Part,
-    Task,
-    TaskState,
-    TaskStatus,
-    TaskStatusUpdateEvent,
 )
+from a2a import types as a2a_types
 
 
 class A2AController(APIRouter):
@@ -72,6 +66,13 @@ class A2AController(APIRouter):
             signatures=[],
         )
 
+        self._handler = {
+            "message/send": None,
+            "message/stream": None,
+            "tasks/get": None,
+            "tasks/cancel": None,
+        }
+
         self.add_api_route(
             "/.well-known/agent-card.json",
             self._agent_card_endpoint,
@@ -110,7 +111,7 @@ class A2AController(APIRouter):
                 ),
             )
 
-    async def message_stream(self, a2a_request: JSONRPCRequest):
+    async def message_stream(self, a2a_request: a2a_types.JSONRPCRequest):
         """
         Streaming implementation of message/stream using Server-Sent Events.
         Returns a stream of JSONRPCResponse objects where result can be:
@@ -119,82 +120,76 @@ class A2AController(APIRouter):
         - TaskStatusUpdateEvent: Status update for a task
         - TaskArtifactUpdateEvent: Artifact update for a task
         """
-
-        async def event_generator() -> AsyncGenerator[str, None]:
-            task_id = f"task_{int(datetime.utcnow().timestamp())}"
-            context_id = f"ctx_{int(datetime.utcnow().timestamp())}"
-
-            # 1. Send initial task creation
-            task = Task(
-                id=task_id,
-                contextId=context_id,
-                status=TaskStatus(state=TaskState.working),
-            )
-            response = JSONRPCResponse(id=a2a_request.id, result=task.model_dump())
-            yield f"data: {json.dumps(response.model_dump())}\n\n"
-
-            # 2. Send message response
-            message = Message(
-                messageId=f"msg_{int(datetime.utcnow().timestamp())}",
-                role="agent",
-                parts=[
-                    Part(
-                        type="text",
-                        text="Hello! This is a placeholder response.",
-                    )
-                ],
-            )
-            response = JSONRPCResponse(id=a2a_request.id, result=message.model_dump())
-            yield f"data: {json.dumps(response.model_dump())}\n\n"
-
-            # 3. Send final status update
-            final_status = TaskStatusUpdateEvent(
-                taskId=task_id,
-                contextId=context_id,
-                status=TaskStatus(state=TaskState.completed),
-                final=True,
-            )
-            response = JSONRPCResponse(
-                id=a2a_request.id, result=final_status.model_dump()
-            )
-            yield f"data: {json.dumps(response.model_dump())}\n\n"
-
-        return StreamingResponse(
-            event_generator(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-            },
+        send_message_request = a2a_types.SendStreamingMessageRequest.model_validate(
+            a2a_request.model_dump()
         )
+        handler = self.get_handler("message/stream")
+        if handler is None:
+            raise ValueError("Handler not implemented for message/stream")
+        response = await handler(send_message_request)
+        if isinstance(response, StreamingResponse):
+            return response
+        else:
+            raise ValueError(
+                f"Invalid response type: {type(response)}. Must be a StreamingResponse."
+            )
 
     async def message_send(self, a2a_request: JSONRPCRequest):
         """
         Non-streaming implementation of message/send.
         """
-        return JSONRPCResponse(
-            id=a2a_request.id,
-            result={
-                "status": "completed",
-                "message": "This is a placeholder response. Implement your agent logic here.",
-                "content": "Hello! I received your message.",
-            },
-        )
+        handler = self.get_handler("message/send")
+        if handler is None:
+            raise ValueError("Handler not implemented for message/send")
+        response = await handler(a2a_request)
+        if isinstance(response, JSONRPCResponse):
+            return response
+        else:
+            raise ValueError(
+                f"Invalid response type: {type(response)}. Must be a JSONRPCResponse."
+            )
 
     async def tasks_get(self, a2a_request: JSONRPCRequest):
-        return JSONRPCResponse(
-            id=a2a_request.id,
-            error=JSONRPCError(
-                code=JSONRPCReturnCodes.SERVER_ERROR_NOT_IMPLEMENTED,
-                message="tasks/get not implemented yet",
-            ),
-        )
+        handler = self.get_handler("tasks/get")
+        if handler is None:
+            raise ValueError("Handler not implemented for tasks/get")
+        response = await handler(a2a_request)
+        if isinstance(response, JSONRPCResponse):
+            return response
+        else:
+            raise ValueError(
+                f"Invalid response type: {type(response)}. Must be a JSONRPCResponse."
+            )
 
     async def tasks_cancel(self, a2a_request: JSONRPCRequest):
-        return JSONRPCResponse(
-            id=a2a_request.id,
-            error=JSONRPCError(
-                code=JSONRPCReturnCodes.SERVER_ERROR_NOT_IMPLEMENTED,
-                message="tasks/cancel not implemented yet",
-            ),
-        )
+        handler = self.get_handler("tasks/cancel")
+        if handler is None:
+            raise ValueError("Handler not implemented for tasks/cancel")
+        response = await handler(a2a_request)
+        if isinstance(response, JSONRPCResponse):
+            return response
+        else:
+            raise ValueError(
+                f"Invalid response type: {type(response)}. Must be a JSONRPCResponse."
+            )
+
+    def add_handler(
+        self,
+        method: Literal["message/send", "message/stream", "tasks/get", "tasks/cancel"],
+        handler: Callable,
+    ):
+        if method not in self._handler:
+            raise ValueError(
+                f"Invalid method: {method}. Must be one of: {list(self._handler.keys())}."
+            )
+        self._handler[method] = handler
+
+    def get_handler(
+        self,
+        method: Literal["message/send", "message/stream", "tasks/get", "tasks/cancel"],
+    ) -> Callable:
+        if method not in self._handler:
+            raise ValueError(
+                f"Invalid method: {method}. Must be one of: {list(self._handler.keys())}."
+            )
+        return self._handler[method]

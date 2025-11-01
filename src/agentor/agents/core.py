@@ -1,7 +1,12 @@
+from datetime import datetime
+import json
 import os
+from a2a.types import JSONRPCResponse, Message, Part, Task, TaskState, TaskStatus
 from fastapi.responses import Response, StreamingResponse
 import uvicorn
 from typing import (
+    AsyncGenerator,
+    AsyncIterator,
     List,
     Literal,
     Optional,
@@ -15,12 +20,13 @@ from agentor.tools.registry import CelestoConfig, ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
 from agentor.prompts import THINKING_PROMPT, render_prompt
 
-from agentor.output_text_formatter import format_stream_events
+from agentor.output_text_formatter import AgentOutput, format_stream_events
 from typing import (
     Any,
     Dict,
     TypedDict,
 )
+from a2a import types as a2a_types
 
 
 from pydantic import BaseModel
@@ -103,14 +109,17 @@ class Agentor:
     async def stream_chat(
         self,
         input: str,
-        dump_json: bool = False,
-    ):
+        serialize: bool = True,
+    ) -> AsyncIterator[Union[str, AgentOutput]]:
         result = Runner.run_streamed(self.agent, input=input, context=CelestoConfig())
         async for agent_output in format_stream_events(
             result.stream_events(),
             allowed_events=["run_item_stream_event"],
         ):
-            yield agent_output.serialize(dump_json=dump_json)
+            if serialize:
+                yield agent_output.serialize(dump_json=True)
+            else:
+                yield agent_output
 
     def serve(
         self,
@@ -156,6 +165,8 @@ class Agentor:
         controller.add_api_route("/chat", self._chat_handler, methods=["POST"])
         controller.add_api_route("/health", self._health_check_handler, methods=["GET"])
 
+        self._register_a2a_handlers(controller)
+
         app = FastAPI()
         app.include_router(controller)
         return app
@@ -163,7 +174,7 @@ class Agentor:
     async def _chat_handler(self, data: APIInputRequest) -> str:
         if data.stream:
             return StreamingResponse(
-                self.stream_chat(data.input, dump_json=True),
+                self.stream_chat(data.input, serialize=True),
                 media_type="text/event-stream",
             )
         else:
@@ -172,3 +183,60 @@ class Agentor:
 
     async def _health_check_handler(self) -> Response:
         return Response(status_code=200, content="OK")
+
+    def _register_a2a_handlers(self, controller: A2AController):
+        controller.add_handler("message/stream", self._message_stream_handler)
+
+    async def _message_stream_handler(
+        self, request: a2a_types.SendStreamingMessageRequest
+    ) -> StreamingResponse:
+        async def event_generator() -> AsyncGenerator[str, None]:
+            task_id = f"task_{int(datetime.utcnow().timestamp())}"
+            context_id = f"ctx_{int(datetime.utcnow().timestamp())}"
+
+            # 1. Send initial task creation
+            task = Task(
+                id=task_id,
+                contextId=context_id,
+                status=TaskStatus(state=TaskState.working),
+            )
+            response = JSONRPCResponse(id=request.id, result=task.model_dump())
+            yield f"data: {json.dumps(response.model_dump())}\n\n"
+
+            # 2. Send message response
+            part = request.params.message.parts[0].root
+            if part.kind != "text":
+                raise ValueError(f"Invalid part kind: {part.kind}. Must be 'text'.")
+            input_text = part.text
+            result = self.stream_chat(input_text, serialize=False)
+            async for event in result:
+                event: AgentOutput
+                if event.message is not None:
+                    message = Message(
+                        messageId=f"msg_{int(datetime.utcnow().timestamp())}",
+                        role="agent",
+                        parts=[Part(type="text", text=event.message)],
+                    )
+                    response = JSONRPCResponse(
+                        id=request.id, result=message.model_dump()
+                    )
+                    yield f"data: {json.dumps(response.model_dump())}\n\n"
+
+            # 3. Send final status update
+            final_status = a2a_types.TaskStatusUpdateEvent(
+                taskId=task_id,
+                contextId=context_id,
+                status=TaskStatus(state=TaskState.completed),
+                final=True,
+            )
+            response = JSONRPCResponse(id=request.id, result=final_status.model_dump())
+            yield f"data: {json.dumps(response.model_dump())}\n\n"
+
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            },
+        )
