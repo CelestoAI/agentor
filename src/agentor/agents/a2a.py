@@ -136,7 +136,7 @@ class A2AController(APIRouter):
             # 2. Send message response
             message = Message(
                 messageId=f"msg_{int(datetime.utcnow().timestamp())}",
-                role="assistant",
+                role="agent",
                 parts=[
                     Part(
                         type="text",
