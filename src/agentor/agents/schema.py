@@ -466,7 +466,7 @@ class AgentCard(BaseModel):
     )
 
     defaultOutputModes: List[str] = Field(
-        default=[],
+        default=["application/json"],
         description="Default set of supported output MIME types for all skills, which can be overridden on a per-skill basis",
     )
 
