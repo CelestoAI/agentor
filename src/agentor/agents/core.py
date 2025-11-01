@@ -147,16 +147,17 @@ class Agentor:
             if self.tools
             else []
         )
-        a2a_controller = A2AController(
+        controller = A2AController(
             name=self.name,
             description=self.instructions,
             skills=skills,
             url=f"http://{host}:{port}",
         )
+        controller.add_api_route("/chat", self._chat_handler, methods=["POST"])
+        controller.add_api_route("/health", self._health_check_handler, methods=["GET"])
+
         app = FastAPI()
-        app.include_router(a2a_controller)
-        app.add_api_route("/chat", self._chat_handler, methods=["POST"])
-        app.add_api_route("/health", self._health_check_handler, methods=["GET"])
+        app.include_router(controller)
         return app
 
     async def _chat_handler(self, data: APIInputRequest) -> str:

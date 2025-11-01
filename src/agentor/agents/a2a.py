@@ -27,7 +27,7 @@ class A2AController(APIRouter):
     """
     A2A Controller for the Agentor framework.
 
-    http://0.0.0.0:8000/a2a/.well-known/agent-card.json will return the agent card manifest for this agent following the A2A protocol v0.3.0.
+    http://0.0.0.0:8000/.well-known/agent-card.json will return the agent card manifest for this agent following the A2A protocol v0.3.0.
     """
 
     def __init__(
