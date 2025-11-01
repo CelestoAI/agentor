@@ -1,4 +1,5 @@
 import os
+from fastapi.responses import Response, StreamingResponse
 import uvicorn
 from typing import (
     Any,
@@ -138,4 +139,18 @@ class Agentor:
         )
         app = FastAPI()
         app.include_router(a2a_controller)
+        app.add_api_route("/chat", self._chat_handler, methods=["POST"])
+        app.add_api_route("/health", self._health_check_handler, methods=["GET"])
         return app
+
+    async def _chat_handler(self, data: APIInputRequest) -> str:
+        if data.stream:
+            return StreamingResponse(
+                await self.stream_chat(data.input, dump_json=True),
+                media_type="text/event-stream",
+            )
+        else:
+            return await self.chat(data.input)
+
+    async def _health_check_handler(self) -> Response:
+        return Response(status_code=200, content="OK")
