@@ -1,35 +1,50 @@
 ---
-description: Documentation of Model Context Protocol (MCP) implementation, defining how AI models interact with the system and handle prompts
+description: Handles centralized tool registration, resource management and communication patterns between AI agents
 ---
 
 
 # model-context-protocol
 
-The Model Context Protocol (MCP) implementation (Importance Score: 75) defines core interaction patterns for AI model communication and context management.
+The Model Context Protocol (MCP) implementation provides the foundation for agent communication and resource management:
 
-Key Components:
+## Core Components
 
-1. Prompt Template System
-Path: src/agentor/mcp/api_router.py
-- Custom prompt template engine for dynamic message construction
-- JSON-RPC routing for standardized model interactions
-- Capability discovery and registration for available model functions
-- Context-aware template selection based on conversation state
+1. API Router (src/agentor/mcp/api_router.py)
+- Implements JSON-RPC style method routing between agents
+- Manages tool registration and discovery
+- Handles resource allocation and access control
+Importance Score: 80/100
 
-2. Resource Management
-Path: src/agentor/mcp/api_router.py
-- Tool capability mapping and validation
-- Dynamic resource allocation for model interactions
-- Context preservation across model calls
-- Specialized JSON-RPC method handling
+2. Tool Registry (src/agentor/tools/registry.py)
+- Centralized tool registration system
+- Tool metadata management and validation
+- Access control for registered capabilities
+Importance Score: 70/100
 
-Core Business Rules:
-- AI model interactions must follow standardized MCP format
-- Each model request requires valid capability declarations
-- Context must be preserved across multiple model interactions
-- Templates dynamically adapt based on conversation state
+3. Agent Communication Patterns
+- Hierarchical routing through Main Triage Agent
+- Specialized agent interfaces for:
+  * Concept Research
+  * Code Operations
+  * Google Services Integration
+- Structured message passing protocol
+Importance Score: 85/100
 
-The system implements a custom approach to managing AI model interactions while maintaining consistent context and ensuring proper resource allocation across different model capabilities.
+## Resource Management
+
+1. Tool Registration Flow
+- Tools register capabilities and requirements
+- Metadata validation ensures complete tool definitions
+- Access permissions assigned during registration
+Importance Score: 75/100
+
+2. Inter-Agent Communication
+- JSON-RPC message format for standardized interactions
+- Context preservation between agent handoffs
+- Resource scope management per agent
+Importance Score: 80/100
+
+The protocol enables complex task delegation while maintaining security boundaries and resource access controls between different agent roles and their assigned tools.
 
 $END$
 
