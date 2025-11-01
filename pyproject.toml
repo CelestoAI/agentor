@@ -61,6 +61,9 @@ models = [
 [tool.hatch.version]
 path = "src/agentor/__init__.py"
 
+[tool.hatch.build]
+packages = ["src/agentor"]
+
 [tool.hatch.build.targets.wheel]
 only-include = ["src"]
 
