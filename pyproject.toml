@@ -31,6 +31,7 @@ dependencies = [
     "uvicorn>=0.37.0",
     "fastapi>=0.120.0",
     "mcp>=1.16.0",
+    "a2a-sdk>=0.3.10",
 ]
 license-files = ["LICENSE"]
 authors = [

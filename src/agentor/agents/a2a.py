@@ -4,18 +4,21 @@ from datetime import datetime
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from .schema import (
+    JSONRPCReturnCodes,
+)
+
+from a2a.types import (
     AgentCard,
     AgentCapabilities,
     AgentSkill,
-    JSONRPCError,
     JSONRPCRequest,
     JSONRPCResponse,
-    JSONRPCReturnCodes,
+    JSONRPCError,
     Message,
-    MessagePart,
+    Part,
     Task,
+    TaskState,
     TaskStatus,
-    TaskStatusState,
     TaskStatusUpdateEvent,
 )
 
@@ -125,7 +128,7 @@ class A2AController(APIRouter):
             task = Task(
                 id=task_id,
                 contextId=context_id,
-                status=TaskStatus(state=TaskStatusState.WORKING),
+                status=TaskStatus(state=TaskState.working),
             )
             response = JSONRPCResponse(id=a2a_request.id, result=task.model_dump())
             yield f"data: {json.dumps(response.model_dump())}\n\n"
@@ -135,8 +138,9 @@ class A2AController(APIRouter):
                 messageId=f"msg_{int(datetime.utcnow().timestamp())}",
                 role="assistant",
                 parts=[
-                    MessagePart(
-                        type="text", text="Hello! This is a placeholder response."
+                    Part(
+                        type="text",
+                        text="Hello! This is a placeholder response.",
                     )
                 ],
             )
@@ -147,7 +151,7 @@ class A2AController(APIRouter):
             final_status = TaskStatusUpdateEvent(
                 taskId=task_id,
                 contextId=context_id,
-                status=TaskStatus(state=TaskStatusState.COMPLETED),
+                status=TaskStatus(state=TaskState.completed),
                 final=True,
             )
             response = JSONRPCResponse(
