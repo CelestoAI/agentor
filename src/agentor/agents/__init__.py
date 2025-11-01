@@ -1,3 +1,9 @@
-from .core import Agentor, AgentServer, get_dummy_weather
+from .core import Agentor, get_dummy_weather
+from .schema import JSONRPCReturnCodes, JSONRPCErrorCodes
 
-__all__ = ["Agentor", "AgentServer", "get_dummy_weather"]
+__all__ = [
+    "Agentor",
+    "get_dummy_weather",
+    "JSONRPCReturnCodes",
+    "JSONRPCErrorCodes",
+]

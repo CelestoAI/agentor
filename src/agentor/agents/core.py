@@ -1,28 +1,28 @@
 import os
-import sys
-import json
-import traceback
+from fastapi.responses import Response, StreamingResponse
+import uvicorn
 from typing import (
-    Any,
-    Dict,
     List,
     Literal,
     Optional,
-    TypedDict,
     Union,
 )
 
-from litestar.exceptions import HTTPException
-from litestar.openapi.plugins import SwaggerRenderPlugin
-from litestar.openapi.config import OpenAPIConfig
-from litestar import Litestar, Request, get, post
-from litestar.response import Stream, Response
+from fastapi import FastAPI
 
+from agentor.agents.a2a import A2AController
+from agentor.agents.schema import AgentSkill
 from agentor.tools.registry import CelestoConfig, ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
 from agentor.prompts import THINKING_PROMPT, render_prompt
 
 from agentor.output_text_formatter import format_stream_events
+from typing import (
+    Any,
+    Dict,
+    TypedDict,
+)
+
 
 from pydantic import BaseModel
 
@@ -55,85 +55,7 @@ class APIInputRequest(BaseModel):
     stream: bool = False
 
 
-class AgentServer:
-    def __init__(self, debug: bool = False) -> None:
-        @post("/chat")
-        async def _chat_handler(data: APIInputRequest) -> str:
-            if data.stream:
-                return Stream(
-                    self.stream_chat(data.input, dump_json=True),
-                    media_type="text/event-stream",
-                )
-            else:
-                return await self.chat(data.input)
-
-        @get("/health")
-        async def health_handler() -> Response:
-            return Response(status_code=200, content="OK")
-
-        self._app = Litestar(
-            [_chat_handler, health_handler],
-            openapi_config=OpenAPIConfig(
-                title="Agentor",
-                description="Agentor is a tool for building and deploying AI Agents.",
-                version="0.1.0",
-                path="/",
-            ),
-            plugins=[SwaggerRenderPlugin()],
-            debug=debug,
-            exception_handlers={
-                Exception: self._exception_handler,
-                HTTPException: self._http_exception_handler,
-            },
-        )
-
-    @staticmethod
-    def _exception_handler(request: Request, exc: Exception) -> Response:
-        """Custom exception handler that prints full traceback."""
-        print("\n" + "=" * 80)
-        print("EXCEPTION CAUGHT:")
-        print("=" * 80)
-        traceback.print_exc(file=sys.stdout)
-        print("=" * 80 + "\n")
-        return Response(
-            status_code=500,
-            content=json.dumps(
-                {
-                    "error": str(exc),
-                    "type": type(exc).__name__,
-                    "detail": "Internal server error",
-                }
-            ),
-        )
-
-    @staticmethod
-    def _http_exception_handler(request: Request, exc: HTTPException) -> Response:
-        """Handler for HTTP exceptions."""
-        print(f"\nHTTP Exception: {exc.status_code} - {exc.detail}\n")
-        return Response(
-            status_code=exc.status_code,
-            content=json.dumps({"error": exc.detail, "status_code": exc.status_code}),
-        )
-
-    def serve(
-        self,
-        host: Literal["0.0.0.0", "127.0.0.1", "localhost"] = "0.0.0.0",
-        port: int = 8000,
-        log_level: Literal["debug", "info", "warning", "error"] = "info",
-        access_log: bool = True,
-    ):
-        if host not in ("0.0.0.0", "127.0.0.1", "localhost"):
-            raise ValueError(
-                f"Invalid host: {host}. Must be 0.0.0.0, 127.0.0.1, or localhost."
-            )
-        import uvicorn
-
-        uvicorn.run(
-            self._app, host=host, port=port, log_level=log_level, access_log=access_log
-        )
-
-
-class Agentor(AgentServer):
+class Agentor:
     def __init__(
         self,
         name: str,
@@ -142,8 +64,7 @@ class Agentor(AgentServer):
         tools: List[Union[FunctionTool, str]] = [],
         debug: bool = False,
     ):
-        super().__init__(debug=debug)
-        tools = [
+        self.tools: List[FunctionTool] = [
             ToolRegistry.get(tool)["tool"] if isinstance(tool, str) else tool
             for tool in tools
         ]
@@ -155,7 +76,7 @@ class Agentor(AgentServer):
             raise ValueError("""OPENAI_API_KEY is required to use the Agentor.
             Please set the OPENAI_API_KEY environment variable.""")
         self.agent: Agent = Agent(
-            name=name, instructions=instructions, model=model, tools=tools
+            name=name, instructions=instructions, model=model, tools=self.tools
         )
 
     def run(self, input: str) -> List[str] | str:
@@ -191,3 +112,59 @@ class Agentor(AgentServer):
             allowed_events=["run_item_stream_event"],
         ):
             yield agent_output.serialize(dump_json=dump_json)
+
+    def serve(
+        self,
+        host: Literal["0.0.0.0", "127.0.0.1", "localhost"] = "0.0.0.0",
+        port: int = 8000,
+        log_level: Literal["debug", "info", "warning", "error"] = "info",
+        access_log: bool = True,
+    ):
+        if host not in ("0.0.0.0", "127.0.0.1", "localhost"):
+            raise ValueError(
+                f"Invalid host: {host}. Must be 0.0.0.0, 127.0.0.1, or localhost."
+            )
+
+        app = self._create_app(host, port)
+        print(f"Running Agentor at http://{host}:{port}")
+        print(
+            f"Agent card available at http://{host}:{port}/a2a/.well-known/agent-card.json"
+        )
+        uvicorn.run(
+            app, host=host, port=port, log_level=log_level, access_log=access_log
+        )
+
+    def _create_app(self, host: str, port: int) -> FastAPI:
+        skills = (
+            [
+                AgentSkill(name=tool.name, description=tool.description)
+                for tool in self.tools
+            ]
+            if self.tools
+            else []
+        )
+        a2a_controller = A2AController(
+            name=self.name,
+            description=self.instructions,
+            skills=skills,
+            url=f"http://{host}:{port}",
+            prefix="/a2a",
+        )
+        app = FastAPI()
+        app.include_router(a2a_controller)
+        app.add_api_route("/chat", self._chat_handler, methods=["POST"])
+        app.add_api_route("/health", self._health_check_handler, methods=["GET"])
+        return app
+
+    async def _chat_handler(self, data: APIInputRequest) -> str:
+        if data.stream:
+            return StreamingResponse(
+                self.stream_chat(data.input, dump_json=True),
+                media_type="text/event-stream",
+            )
+        else:
+            result = await self.chat(data.input)
+            return result.final_output
+
+    async def _health_check_handler(self) -> Response:
+        return Response(status_code=200, content="OK")
