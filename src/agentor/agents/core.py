@@ -159,7 +159,7 @@ class Agentor:
     async def _chat_handler(self, data: APIInputRequest) -> str:
         if data.stream:
             return StreamingResponse(
-                await self.stream_chat(data.input, dump_json=True),
+                self.stream_chat(data.input, dump_json=True),
                 media_type="text/event-stream",
             )
         else:
