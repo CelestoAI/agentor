@@ -74,22 +74,27 @@ class JSONRPCResponse(BaseModel):
 # A2A Operation Schemas
 
 
+class MessagePart(BaseModel):
+    """A part of a message content."""
+
+    type: str = Field(default="text", description="Type of content part")
+    text: Optional[str] = Field(None, description="Text content")
+
+
 class Message(BaseModel):
     """
     Represents a message being sent to or from an agent.
     """
 
+    messageId: str = Field(..., description="Unique identifier for the message")
     role: str = Field(
         ...,
-        description="The role of the message sender (e.g., 'user', 'assistant', 'system')",
+        description="The role of the message sender",
         examples=["user", "assistant", "system"],
     )
-    content: Union[str, List[Dict[str, Any]]] = Field(
+    parts: List[MessagePart] = Field(
         ...,
-        description="The message content. Can be a simple string or structured content blocks",
-    )
-    name: Optional[str] = Field(
-        None, description="Optional name of the sender (for multi-party conversations)"
+        description="Array of message content parts",
     )
     metadata: Optional[Dict[str, Any]] = Field(
         None, description="Optional metadata for the message"
@@ -155,6 +160,69 @@ class MessageSendParams(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(
         None, description="Optional metadata for extensions"
     )
+
+
+class TaskStatusState(str, Enum):
+    """Valid task status states."""
+
+    SUBMITTED = "submitted"
+    WORKING = "working"
+    INPUT_REQUIRED = "input-required"
+    COMPLETED = "completed"
+    CANCELED = "canceled"
+    FAILED = "failed"
+    REJECTED = "rejected"
+    AUTH_REQUIRED = "auth-required"
+    UNKNOWN = "unknown"
+
+
+class TaskStatus(BaseModel):
+    """Status of a task."""
+
+    state: TaskStatusState = Field(
+        ...,
+        description="Current state of the task",
+    )
+
+
+class Task(BaseModel):
+    """
+    Represents a task created by an agent in response to a message.
+    """
+
+    id: str = Field(..., description="Unique identifier for the task")
+    contextId: str = Field(..., description="Context/conversation identifier")
+    status: TaskStatus = Field(..., description="Current status of the task")
+    metadata: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Additional metadata about the task"
+    )
+
+
+class TaskStatusUpdateEvent(BaseModel):
+    """
+    Represents a status update event for a task during streaming.
+    """
+
+    type: str = Field(default="task_status_update", description="Event type identifier")
+    taskId: str = Field(..., description="The ID of the task being updated")
+    contextId: str = Field(..., description="Context/conversation identifier")
+    status: TaskStatus = Field(..., description="Updated status of the task")
+    final: bool = Field(
+        default=False, description="Whether this is the final status update"
+    )
+
+
+class TaskArtifactUpdateEvent(BaseModel):
+    """
+    Represents an artifact update event for a task during streaming.
+    """
+
+    type: str = Field(
+        default="task_artifact_update", description="Event type identifier"
+    )
+    taskId: str = Field(..., description="The ID of the task being updated")
+    contextId: str = Field(..., description="Context/conversation identifier")
+    artifact: Dict[str, Any] = Field(..., description="The artifact data being sent")
 
 
 # A2A Protocol Schemas

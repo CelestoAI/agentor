@@ -1,5 +1,6 @@
 from typing import Optional, List, AsyncGenerator
 import json
+from datetime import datetime
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from .schema import (
@@ -9,6 +10,12 @@ from .schema import (
     JSONRPCError,
     JSONRPCRequest,
     JSONRPCResponse,
+    Message,
+    MessagePart,
+    Task,
+    TaskStatus,
+    TaskStatusState,
+    TaskStatusUpdateEvent,
 )
 
 
@@ -103,19 +110,51 @@ class A2AController(APIRouter):
 
     async def message_stream(self, a2a_request: JSONRPCRequest):
         """
-        Streaming implementation of message/send using Server-Sent Events.
+        Streaming implementation of message/stream using Server-Sent Events.
+        Returns a stream of JSONRPCResponse objects where result can be:
+        - Message: An agent response message
+        - Task: A task object
+        - TaskStatusUpdateEvent: Status update for a task
+        - TaskArtifactUpdateEvent: Artifact update for a task
         """
 
         async def event_generator() -> AsyncGenerator[str, None]:
-            final_response = JSONRPCResponse(
-                id=a2a_request.id,
-                result={
-                    "status": "completed",
-                    "message": "This is a placeholder response. Implement your agent logic here.",
-                    "content": "Hello! I received your message.",
-                },
+            task_id = f"task_{int(datetime.utcnow().timestamp())}"
+            context_id = f"ctx_{int(datetime.utcnow().timestamp())}"
+
+            # 1. Send initial task creation
+            task = Task(
+                id=task_id,
+                contextId=context_id,
+                status=TaskStatus(state=TaskStatusState.WORKING),
             )
-            yield f"data: {json.dumps(final_response.model_dump())}\n\n"
+            response = JSONRPCResponse(id=a2a_request.id, result=task.model_dump())
+            yield f"data: {json.dumps(response.model_dump())}\n\n"
+
+            # 2. Send message response
+            message = Message(
+                messageId=f"msg_{int(datetime.utcnow().timestamp())}",
+                role="assistant",
+                parts=[
+                    MessagePart(
+                        type="text", text="Hello! This is a placeholder response."
+                    )
+                ],
+            )
+            response = JSONRPCResponse(id=a2a_request.id, result=message.model_dump())
+            yield f"data: {json.dumps(response.model_dump())}\n\n"
+
+            # 3. Send final status update
+            final_status = TaskStatusUpdateEvent(
+                taskId=task_id,
+                contextId=context_id,
+                status=TaskStatus(state=TaskStatusState.COMPLETED),
+                final=True,
+            )
+            response = JSONRPCResponse(
+                id=a2a_request.id, result=final_status.model_dump()
+            )
+            yield f"data: {json.dumps(response.model_dump())}\n\n"
 
         return StreamingResponse(
             event_generator(),
