@@ -109,7 +109,7 @@ async def _send_message(agent: str, input: str, timeout: float):
 
 
 @app.command()
-def send_message(
+def chat(
     agent: str = typer.Option(
         "http://localhost:8000", help="The URL of the agent to connect to"
     ),
