@@ -1,8 +1,8 @@
-from datetime import datetime
 import json
 import os
 import uuid
-from a2a.types import JSONRPCResponse, Message, Part, Task, TaskState, TaskStatus
+from a2a import types as a2a_types
+from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
 from fastapi.responses import Response, StreamingResponse
 import uvicorn
 from typing import (
@@ -27,10 +27,11 @@ from typing import (
     Dict,
     TypedDict,
 )
-from a2a import types as a2a_types
 
-
+import logging
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -194,51 +195,86 @@ class Agentor:
         async def event_generator() -> AsyncGenerator[str, None]:
             task_id = f"task_{uuid.uuid4()}"
             context_id = f"ctx_{uuid.uuid4()}"
+            artifact_id = f"artifact_{uuid.uuid4()}"
 
-            # 1. Send initial task creation
-            task = Task(
-                id=task_id,
-                contextId=context_id,
-                status=TaskStatus(state=TaskState.working),
-            )
-            response = JSONRPCResponse(id=request.id, result=task.model_dump())
-            yield f"data: {json.dumps(response.model_dump())}\n\n"
-
-            # 2. Send message response
-            if (
-                request.params.message.parts is None
-                or len(request.params.message.parts) == 0
-            ):
-                raise ValueError(
-                    f"Message parts are required but got {request.params.message.parts}."
+            try:
+                # Send initial task
+                task = Task(
+                    id=task_id,
+                    context_id=context_id,
+                    status=TaskStatus(state=TaskState.working),
                 )
-            part = request.params.message.parts[0].root
-            if part.kind != "text":
-                raise ValueError(f"Invalid part kind: {part.kind}. Must be 'text'.")
-            input_text = part.text
-            result = self.stream_chat(input_text, serialize=False)
-            async for event in result:
-                event: AgentOutput
-                if event.message is not None:
-                    message = Message(
-                        messageId=f"msg_{int(datetime.utcnow().timestamp())}",
-                        role="agent",
-                        parts=[Part(type="text", text=event.message)],
-                    )
-                    response = JSONRPCResponse(
-                        id=request.id, result=message.model_dump()
-                    )
-                    yield f"data: {json.dumps(response.model_dump())}\n\n"
+                response = JSONRPCResponse(id=request.id, result=task.model_dump())
+                yield f"data: {json.dumps(response.model_dump())}\n\n"
 
-            # 3. Send final status update
-            final_status = a2a_types.TaskStatusUpdateEvent(
-                taskId=task_id,
-                contextId=context_id,
-                status=TaskStatus(state=TaskState.completed),
-                final=True,
-            )
-            response = JSONRPCResponse(id=request.id, result=final_status.model_dump())
-            yield f"data: {json.dumps(response.model_dump())}\n\n"
+                # Extract message text
+                if (
+                    request.params.message.parts is None
+                    or len(request.params.message.parts) == 0
+                ):
+                    raise ValueError(
+                        f"Message parts are required but got {request.params.message.parts}."
+                    )
+                part = request.params.message.parts[0].root
+                if part.kind != "text":
+                    raise ValueError(f"Invalid part kind: {part.kind}. Must be 'text'.")
+                input_text = part.text
+
+                # Stream artifact updates
+                result = self.stream_chat(input_text, serialize=False)
+                is_first_chunk = True
+
+                async for event in result:
+                    event: AgentOutput
+                    if event.message is not None:
+                        artifact = a2a_types.Artifact(
+                            artifact_id=artifact_id,
+                            name="response",
+                            description="Agent response text",
+                            parts=[
+                                a2a_types.Part(
+                                    root=a2a_types.TextPart(text=event.message)
+                                )
+                            ],
+                        )
+                        artifact_update = a2a_types.TaskArtifactUpdateEvent(
+                            kind="artifact-update",
+                            task_id=task_id,
+                            context_id=context_id,
+                            artifact=artifact,
+                            append=not is_first_chunk,
+                        )
+                        response = JSONRPCResponse(
+                            id=request.id, result=artifact_update.model_dump()
+                        )
+                        yield f"data: {json.dumps(response.model_dump())}\n\n"
+                        is_first_chunk = False
+
+                # Send completion status
+                final_status = a2a_types.TaskStatusUpdateEvent(
+                    task_id=task_id,
+                    context_id=context_id,
+                    status=TaskStatus(state=TaskState.completed),
+                    final=True,
+                )
+                response = JSONRPCResponse(
+                    id=request.id, result=final_status.model_dump()
+                )
+                yield f"data: {json.dumps(response.model_dump())}\n\n"
+
+            except Exception as e:
+                logger.exception(f"Error in A2A stream handler: {e}")
+
+                error_status = a2a_types.TaskStatusUpdateEvent(
+                    task_id=task_id,
+                    context_id=context_id,
+                    status=TaskStatus(state=TaskState.failed, message=str(e)),
+                    final=True,
+                )
+                response = JSONRPCResponse(
+                    id=request.id, result=error_status.model_dump()
+                )
+                yield f"data: {json.dumps(response.model_dump())}\n\n"
 
         return StreamingResponse(
             event_generator(),

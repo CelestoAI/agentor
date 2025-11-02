@@ -114,11 +114,12 @@ class A2AController(APIRouter):
     async def message_stream(self, a2a_request: a2a_types.JSONRPCRequest):
         """
         Streaming implementation of message/stream using Server-Sent Events.
+
         Returns a stream of JSONRPCResponse objects where result can be:
-        - Message: An agent response message
-        - Task: A task object
-        - TaskStatusUpdateEvent: Status update for a task
-        - TaskArtifactUpdateEvent: Artifact update for a task
+        - Message: A single agent response message (stream ends immediately)
+        - Task: A task object (sent first to establish the task)
+        - TaskStatusUpdateEvent: Status updates (working, completed, etc.)
+        - TaskArtifactUpdateEvent: Streaming content updates
         """
         send_message_request = a2a_types.SendStreamingMessageRequest.model_validate(
             a2a_request.model_dump()
