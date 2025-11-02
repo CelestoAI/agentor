@@ -1,8 +1,7 @@
-from datetime import datetime
 import json
 import os
 import uuid
-from a2a.types import JSONRPCResponse, Message, Part, Task, TaskState, TaskStatus
+from a2a.types import JSONRPCResponse, Part, Task, TaskState, TaskStatus
 from fastapi.responses import Response, StreamingResponse
 import uvicorn
 from typing import (
@@ -194,8 +193,9 @@ class Agentor:
         async def event_generator() -> AsyncGenerator[str, None]:
             task_id = f"task_{uuid.uuid4()}"
             context_id = f"ctx_{uuid.uuid4()}"
+            artifact_id = f"artifact_{uuid.uuid4()}"
 
-            # 1. Send initial task creation
+            # Send initial task
             task = Task(
                 id=task_id,
                 contextId=context_id,
@@ -204,7 +204,7 @@ class Agentor:
             response = JSONRPCResponse(id=request.id, result=task.model_dump())
             yield f"data: {json.dumps(response.model_dump())}\n\n"
 
-            # 2. Send message response
+            # Extract message text
             if (
                 request.params.message.parts is None
                 or len(request.params.message.parts) == 0
@@ -216,21 +216,34 @@ class Agentor:
             if part.kind != "text":
                 raise ValueError(f"Invalid part kind: {part.kind}. Must be 'text'.")
             input_text = part.text
+
+            # Stream artifact updates
             result = self.stream_chat(input_text, serialize=False)
+            is_first_chunk = True
+
             async for event in result:
                 event: AgentOutput
                 if event.message is not None:
-                    message = Message(
-                        messageId=f"msg_{int(datetime.utcnow().timestamp())}",
-                        role="agent",
+                    artifact = a2a_types.Artifact(
+                        artifact_id=artifact_id,
+                        name="response",
+                        description="Agent response text",
                         parts=[Part(type="text", text=event.message)],
                     )
+                    artifact_update = a2a_types.TaskArtifactUpdateEvent(
+                        kind="artifact-update",
+                        task_id=task_id,
+                        context_id=context_id,
+                        artifact=artifact,
+                        append=not is_first_chunk,
+                    )
                     response = JSONRPCResponse(
-                        id=request.id, result=message.model_dump()
+                        id=request.id, result=artifact_update.model_dump()
                     )
                     yield f"data: {json.dumps(response.model_dump())}\n\n"
+                    is_first_chunk = False
 
-            # 3. Send final status update
+            # Send completion status
             final_status = a2a_types.TaskStatusUpdateEvent(
                 taskId=task_id,
                 contextId=context_id,
