@@ -11,7 +11,6 @@ requires-python = ">=3.10"
 dependencies = [
     "fastmcp>=2.7.1",
     "rich>=14.0.0",
-    "typer>=0.16.0",
     "python-dotenv>=1.0.0",
     "openai>=1.97.0",
     "google-api-python-client>=2.178.0",
@@ -32,6 +31,7 @@ dependencies = [
     "fastapi>=0.120.0",
     "mcp>=1.16.0",
     "a2a-sdk>=0.3.10",
+    "typer>=0.20.0",
 ]
 license-files = ["LICENSE"]
 authors = [
