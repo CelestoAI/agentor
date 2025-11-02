@@ -1,5 +1,5 @@
 from uuid import uuid4
-from typing import Optional, Tuple
+from typing import Tuple
 
 import httpx
 from a2a.client import ClientFactory, ClientConfig, Client
@@ -15,36 +15,30 @@ DEFAULT_TIMEOUT_SECONDS = 120.0
 
 
 async def _connect_client(
-    agent: str, timeout: Optional[float]
-) -> Tuple[Client, Optional[httpx.AsyncClient]]:
+    agent: str, timeout: float
+) -> Tuple[Client, httpx.AsyncClient]:
     """
-    Connect to the remote agent using a ClientConfig that carries an httpx timeout.
-    Returns the client and the httpx.AsyncClient to close when finished.
+    Connect to the remote agent with a ClientConfig that uses an httpx timeout.
+    Returns the client and the httpx.AsyncClient to close after the call completes.
     """
-    http_client: Optional[httpx.AsyncClient] = None
-    if timeout is not None:
-        http_client = httpx.AsyncClient(timeout=httpx.Timeout(timeout))
-        client_config = ClientConfig(httpx_client=http_client)
-    else:
-        client_config = ClientConfig()
+    http_client = httpx.AsyncClient(timeout=timeout)
+    client_config = ClientConfig(httpx_client=http_client)
 
     try:
         client = await ClientFactory.connect(agent=agent, client_config=client_config)
         return client, http_client
     except Exception:
-        if http_client is not None:
-            await http_client.aclose()
+        await http_client.aclose()
         raise
 
 
-async def _get_card(agent: str, timeout: Optional[float]):
+async def _get_card(agent: str, timeout: float):
     client, http_client = await _connect_client(agent, timeout)
     try:
         card = await client.get_card()
         console.print(card.model_dump(mode="json"))
     finally:
-        if http_client is not None:
-            await http_client.aclose()
+        await http_client.aclose()
 
 
 @app.command()
@@ -64,11 +58,11 @@ def get_card(
     asyncio.run(_get_card(agent, timeout))
 
 
-async def _send_message(agent: str, input: str, timeout: Optional[float]):
+async def _send_message(agent: str, input: str, timeout: float):
     import sys
     import traceback
 
-    http_client: Optional[httpx.AsyncClient] = None
+    http_client = None
     try:
         client, http_client = await _connect_client(agent, timeout)
 
