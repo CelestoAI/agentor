@@ -1,5 +1,8 @@
 from uuid import uuid4
-from a2a.client import ClientFactory
+from typing import Optional, Tuple
+
+import httpx
+from a2a.client import ClientFactory, ClientConfig, Client
 from a2a.types import Message, TextPart
 from rich.console import Console
 import asyncio
@@ -8,14 +11,40 @@ import typer
 
 app = typer.Typer()
 console = Console()
+DEFAULT_TIMEOUT_SECONDS = 120.0
 
 
-async def _get_card(agent: str):
-    client = await ClientFactory.connect(
-        agent=agent,
-    )
-    card = await client.get_card()
-    console.print(card.model_dump(mode="json"))
+async def _connect_client(
+    agent: str, timeout: Optional[float]
+) -> Tuple[Client, Optional[httpx.AsyncClient]]:
+    """
+    Connect to the remote agent using a ClientConfig that carries an httpx timeout.
+    Returns the client and the httpx.AsyncClient to close when finished.
+    """
+    http_client: Optional[httpx.AsyncClient] = None
+    if timeout is not None:
+        http_client = httpx.AsyncClient(timeout=httpx.Timeout(timeout))
+        client_config = ClientConfig(httpx_client=http_client)
+    else:
+        client_config = ClientConfig()
+
+    try:
+        client = await ClientFactory.connect(agent=agent, client_config=client_config)
+        return client, http_client
+    except Exception:
+        if http_client is not None:
+            await http_client.aclose()
+        raise
+
+
+async def _get_card(agent: str, timeout: Optional[float]):
+    client, http_client = await _connect_client(agent, timeout)
+    try:
+        card = await client.get_card()
+        console.print(card.model_dump(mode="json"))
+    finally:
+        if http_client is not None:
+            await http_client.aclose()
 
 
 @app.command()
@@ -23,18 +52,25 @@ def get_card(
     agent: str = typer.Option(
         "http://localhost:8000", help="The URL of the agent to connect to"
     ),
+    timeout: float = typer.Option(
+        DEFAULT_TIMEOUT_SECONDS,
+        help="Timeout in seconds for connecting to the agent",
+    ),
 ):
-    asyncio.run(_get_card(agent))
+    if timeout <= 0:
+        raise typer.BadParameter(
+            "Timeout must be greater than zero.", param_name="timeout"
+        )
+    asyncio.run(_get_card(agent, timeout))
 
 
-async def _send_message(agent: str, input: str):
+async def _send_message(agent: str, input: str, timeout: Optional[float]):
     import sys
     import traceback
 
+    http_client: Optional[httpx.AsyncClient] = None
     try:
-        client = await ClientFactory.connect(
-            agent=agent,
-        )
+        client, http_client = await _connect_client(agent, timeout)
 
         message = Message(
             role="user",
@@ -73,6 +109,9 @@ async def _send_message(agent: str, input: str):
         print(f"\n[ERROR] Stream failed: {e}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         raise
+    finally:
+        if http_client is not None:
+            await http_client.aclose()
 
 
 @app.command()
@@ -81,5 +120,13 @@ def send_message(
         "http://localhost:8000", help="The URL of the agent to connect to"
     ),
     message: str = typer.Option(..., help="The message to send to the agent"),
+    timeout: float = typer.Option(
+        DEFAULT_TIMEOUT_SECONDS,
+        help="Timeout in seconds for connecting to the agent",
+    ),
 ):
-    asyncio.run(_send_message(agent, message))
+    if timeout <= 0:
+        raise typer.BadParameter(
+            "Timeout must be greater than zero.", param_name="timeout"
+        )
+    asyncio.run(_send_message(agent, message, timeout))
