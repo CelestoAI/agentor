@@ -28,34 +28,51 @@ def get_card(
 
 
 async def _send_message(agent: str, input: str):
-    client = await ClientFactory.connect(
-        agent=agent,
-    )
+    import sys
+    import traceback
 
-    message = Message(
-        role="user",
-        parts=[TextPart(text=input)],
-        message_id=str(uuid4()),
-        task_id=str(uuid4()),
-        context_id=str(uuid4()),
-    )
-    response_stream = client.send_message(message)
+    try:
+        client = await ClientFactory.connect(
+            agent=agent,
+        )
 
-    async for event in response_stream:
-        if isinstance(event, Message):
-            console.print("[bold green]Response:[/bold green]")
-            for part in event.parts:
-                if hasattr(part.root, "text"):
-                    console.print(part.root.text)
-        else:
-            task, update = event
-            if update is not None:
-                if hasattr(update, "artifact") and update.artifact:
-                    for part in update.artifact.parts:
+        message = Message(
+            role="user",
+            parts=[TextPart(text=input)],
+            message_id=str(uuid4()),
+            task_id=str(uuid4()),
+            context_id=str(uuid4()),
+        )
+        response_stream = client.send_message(message)
+
+        async for event in response_stream:
+            try:
+                if isinstance(event, Message):
+                    console.print("[bold green]Response:[/bold green]")
+                    for part in event.parts:
                         if hasattr(part.root, "text"):
-                            console.print(part.root.text, end="")
-                elif hasattr(update, "status"):
-                    console.print(f"\n[dim]Task status: {update.status.state}[/dim]")
+                            console.print(part.root.text)
+                else:
+                    task, update = event
+                    if update is not None:
+                        if hasattr(update, "artifact") and update.artifact:
+                            for part in update.artifact.parts:
+                                if hasattr(part.root, "text"):
+                                    console.print(part.root.text, end="")
+                        elif hasattr(update, "status"):
+                            console.print(
+                                f"\n[dim]Task status: {update.status.state}[/dim]"
+                            )
+            except Exception as e:
+                print(f"\n[ERROR] Failed to process event: {e}", file=sys.stderr)
+                print(f"Event type: {type(event)}", file=sys.stderr)
+                print(f"Event: {event}", file=sys.stderr)
+                traceback.print_exc(file=sys.stderr)
+                raise
+    except Exception as e:
+        print(f"\n[ERROR] Stream failed: {e}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        raise
 
 
 @app.command()
