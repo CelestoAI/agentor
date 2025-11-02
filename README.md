@@ -114,7 +114,12 @@ if __name__ == "__main__":
 
 📖 [Learn more](https://docs.celesto.ai/agentor/tools/LiteMCP)
 
-## Agent-to-Agent 
+## Agent-to-Agent (A2A) Protocol
+
+A2A Protocol defines the specifications for communicating with Agents and the format of the messages exchanged between Agents. 
+`Agentor` implements the A2A protocol and makes it easy to convert any Agent into an A2A-compatible Agent.
+
+📖 [Learn more](https://docs.celesto.ai/agentor/agent-to-agent)
 
 ## 🚀 Features
 
