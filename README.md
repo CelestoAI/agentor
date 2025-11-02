@@ -116,8 +116,30 @@ if __name__ == "__main__":
 
 ## Agent-to-Agent (A2A) Protocol
 
-A2A Protocol defines the specifications for communicating with Agents and the format of the messages exchanged between Agents. 
-`Agentor` implements the A2A protocol and makes it easy to convert any Agent into an A2A-compatible Agent.
+The A2A Protocol defines standard specifications for agent communication and message formatting, enabling seamless interoperability between different AI agents. Agentor provides built-in A2A support, making it effortless to create agents that can discover, communicate, and collaborate with other A2A-compatible agents.
+
+**Key Features:**
+- **Agent Discovery**: Automatic agent card generation at `/.well-known/agent-card.json` describing agent capabilities, skills, and endpoints
+- **Standard Communication**: JSON-RPC based messaging with support for both streaming and non-streaming responses
+- **Rich Interactions**: Built-in support for tasks, status updates, and artifact sharing between agents
+
+**Quick Example:**
+
+```python
+from agentor import Agentor
+
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+    tools=["get_weather"],
+)
+
+# Serve agent with A2A protocol enabled automatically
+agent.serve(port=8000)
+# Agent card available at: http://localhost:8000/.well-known/agent-card.json
+```
+
+Any agent served with `agent.serve()` automatically becomes A2A-compatible with standardized endpoints for message sending, streaming, and task management.
 
 📖 [Learn more](https://docs.celesto.ai/agentor/agent-to-agent)
 
