@@ -28,8 +28,10 @@ from typing import (
     TypedDict,
 )
 
-
+import logging
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -261,11 +263,7 @@ class Agentor:
                 yield f"data: {json.dumps(response.model_dump())}\n\n"
 
             except Exception as e:
-                # Log and send error status on any exception
-                import traceback
-
-                print(f"Error in A2A stream handler: {e}")
-                print(traceback.format_exc())
+                logger.exception(f"Error in A2A stream handler: {e}")
 
                 error_status = a2a_types.TaskStatusUpdateEvent(
                     task_id=task_id,
