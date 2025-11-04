@@ -29,7 +29,6 @@ agentor/
 ├── tests/                 # Test suite
 ├── examples/              # Usage examples
 ├── .github/               # GitHub configuration and workflows
-├── .cursor/rules/         # Cursor IDE rules for code context
 └── pyproject.toml         # Project metadata and dependencies
 ```
 
@@ -297,7 +296,6 @@ agent = Agentor(
 - **Evidence-based**: Provide complete PLAN with REASONING based on evidence from code and logs
 - **Clear observations**: Explain OBSERVATIONS clearly, then provide REASONING to identify issues
 - **Logging**: Add console logs when needed to gather more information
-- **Context awareness**: Read relevant Markdown inside `.cursor/rules` for detailed component context
 
 ## CI/CD
 

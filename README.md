@@ -35,13 +35,13 @@ pip install agentor
 <details>
   <summary>More ways...</summary>
 
-  You can also install the latest bleeding edge version (could be unstable) of `agentor`, should you feel motivated enough, as follows:
-  
-  ```bash
-  pip install git+https://github.com/celestoai/agentor@main
-  ```
-</details>
+You can also install the latest bleeding edge version (could be unstable) of `agentor`, should you feel motivated enough, as follows:
 
+```bash
+pip install git+https://github.com/celestoai/agentor@main
+```
+
+</details>
 
 ## Agents API
 
@@ -119,8 +119,9 @@ if __name__ == "__main__":
 The A2A Protocol defines standard specifications for agent communication and message formatting, enabling seamless interoperability between different AI agents. Agentor provides built-in A2A support, making it effortless to create agents that can discover, communicate, and collaborate with other A2A-compatible agents.
 
 **Key Features:**
-- **Agent Discovery**: Automatic agent card generation at `/.well-known/agent-card.json` describing agent capabilities, skills, and endpoints
+
 - **Standard Communication**: JSON-RPC based messaging with support for both streaming and non-streaming responses
+- **Agent Discovery**: Automatic agent card generation at `/.well-known/agent-card.json` describing agent capabilities, skills, and endpoints
 - **Rich Interactions**: Built-in support for tasks, status updates, and artifact sharing between agents
 
 **Quick Example:**
