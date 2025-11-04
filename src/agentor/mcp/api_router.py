@@ -1,4 +1,10 @@
-from fastapi import APIRouter, Request
+from contextlib import AsyncExitStack
+from copy import deepcopy
+from fastapi import APIRouter, BackgroundTasks, Request, Response
+from fastapi.dependencies.models import Dependant
+from fastapi.dependencies.utils import get_dependant, solve_dependencies
+from fastapi.params import Depends
+from fastapi.security import SecurityScopes
 from mcp.types import (
     Icon,
     Implementation,
@@ -8,7 +14,21 @@ from mcp.types import (
     ResourcesCapability,
     PromptsCapability,
 )
-from typing import Callable, Dict, Optional, List, Any, get_type_hints
+from starlette.requests import HTTPConnection
+from starlette.websockets import WebSocket
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    get_type_hints,
+)
+from typing import get_args, get_origin
 import inspect
 import json
 from dataclasses import dataclass
@@ -23,6 +43,8 @@ class ToolMetadata:
     name: str
     description: str
     input_schema: Dict[str, Any]
+    dependant: Dependant
+    dependency_dependant: Dependant
 
 
 @dataclass
@@ -64,6 +86,14 @@ class MCPAPIRouter:
         self.instructions = instructions
         self.website_url = website_url
         self.icons = icons
+        self._auto_injected_types: Tuple[type, ...] = (
+            Request,
+            HTTPConnection,
+            WebSocket,
+            BackgroundTasks,
+            Response,
+            SecurityScopes,
+        )
 
         # Storage for registered items
         self.method_handlers: Dict[str, Callable] = {}
@@ -88,7 +118,8 @@ class MCPAPIRouter:
 
             if method in self.method_handlers:
                 try:
-                    result = await self.method_handlers[method](body)
+                    handler = self.method_handlers[method]
+                    result = await self._execute_method_handler(handler, body, request)
 
                     if isinstance(result, dict) and "jsonrpc" in result:
                         response = result
@@ -123,6 +154,56 @@ class MCPAPIRouter:
                     "error": {"code": -32601, "message": "Method not found"},
                 }
 
+    def _normalize_annotation(self, annotation: Any) -> Optional[type]:
+        """Resolve typing constructs (Annotated/Optional/Union) to a concrete type."""
+        if annotation is inspect.Signature.empty:
+            return None
+
+        origin = get_origin(annotation)
+        if origin is None:
+            if isinstance(annotation, type):
+                return annotation
+            return None
+
+        if origin is Annotated:
+            args = get_args(annotation)
+            if args:
+                return self._normalize_annotation(args[0])
+            return None
+
+        if origin is Union:
+            non_none_args = [
+                arg for arg in get_args(annotation) if arg is not type(None)
+            ]  # noqa: E721
+            if non_none_args:
+                return self._normalize_annotation(non_none_args[0])
+            return str
+
+        return None
+
+    def _should_include_parameter(
+        self,
+        param_name: str,
+        param: inspect.Parameter,
+        type_hints: Dict[str, Any],
+    ) -> bool:
+        if param_name == "self":
+            return False
+
+        if isinstance(param.default, Depends):
+            return False
+
+        annotation = type_hints.get(param_name, param.annotation)
+        normalized = self._normalize_annotation(annotation)
+
+        if normalized and any(
+            isinstance(normalized, type) and issubclass(normalized, auto_type)
+            for auto_type in self._auto_injected_types
+        ):
+            return False
+
+        return True
+
     def _generate_schema_from_function(self, func: Callable) -> Dict[str, Any]:
         """Generate JSON schema from function signature"""
         sig = inspect.signature(func)
@@ -141,10 +222,12 @@ class MCPAPIRouter:
         }
 
         for param_name, param in sig.parameters.items():
-            if param_name == "self":
+            if not self._should_include_parameter(param_name, param, type_hints):
                 continue
 
-            param_type = type_hints.get(param_name, str)
+            annotation = type_hints.get(param_name, param.annotation)
+            param_type = self._normalize_annotation(annotation) or str
+
             properties[param_name] = {
                 "type": type_map.get(param_type, "string"),
                 "description": f"Parameter: {param_name}",
@@ -158,6 +241,76 @@ class MCPAPIRouter:
             schema["required"] = required
 
         return schema
+
+    def _create_dependency_dependant(self, dependant: Dependant) -> Dependant:
+        """Create a dependant that only resolves declared dependencies."""
+        return Dependant(
+            dependencies=deepcopy(dependant.dependencies),
+            security_requirements=deepcopy(dependant.security_requirements),
+            request_param_name=dependant.request_param_name,
+            websocket_param_name=dependant.websocket_param_name,
+            http_connection_param_name=dependant.http_connection_param_name,
+            response_param_name=dependant.response_param_name,
+            background_tasks_param_name=dependant.background_tasks_param_name,
+            security_scopes_param_name=dependant.security_scopes_param_name,
+            security_scopes=dependant.security_scopes,
+            use_cache=dependant.use_cache,
+            scope=dependant.scope,
+        )
+
+    def _build_handler_call_args(
+        self, handler: Callable, body: dict, request: Request
+    ) -> Tuple[List[Any], Dict[str, Any]]:
+        """Prepare positional and keyword arguments for method handlers."""
+        signature = inspect.signature(handler)
+        args: List[Any] = []
+        kwargs: Dict[str, Any] = {}
+        provided: Set[str] = set()
+
+        for param in signature.parameters.values():
+            if param.name == "request":
+                if param.kind in (
+                    inspect.Parameter.POSITIONAL_ONLY,
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                ):
+                    args.append(request)
+                else:
+                    kwargs[param.name] = request
+                provided.add(param.name)
+            elif param.name == "body":
+                if param.kind in (
+                    inspect.Parameter.POSITIONAL_ONLY,
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                ):
+                    args.append(body)
+                else:
+                    kwargs[param.name] = body
+                provided.add(param.name)
+
+        for param in signature.parameters.values():
+            if param.name in provided:
+                continue
+            if param.kind in (
+                inspect.Parameter.POSITIONAL_ONLY,
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            ):
+                args.append(body)
+                provided.add(param.name)
+                break
+            if param.kind == inspect.Parameter.KEYWORD_ONLY:
+                kwargs[param.name] = body
+                provided.add(param.name)
+                break
+
+        return args, kwargs
+
+    async def _execute_method_handler(
+        self, handler: Callable, body: dict, request: Request
+    ) -> Any:
+        args, kwargs = self._build_handler_call_args(handler, body, request)
+        if inspect.iscoroutinefunction(handler):
+            return await handler(*args, **kwargs)
+        return handler(*args, **kwargs)
 
     def _register_default_handlers(self):
         """Register default MCP handlers"""
@@ -210,7 +363,7 @@ class MCPAPIRouter:
             }
 
         @self.method("tools/call")
-        async def default_tools_call(body: dict):
+        async def default_tools_call(body: dict, request: Request):
             params = body.get("params", {})
             tool_name = params.get("name")
             arguments = params.get("arguments", {})
@@ -223,11 +376,66 @@ class MCPAPIRouter:
 
             try:
                 tool_meta = self.tools[tool_name]
+                dependency_overrides_provider = getattr(
+                    request.scope.get("route"), "dependency_overrides_provider", None
+                )
+                async_exit_stack = request.scope.get("fastapi_inner_astack")
+                function_stack = request.scope.get("fastapi_function_astack")
+
+                if not isinstance(async_exit_stack, AsyncExitStack) or not isinstance(
+                    function_stack, AsyncExitStack
+                ):
+                    logger.error(
+                        "FastAPI dependency context not available for tool '%s'",
+                        tool_name,
+                    )
+                    return {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Dependency context unavailable for tool execution.",
+                            }
+                        ],
+                        "isError": True,
+                    }
+
+                solved_dependencies = await solve_dependencies(
+                    request=request,
+                    dependant=tool_meta.dependency_dependant,
+                    body=None,
+                    dependency_overrides_provider=dependency_overrides_provider,
+                    async_exit_stack=async_exit_stack,
+                    embed_body_fields=False,
+                )
+
+                if solved_dependencies.errors:
+                    logger.error(
+                        "Dependency resolution error for tool '%s': %s",
+                        tool_name,
+                        solved_dependencies.errors,
+                    )
+                    return {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Error resolving dependencies for tool execution.",
+                            }
+                        ],
+                        "isError": True,
+                    }
+
+                call_kwargs = {**arguments, **solved_dependencies.values}
 
                 if inspect.iscoroutinefunction(tool_meta.func):
-                    result = await tool_meta.func(**arguments)
+                    result = await tool_meta.func(**call_kwargs)
                 else:
-                    result = tool_meta.func(**arguments)
+                    result = tool_meta.func(**call_kwargs)
+
+                if (
+                    solved_dependencies.background_tasks
+                    and solved_dependencies.background_tasks.tasks
+                ):
+                    await solved_dependencies.background_tasks()
 
                 if isinstance(result, str):
                     content = [{"type": "text", "text": result}]
@@ -363,12 +571,16 @@ class MCPAPIRouter:
                 description or (func.__doc__ or f"Tool: {tool_name}").strip()
             )
             schema = input_schema or self._generate_schema_from_function(func)
+            dependant = get_dependant(path=self.prefix, call=func)
+            dependency_dependant = self._create_dependency_dependant(dependant)
 
             self.tools[tool_name] = ToolMetadata(
                 func=func,
                 name=tool_name,
                 description=tool_description,
                 input_schema=schema,
+                dependant=dependant,
+                dependency_dependant=dependency_dependant,
             )
             return func
 
