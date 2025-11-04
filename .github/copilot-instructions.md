@@ -73,7 +73,7 @@ pip install -e ".[dev]"
 
 ### Environment Setup
 
-- Python version is specified in `.python-version` (currently 3.10+)
+- Python version is specified in `.python-version` (currently `>=3.10`)
 - Use virtual environments for isolation
 
 ## Code Style and Linting
@@ -114,7 +114,7 @@ uv run ruff check --fix .
 ### Code Style Guidelines
 
 - Follow PEP 8 conventions
-- Use type hints where applicable (see `type_helper.py` for custom types)
+- Use type hints where applicable (see `src/agentor/type_helper.py` for custom types)
 - Keep functions focused and single-purpose
 - Document public APIs with docstrings
 - Never use placeholders like `# ... rest of code ...` - always include complete implementations
