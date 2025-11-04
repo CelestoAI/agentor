@@ -18,9 +18,21 @@
 
 ## Agentor
 
-Agentor is an open-source framework that makes it easy to build multi-agent system with secure integrations across email, calendars, CRMs, and more.
+Agentor is an open-source framework that makes it easy to build Agentic system with secure integrations across email, calendars, CRMs, and more.
 
 It lets you connect LLMs to tools — like email, calendar, CRMs, or any data stack.
+
+
+## Features
+
+| Feature | Description |
+|-----------------------------------------------|-----------------------------------------------|
+| ✅ Pre-built agents | Ready-to-use MCP Servers and Agents |
+| 🚀 LiteMCP | The only **full FastAPI compatible** MCP Server with decorator API |
+| 🦾 [A2A Protocol](https://a2a-protocol.org/latest/topics/what-is-a2a/) | [Docs](https://docs.celesto.ai/agentor/agent-to-agent) |
+| ☁️ [Fast Agent deployment](https://github.com/CelestoAI/agentor/tree/main/examples/agent-server) | `agentor deploy` |
+| 🔐 Secure integrations | Email, calendar, CRMs, and more |
+
 
 ## 🚅 Quick Start
 
@@ -43,7 +55,7 @@ pip install git+https://github.com/celestoai/agentor@main
 
 </details>
 
-## Agents API
+### Build and Deploy an Agent
 
 Build an Agent, connect external tools or MCP Server and serve as an API in just few lines of code:
 
@@ -144,20 +156,6 @@ Any agent served with `agent.serve()` automatically becomes A2A-compatible with 
 
 📖 [Learn more](https://docs.celesto.ai/agentor/agent-to-agent)
 
-## 🚀 Features
-
-<p>
-  🔧 <b>Build with OSS</b> &nbsp; | &nbsp; 
-  🧡 <a href="https://celesto.ai" target="_blank"><b>Managed Multi-Agent Platform</b></a>
-</p>
-
-| Feature | Description |
-|-----------------------------------------------|-----------------------------------------------|
-| ✅ Pre-built agents | Ready-to-use tools |
-| 🔐 Secure integrations | Email, calendar, CRMs, and more |
-| 🚀 LiteMCP | The only **full FastAPI compatible** MCP Server with decorator API |
-| 🦾 [A2A Protocol](https://a2a-protocol.org/latest/topics/what-is-a2a/) | [Docs](https://docs.celesto.ai/agentor/agent-to-agent) |
-| ☁️ [Easy agent deployment](https://github.com/CelestoAI/agentor/tree/main/examples/agent-server) | `agentor deploy` |
 
 ### Managed Tool Hub (ready-to-use collection of tools)
 
