@@ -57,6 +57,7 @@ class MCPAPIRouter:
         instructions: Optional[str] = None,
         website_url: Optional[str] = None,
         icons: Optional[List[Icon]] = None,
+        dependencies: Optional[List[Callable]] = None,
     ):
         self.prefix = prefix
         self.name = name
@@ -71,7 +72,7 @@ class MCPAPIRouter:
         self.resources: Dict[str, ResourceMetadata] = {}
         self.prompts: Dict[str, PromptMetadata] = {}
 
-        self._fastapi_router = APIRouter()
+        self._fastapi_router = APIRouter(dependencies=dependencies)
         self._register_default_handlers()
         self._register_endpoint()
 
