@@ -64,7 +64,12 @@ class APIInputRequest(BaseModel):
 
 
 class AgentorBase:
-    def __init__(self, name: str, instructions: str, model: str):
+    def __init__(
+        self,
+        name: str,
+        instructions: Optional[str],
+        model: Optional[str],
+    ):
         self.agent = None
         self.name = name
         self.instructions = instructions
@@ -94,27 +99,37 @@ class Agentor(AgentorBase):
         name: str,
         instructions: Optional[str] = None,
         model: Optional[str] = "gpt-5-nano",
-        tools: List[Union[FunctionTool, str, MCPServerStreamableHttp]] = [],
+        tools: Optional[List[Union[FunctionTool, str, MCPServerStreamableHttp]]] = None,
         debug: bool = False,
     ):
         super().__init__(name, instructions, model)
-        self.tools: List[FunctionTool] = [
-            ToolRegistry.get(tool)["tool"] if isinstance(tool, str) else tool
-            for tool in tools
-            if isinstance(tool, str) or isinstance(tool, FunctionTool)
-        ]
+        tools = tools or []
 
-        self.mcp_servers: List[MCPServerStreamableHttp] = [
-            tool if isinstance(tool, MCPServerStreamableHttp) else None
-            for tool in tools
-        ]
+        resolved_tools: List[FunctionTool] = []
+        mcp_servers: List[MCPServerStreamableHttp] = []
+
+        for tool in tools:
+            if isinstance(tool, str):
+                resolved_tools.append(ToolRegistry.get(tool)["tool"])
+            elif isinstance(tool, FunctionTool):
+                resolved_tools.append(tool)
+            elif isinstance(tool, MCPServerStreamableHttp):
+                mcp_servers.append(tool)
+            else:
+                raise TypeError(
+                    f"Unsupported tool type '{type(tool).__name__}'. "
+                    "Expected str, FunctionTool, or MCPServerStreamableHttp."
+                )
+
+        self.tools = resolved_tools
+        self.mcp_servers = mcp_servers
 
         self.agent: Agent = Agent(
             name=name,
             instructions=instructions,
             model=model,
             tools=self.tools,
-            mcp_servers=self.mcp_servers,
+            mcp_servers=self.mcp_servers or None,
         )
 
     def run(self, input: str) -> List[str] | str:
@@ -320,8 +335,8 @@ class Agentor(AgentorBase):
         )
 
     def close(self):
-        """Clean up resources. The MCP server context manager is handled by Agent."""
-        self._mcp_server = None
+        """Clean up references held by the Agent wrapper."""
+        self.agent = None
 
 
 class CelestoMCPHub:
