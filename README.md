@@ -102,9 +102,29 @@ Integrating multiple MCP servers usually means maintaining OAuth flows, tracking
 
 Enable Agentor’s managed MCP Hub. Connectors arrive pre-authenticated, version-locked, and streaming-ready, while the hub takes care of discovery, retries, and lifecycle management.
 
-- Set `CELESTO_API_KEY` in your environment.
-- Wrap your workflow in `async with CelestoMCPHub() as hub:` and pass `hub` in `Agentor(..., tools=[hub])` to tap into 100+ managed connectors (Google Workspace, Notion, weather, and more).
-- Run `await agent.arun(...)` or `agent.serve()` inside that context; the hub keeps auth, discovery, and retries alive and cleans up automatically when the block exits.
+```python
+import asyncio
+import os
+from agentor import Agentor, CelestoMCPHub
+
+os.environ["CELESTO_API_KEY"] = "<your celesto api key>"
+
+
+async def main() -> None:
+    async with CelestoMCPHub() as hub:
+        agent = Agentor(
+            name="Weather Agent",
+            model="gpt-5-mini",
+            tools=[hub],  # Auto-registers 10+ managed connectors
+        )
+        result = await agent.arun("What is the weather in London?")
+        print(result)
+        # Or expose it as a service:
+        # agent.serve()
+
+
+asyncio.run(main())
+```
 
 ## LiteMCP - Build a custom MCP Server
 
