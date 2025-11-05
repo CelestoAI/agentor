@@ -331,15 +331,24 @@ class Agentor(AgentorBase):
 
 
 class CelestoMCPHub:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        timeout: int = 10,
+        max_retry_attempts: int = 3,
+        cache_tools_list: bool = True,
+        api_key: Optional[str] = None,
+    ) -> None:
+        api_key = api_key or CELESTO_API_KEY
+        if api_key is None:
+            raise ValueError("API key is required to use the Celesto MCP Hub.")
         self.mcp_server = MCPServerStreamableHttp(
             name="Celesto AI MCP Server",
             params={
                 "url": f"{CELESTO_BASE_URL}/mcp",
-                "headers": {"Authorization": f"Bearer {CELESTO_API_KEY}"},
-                "timeout": 10,
-                "cache_tools_list": True,
-                "max_retry_attempts": 3,
+                "headers": {"Authorization": f"Bearer {api_key}"},
+                "timeout": timeout,
+                "cache_tools_list": cache_tools_list,
+                "max_retry_attempts": max_retry_attempts,
             },
         )
 
