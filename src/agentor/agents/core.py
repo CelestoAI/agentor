@@ -104,8 +104,7 @@ class Agentor(AgentorBase):
             if isinstance(tool, str) or isinstance(tool, FunctionTool)
         ]
 
-        self.mcp_servers: List[MCPServerStreamableHttp] = [
-            tool if isinstance(tool, MCPServerStreamableHttp) else None
+            tool for tool in tools if isinstance(tool, MCPServerStreamableHttp)
             for tool in tools
         ]
 
