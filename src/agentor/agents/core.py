@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import uuid
@@ -29,6 +30,7 @@ from agents.mcp import MCPServerStreamableHttp
 
 import logging
 from pydantic import BaseModel
+from contextlib import AsyncExitStack
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +67,15 @@ class APIInputRequest(BaseModel):
     stream: bool = False
 
 
-class Agentor:
+class AgentorBase:
+    def __init__(self):
+        self._lock = asyncio.Lock()
+        self._stack = AsyncExitStack()
+        self.agent = None
+        self._mcp_server = None
+
+
+class Agentor(AgentorBase):
     """
     Build an Agent, connect tools, and serve as an API in just few lines of code.
 
@@ -84,8 +94,7 @@ class Agentor:
         name: str,
         instructions: Optional[str] = None,
         model: Optional[str] = "gpt-5-nano",
-        tools: List[Union[FunctionTool, str]] = [],
-        enable_celesto_mcp: bool = False,
+        tools: List[Union[FunctionTool, str, MCPServerStreamableHttp]] = [],
         debug: bool = False,
     ):
         self.tools: List[FunctionTool] = [
@@ -93,23 +102,10 @@ class Agentor:
             for tool in tools
         ]
 
-        self._mcp_server: Optional[MCPServerStreamableHttp] = None
-        if enable_celesto_mcp:
-            if CELESTO_API_KEY is None:
-                raise ValueError(
-                    "CELESTO_API_KEY is required to use the Celesto MCP Server."
-                )
-
-            self._mcp_server = MCPServerStreamableHttp(
-                name="Celesto MCP Server",
-                params={
-                    "url": f"{CELESTO_BASE_URL}/mcp",
-                    "headers": {"Authorization": f"Bearer {CELESTO_API_KEY}"},
-                    "timeout": 10,
-                    "cache_tools_list": True,
-                    "max_retry_attempts": 3,
-                },
-            )
+        self.mcp_servers: List[MCPServerStreamableHttp] = [
+            tool if isinstance(tool, MCPServerStreamableHttp) else None
+            for tool in tools
+        ]
         self.name = name
         self.instructions = instructions
         self.model = model
@@ -123,7 +119,7 @@ class Agentor:
             instructions=instructions,
             model=model,
             tools=self.tools,
-            mcp_servers=[self._mcp_server] if self._mcp_server else None,
+            mcp_servers=self.mcp_servers,
         )
 
     def run(self, input: str) -> List[str] | str:
@@ -328,3 +324,17 @@ class Agentor:
     def close(self):
         """Clean up resources. The MCP server context manager is handled by Agent."""
         self._mcp_server = None
+
+
+class CelestoMCPHub(MCPServerStreamableHttp):
+    def __init__(self):
+        super().__init__(
+            name="Celesto AI MCP Server",
+            params={
+                "url": f"{CELESTO_BASE_URL}/mcp",
+                "headers": {"Authorization": f"Bearer {CELESTO_API_KEY}"},
+                "timeout": 10,
+                "cache_tools_list": True,
+                "max_retry_attempts": 3,
+            },
+        )

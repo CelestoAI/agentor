@@ -1,4 +1,4 @@
-from agentor.agents import Agentor
+from agentor.agents import Agentor, CelestoMCPHub
 from agentor.sdk.client import CelestoSDK
 from agents import function_tool
 
@@ -23,6 +23,7 @@ __all__ = [
     "Memory",
     "CelestoSDK",
     "function_tool",
+    "CelestoMCPHub",
 ]
 
 
