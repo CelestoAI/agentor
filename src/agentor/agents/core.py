@@ -93,14 +93,14 @@ class Agentor:
             for tool in tools
         ]
 
-        _mcp_server: Optional[MCPServerStreamableHttp] = None
+        self._mcp_server: Optional[MCPServerStreamableHttp] = None
         if enable_celesto_mcp:
             if CELESTO_API_KEY is None:
                 raise ValueError(
                     "CELESTO_API_KEY is required to use the Celesto MCP Server."
                 )
 
-            _mcp_server = MCPServerStreamableHttp(
+            self._mcp_server = MCPServerStreamableHttp(
                 name="Celesto MCP Server",
                 params={
                     "url": f"{CELESTO_BASE_URL}/mcp",
@@ -118,13 +118,12 @@ class Agentor:
             raise ValueError("""OPENAI_API_KEY is required to use the Agentor.
             Please set the OPENAI_API_KEY environment variable.""")
 
-        breakpoint()
         self.agent: Agent = Agent(
             name=name,
             instructions=instructions,
             model=model,
             tools=self.tools,
-            mcp_servers=[_mcp_server] if _mcp_server else None,
+            mcp_servers=[self._mcp_server] if self._mcp_server else None,
         )
 
     def run(self, input: str) -> List[str] | str:
@@ -325,3 +324,7 @@ class Agentor:
                 "Connection": "keep-alive",
             },
         )
+
+    def close(self):
+        """Clean up resources. The MCP server context manager is handled by Agent."""
+        self._mcp_server = None
