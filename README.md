@@ -55,33 +55,27 @@ pip install git+https://github.com/celestoai/agentor@main
 
 ### Build and Deploy an Agent
 
-Build an Agent, attach the managed MCP Hub, and query it end-to-end:
+Build an Agent, connect external tools or MCP Server and serve as an API in just few lines of code:
 
-```python
-import asyncio
-from agentor import Agentor, CelestoMCPHub
+```diff
+from agentor import Agentor, function_tool
 
+@function_tool
+def get_weather(city: str):
+    """Get the weather of city"""
+    return f"Weather in {city} is sunny"
 
-async def main() -> None:
-    async with CelestoMCPHub() as mcp_hub:
-        agent = Agentor(
-            name="Weather Agent",
-            model="gpt-5-mini",
-            tools=[mcp_hub],  # Access Celesto AI's managed MCP catalog
-        )
-        result = await agent.arun("What is the weather in London?")
-        print(result)
+agent = Agentor(
+    name="Weather Agent",
+    model="gpt-5-mini",
+-    tools=[get_weather],  # Bring your own tool, or
++    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
 
+result = agent.run("What is the weather in London?")  # Run the Agent
+print(result)
 
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-To expose the agent over HTTP, keep the hub context open while calling `agent.serve()`:
-
-```python
-async with CelestoMCPHub() as mcp_hub:
-    Agentor(name="Weather Agent", model="gpt-5-mini", tools=[mcp_hub]).serve()
+# Serve Agent with a single line of code
++ agent.serve()
 ```
 
 Run the following command to query the Agent server:
@@ -103,26 +97,16 @@ Integrating multiple MCP servers usually means maintaining OAuth flows, tracking
 Enable Agentor’s managed MCP Hub. Connectors arrive pre-authenticated, version-locked, and streaming-ready, while the hub takes care of discovery, retries, and lifecycle management.
 
 ```python
-import asyncio
-import os
+import asyncio, os
 from agentor import Agentor, CelestoMCPHub
-
-os.environ["CELESTO_API_KEY"] = "<your celesto api key>"
-
 
 async def main() -> None:
     async with CelestoMCPHub() as hub:
-        agent = Agentor(
-            name="Weather Agent",
-            model="gpt-5-mini",
-            tools=[hub],  # Auto-registers 10+ managed connectors
+        agent = Agentor(name="Weather Agent", model="gpt-5-mini",
+          tools=[hub],  # Auto-registers 10+ managed connectors
         )
         result = await agent.arun("What is the weather in London?")
         print(result)
-        # Or expose it as a service:
-        # agent.serve()
-
-
 asyncio.run(main())
 ```
 
