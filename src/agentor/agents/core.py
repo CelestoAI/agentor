@@ -97,6 +97,7 @@ class Agentor(AgentorBase):
         tools: List[Union[FunctionTool, str, MCPServerStreamableHttp]] = [],
         debug: bool = False,
     ):
+        super().__init__()
         self.tools: List[FunctionTool] = [
             ToolRegistry.get(tool)["tool"] if isinstance(tool, str) else tool
             for tool in tools
