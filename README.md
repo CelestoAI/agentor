@@ -22,17 +22,15 @@ Agentor is an open-source framework that makes it easy to build Agentic system w
 
 It lets you connect LLMs to tools — like email, calendar, CRMs, or any data stack.
 
-
 ## Features
 
 | Feature | Description |
 |-----------------------------------------------|-----------------------------------------------|
-| ✅ Pre-built agents | Ready-to-use MCP Servers and Agents |
+| ✅ MCP Hub | Ready-to-use MCP Servers and Agents |
 | 🚀 LiteMCP | The only **full FastAPI compatible** MCP Server with decorator API |
 | 🦾 [A2A Protocol](https://a2a-protocol.org/latest/topics/what-is-a2a/) | [Docs](https://docs.celesto.ai/agentor/agent-to-agent) |
 | ☁️ [Fast Agent deployment](https://github.com/CelestoAI/agentor/tree/main/examples/agent-server) | `agentor deploy` |
 | 🔐 Secure integrations | Email, calendar, CRMs, and more |
-
 
 ## 🚅 Quick Start
 
@@ -57,28 +55,33 @@ pip install git+https://github.com/celestoai/agentor@main
 
 ### Build and Deploy an Agent
 
-Build an Agent, connect external tools or MCP Server and serve as an API in just few lines of code:
+Build an Agent, attach the managed MCP Hub, and query it end-to-end:
 
-```diff
-from agentor import Agentor, function_tool
+```python
+import asyncio
+from agentor import Agentor, CelestoMCPHub
 
-@function_tool
-def get_weather(city: str):
-    """Get the weather of city"""
-    return f"Weather in {city} is sunny"
 
-agent = Agentor(
-    name="Weather Agent",
-    model="gpt-5-mini",
--    tools=[get_weather],  # Bring your own tool, or
-+    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
-)
+async def main() -> None:
+    async with CelestoMCPHub() as mcp_hub:
+        agent = Agentor(
+            name="Weather Agent",
+            model="gpt-5-mini",
+            tools=[mcp_hub],  # Access Celesto AI's managed MCP catalog
+        )
+        result = await agent.arun("What is the weather in London?")
+        print(result)
 
-result = agent.run("What is the weather in London?")  # Run the Agent
-print(result)
 
-# Serve Agent with a single line of code
-+ agent.serve()
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+To expose the agent over HTTP, keep the hub context open while calling `agent.serve()`:
+
+```python
+async with CelestoMCPHub() as mcp_hub:
+    Agentor(name="Weather Agent", model="gpt-5-mini", tools=[mcp_hub]).serve()
 ```
 
 Run the following command to query the Agent server:
@@ -93,7 +96,37 @@ curl -X 'POST' \
 }'
 ```
 
-## LiteMCP
+## MCP Hub
+
+Integrating multiple MCP servers usually means maintaining OAuth flows, tracking version drift, and wiring up streaming support before your agent can run.
+
+Enable Agentor’s managed MCP Hub. Connectors arrive pre-authenticated, version-locked, and streaming-ready, while the hub takes care of discovery, retries, and lifecycle management.
+
+```python
+import asyncio
+import os
+from agentor import Agentor, CelestoMCPHub
+
+os.environ["CELESTO_API_KEY"] = "<your celesto api key>"
+
+
+async def main() -> None:
+    async with CelestoMCPHub() as hub:
+        agent = Agentor(
+            name="Weather Agent",
+            model="gpt-5-mini",
+            tools=[hub],  # Auto-registers 10+ managed connectors
+        )
+        result = await agent.arun("What is the weather in London?")
+        print(result)
+        # Or expose it as a service:
+        # agent.serve()
+
+
+asyncio.run(main())
+```
+
+## LiteMCP - Build a custom MCP Server
 
 Lightweight [Model Context Protocol](https://modelcontextprotocol.io) server with FastAPI-like decorators:
 
@@ -155,7 +188,6 @@ agent.serve(port=8000)
 Any agent served with `agent.serve()` automatically becomes A2A-compatible with standardized endpoints for message sending, streaming, and task management.
 
 📖 [Learn more](https://docs.celesto.ai/agentor/agent-to-agent)
-
 
 ### Managed Tool Hub (ready-to-use collection of tools)
 

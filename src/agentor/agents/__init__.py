@@ -1,5 +1,5 @@
 from .core import Agentor, get_dummy_weather
-from .schema import JSONRPCReturnCodes, JSONRPCErrorCodes
+from .schema import JSONRPCErrorCodes, JSONRPCReturnCodes
 
 __all__ = [
     "Agentor",

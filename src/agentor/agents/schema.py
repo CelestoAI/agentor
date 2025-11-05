@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-
 # JSON-RPC 2.0 Protocol Schemas
 
 

@@ -1,37 +1,38 @@
 import json
+import logging
 import os
 import uuid
-from a2a import types as a2a_types
-from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
-from fastapi.responses import Response, StreamingResponse
-import uvicorn
 from typing import (
+    Any,
     AsyncGenerator,
     AsyncIterator,
+    Dict,
     List,
     Literal,
     Optional,
+    TypedDict,
     Union,
 )
 
-from fastapi import FastAPI
-
-from agentor.agents.a2a import A2AController, AgentSkill
-from agentor.tools.registry import CelestoConfig, ToolRegistry
+import uvicorn
+from a2a import types as a2a_types
+from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
 from agents import Agent, FunctionTool, Runner, function_tool
-from agentor.prompts import THINKING_PROMPT, render_prompt
-
-from agentor.output_text_formatter import AgentOutput, format_stream_events
-from typing import (
-    Any,
-    Dict,
-    TypedDict,
-)
-
-import logging
+from agents.mcp import MCPServerStreamableHttp
+from fastapi import FastAPI
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
+from agentor.agents.a2a import A2AController, AgentSkill
+from agentor.output_text_formatter import AgentOutput, format_stream_events
+from agentor.prompts import THINKING_PROMPT, render_prompt
+from agentor.tools.registry import CelestoConfig, ToolRegistry
+
 logger = logging.getLogger(__name__)
+
+
+CELESTO_BASE_URL = os.environ.get("CELESTO_BASE_URL", "https://api.celesto.ai/v1")
+CELESTO_API_KEY = os.environ.get("CELESTO_API_KEY")
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -62,19 +63,14 @@ class APIInputRequest(BaseModel):
     stream: bool = False
 
 
-class Agentor:
+class AgentorBase:
     def __init__(
         self,
         name: str,
-        instructions: Optional[str] = None,
-        model: Optional[str] = "gpt-5-nano",
-        tools: List[Union[FunctionTool, str]] = [],
-        debug: bool = False,
+        instructions: Optional[str],
+        model: Optional[str],
     ):
-        self.tools: List[FunctionTool] = [
-            ToolRegistry.get(tool)["tool"] if isinstance(tool, str) else tool
-            for tool in tools
-        ]
+        self.agent = None
         self.name = name
         self.instructions = instructions
         self.model = model
@@ -82,12 +78,65 @@ class Agentor:
         if os.environ.get("OPENAI_API_KEY") is None:
             raise ValueError("""OPENAI_API_KEY is required to use the Agentor.
             Please set the OPENAI_API_KEY environment variable.""")
+
+
+class Agentor(AgentorBase):
+    """
+    Build an Agent, connect tools, and serve as an API in just few lines of code.
+
+    Example:
+        >>> from agentor import Agentor
+        >>> agent = Agentor(name="Weather Agent", model="gpt-5-mini", tools=["celesto/weather"])
+        >>> result = agent.run("What is the weather in London?")
+        >>> print(result)
+
+        >>> # Serve the Agent as an API
+        >>> agent.serve(port=8000)
+    """
+
+    def __init__(
+        self,
+        name: str,
+        instructions: Optional[str] = None,
+        model: Optional[str] = "gpt-5-nano",
+        tools: Optional[List[Union[FunctionTool, str, MCPServerStreamableHttp]]] = None,
+        debug: bool = False,
+    ):
+        super().__init__(name, instructions, model)
+        tools = tools or []
+
+        resolved_tools: List[FunctionTool] = []
+        mcp_servers: List[MCPServerStreamableHttp] = []
+
+        for tool in tools:
+            if isinstance(tool, str):
+                resolved_tools.append(ToolRegistry.get(tool)["tool"])
+            elif isinstance(tool, FunctionTool):
+                resolved_tools.append(tool)
+            elif isinstance(tool, MCPServerStreamableHttp):
+                mcp_servers.append(tool)
+            else:
+                raise TypeError(
+                    f"Unsupported tool type '{type(tool).__name__}'. "
+                    "Expected str, FunctionTool, or MCPServerStreamableHttp."
+                )
+
+        self.tools = resolved_tools
+        self.mcp_servers = mcp_servers
+
         self.agent: Agent = Agent(
-            name=name, instructions=instructions, model=model, tools=self.tools
+            name=name,
+            instructions=instructions,
+            model=model,
+            tools=self.tools,
+            mcp_servers=self.mcp_servers or None,
         )
 
     def run(self, input: str) -> List[str] | str:
         return Runner.run_sync(self.agent, input, context=CelestoConfig())
+
+    async def arun(self, input: str) -> List[str] | str:
+        return await Runner.run(self.agent, input, context=CelestoConfig())
 
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(
@@ -284,3 +333,33 @@ class Agentor:
                 "Connection": "keep-alive",
             },
         )
+
+
+class CelestoMCPHub:
+    def __init__(
+        self,
+        timeout: int = 10,
+        max_retry_attempts: int = 3,
+        cache_tools_list: bool = True,
+        api_key: Optional[str] = None,
+    ) -> None:
+        api_key = api_key or CELESTO_API_KEY
+        if api_key is None:
+            raise ValueError("API key is required to use the Celesto MCP Hub.")
+        self.mcp_server = MCPServerStreamableHttp(
+            name="Celesto AI MCP Server",
+            params={
+                "url": f"{CELESTO_BASE_URL}/mcp",
+                "headers": {"Authorization": f"Bearer {api_key}"},
+                "timeout": timeout,
+                "cache_tools_list": cache_tools_list,
+                "max_retry_attempts": max_retry_attempts,
+            },
+        )
+
+    async def __aenter__(self) -> MCPServerStreamableHttp:
+        await self.mcp_server.connect()
+        return self.mcp_server
+
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
+        await self.mcp_server.cleanup()
