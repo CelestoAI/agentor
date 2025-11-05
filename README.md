@@ -173,25 +173,6 @@ Any agent served with `agent.serve()` automatically becomes A2A-compatible with 
 
 📖 [Learn more](https://docs.celesto.ai/agentor/agent-to-agent)
 
-### Managed Tool Hub (ready-to-use collection of tools)
-
-Use Celesto [Tool Hub](https://celesto.ai/toolhub) for a realtime access to weather data and 100+ tools.
-
-```python
-from agentor import CelestoSDK
-
-client = CelestoSDK(CELESTOAI_API_KEY)
-
-# List all available tools
-client.toolhub.list_tools()
-
-# Run the weather tool for a specific location
-client.toolhub.run_weather_tool("London")
-
-# Run the Google email tool
-client.toolhub.run_list_google_emails(limit=5)
-```
-
 ## 🤝 Contributing
 
 We'd love your help making Agentor even better! Please read our [Contributing Guidelines](.github/CONTRIBUTING.md) and [Code of Conduct](.github/CODE_OF_CONDUCT.md).
