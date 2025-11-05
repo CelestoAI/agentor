@@ -55,28 +55,33 @@ pip install git+https://github.com/celestoai/agentor@main
 
 ### Build and Deploy an Agent
 
-Build an Agent, connect external tools or MCP Server and serve as an API in just few lines of code:
+Build an Agent, attach the managed MCP Hub, and query it end-to-end:
 
-```diff
-from agentor import Agentor, function_tool
+```python
+import asyncio
+from agentor import Agentor, CelestoMCPHub
 
-@function_tool
-def get_weather(city: str):
-    """Get the weather of city"""
-    return f"Weather in {city} is sunny"
 
-agent = Agentor(
-    name="Weather Agent",
-    model="gpt-5-mini",
--    tools=[get_weather],  # Bring your own tool, or
-+    tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
-)
+async def main() -> None:
+    async with CelestoMCPHub() as mcp_hub:
+        agent = Agentor(
+            name="Weather Agent",
+            model="gpt-5-mini",
+            tools=[mcp_hub],  # Access Celesto AI's managed MCP catalog
+        )
+        result = await agent.arun("What is the weather in London?")
+        print(result)
 
-result = agent.run("What is the weather in London?")  # Run the Agent
-print(result)
 
-# Serve Agent with a single line of code
-+ agent.serve()
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+To expose the agent over HTTP, keep the hub context open while calling `agent.serve()`:
+
+```python
+async with CelestoMCPHub() as mcp_hub:
+    Agentor(name="Weather Agent", model="gpt-5-mini", tools=[mcp_hub]).serve()
 ```
 
 Run the following command to query the Agent server:
@@ -96,6 +101,10 @@ curl -X 'POST' \
 Integrating multiple MCP servers usually means maintaining OAuth flows, tracking version drift, and wiring up streaming support before your agent can run.
 
 Enable Agentor’s managed MCP Hub. Connectors arrive pre-authenticated, version-locked, and streaming-ready, while the hub takes care of discovery, retries, and lifecycle management.
+
+- Set `CELESTO_API_KEY` in your environment.
+- Wrap your workflow in `async with CelestoMCPHub() as hub:` and pass `hub` in `Agentor(..., tools=[hub])` to tap into 100+ managed connectors (Google Workspace, Notion, weather, and more).
+- Run `await agent.arun(...)` or `agent.serve()` inside that context; the hub keeps auth, discovery, and retries alive and cleans up automatically when the block exits.
 
 ## LiteMCP - Build a custom MCP Server
 
