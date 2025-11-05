@@ -13,9 +13,7 @@ from typing import (
     Optional,
     Union,
 )
-
 from fastapi import FastAPI
-
 from agentor.agents.a2a import A2AController, AgentSkill
 from agentor.tools.registry import CelestoConfig, ToolRegistry
 from agents import Agent, FunctionTool, Runner, function_tool
@@ -27,11 +25,16 @@ from typing import (
     Dict,
     TypedDict,
 )
+from agents.mcp import MCPServerStreamableHttp
 
 import logging
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+
+CELESTO_BASE_URL = os.environ.get("CELESTO_BASE_URL", "https://api.celesto.ai/v1")
+CELESTO_API_KEY = os.environ.get("CELESTO_API_KEY")
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -63,18 +66,50 @@ class APIInputRequest(BaseModel):
 
 
 class Agentor:
+    """
+    Build an Agent, connect tools, and serve as an API in just few lines of code.
+
+    Example:
+        >>> from agentor import Agentor
+        >>> agent = Agentor(name="Weather Agent", model="gpt-5-mini", tools=["celesto/weather"])
+        >>> result = agent.run("What is the weather in London?")
+        >>> print(result)
+
+        >>> # Serve the Agent as an API
+        >>> agent.serve(port=8000)
+    """
+
     def __init__(
         self,
         name: str,
         instructions: Optional[str] = None,
         model: Optional[str] = "gpt-5-nano",
         tools: List[Union[FunctionTool, str]] = [],
+        enable_celesto_mcp: bool = False,
         debug: bool = False,
     ):
         self.tools: List[FunctionTool] = [
             ToolRegistry.get(tool)["tool"] if isinstance(tool, str) else tool
             for tool in tools
         ]
+
+        _mcp_server: Optional[MCPServerStreamableHttp] = None
+        if enable_celesto_mcp:
+            if CELESTO_API_KEY is None:
+                raise ValueError(
+                    "CELESTO_API_KEY is required to use the Celesto MCP Server."
+                )
+
+            _mcp_server = MCPServerStreamableHttp(
+                name="Celesto MCP Server",
+                params={
+                    "url": f"{CELESTO_BASE_URL}/mcp",
+                    "headers": {"Authorization": f"Bearer {CELESTO_API_KEY}"},
+                    "timeout": 10,
+                    "cache_tools_list": True,
+                    "max_retry_attempts": 3,
+                },
+            )
         self.name = name
         self.instructions = instructions
         self.model = model
@@ -82,8 +117,14 @@ class Agentor:
         if os.environ.get("OPENAI_API_KEY") is None:
             raise ValueError("""OPENAI_API_KEY is required to use the Agentor.
             Please set the OPENAI_API_KEY environment variable.""")
+
+        breakpoint()
         self.agent: Agent = Agent(
-            name=name, instructions=instructions, model=model, tools=self.tools
+            name=name,
+            instructions=instructions,
+            model=model,
+            tools=self.tools,
+            mcp_servers=[_mcp_server] if _mcp_server else None,
         )
 
     def run(self, input: str) -> List[str] | str:
