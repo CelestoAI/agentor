@@ -22,17 +22,15 @@ Agentor is an open-source framework that makes it easy to build Agentic system w
 
 It lets you connect LLMs to tools — like email, calendar, CRMs, or any data stack.
 
-
 ## Features
 
 | Feature | Description |
 |-----------------------------------------------|-----------------------------------------------|
-| ✅ Pre-built agents | Ready-to-use MCP Servers and Agents |
+| ✅ MCP Hub | Ready-to-use MCP Servers and Agents |
 | 🚀 LiteMCP | The only **full FastAPI compatible** MCP Server with decorator API |
 | 🦾 [A2A Protocol](https://a2a-protocol.org/latest/topics/what-is-a2a/) | [Docs](https://docs.celesto.ai/agentor/agent-to-agent) |
 | ☁️ [Fast Agent deployment](https://github.com/CelestoAI/agentor/tree/main/examples/agent-server) | `agentor deploy` |
 | 🔐 Secure integrations | Email, calendar, CRMs, and more |
-
 
 ## 🚅 Quick Start
 
@@ -93,7 +91,13 @@ curl -X 'POST' \
 }'
 ```
 
-## LiteMCP
+## MCP Hub
+
+Integrating multiple MCP servers usually means maintaining OAuth flows, tracking version drift, and wiring up streaming support before your agent can run.
+
+Enable Agentor’s managed MCP Hub. Connectors arrive pre-authenticated, version-locked, and streaming-ready, while the hub takes care of discovery, retries, and lifecycle management.
+
+## LiteMCP - Build a custom MCP Server
 
 Lightweight [Model Context Protocol](https://modelcontextprotocol.io) server with FastAPI-like decorators:
 
@@ -155,7 +159,6 @@ agent.serve(port=8000)
 Any agent served with `agent.serve()` automatically becomes A2A-compatible with standardized endpoints for message sending, streaming, and task management.
 
 📖 [Learn more](https://docs.celesto.ai/agentor/agent-to-agent)
-
 
 ### Managed Tool Hub (ready-to-use collection of tools)
 

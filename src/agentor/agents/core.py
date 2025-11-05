@@ -1,36 +1,32 @@
-import asyncio
 import json
+import logging
 import os
 import uuid
-from a2a import types as a2a_types
-from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
-from fastapi.responses import Response, StreamingResponse
-import uvicorn
 from typing import (
+    Any,
     AsyncGenerator,
     AsyncIterator,
+    Dict,
     List,
     Literal,
     Optional,
+    TypedDict,
     Union,
 )
-from fastapi import FastAPI
-from agentor.agents.a2a import A2AController, AgentSkill
-from agentor.tools.registry import CelestoConfig, ToolRegistry
+
+import uvicorn
+from a2a import types as a2a_types
+from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
 from agents import Agent, FunctionTool, Runner, function_tool
-from agentor.prompts import THINKING_PROMPT, render_prompt
-
-from agentor.output_text_formatter import AgentOutput, format_stream_events
-from typing import (
-    Any,
-    Dict,
-    TypedDict,
-)
 from agents.mcp import MCPServerStreamableHttp
-
-import logging
+from fastapi import FastAPI
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
-from contextlib import AsyncExitStack
+
+from agentor.agents.a2a import A2AController, AgentSkill
+from agentor.output_text_formatter import AgentOutput, format_stream_events
+from agentor.prompts import THINKING_PROMPT, render_prompt
+from agentor.tools.registry import CelestoConfig, ToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -68,11 +64,15 @@ class APIInputRequest(BaseModel):
 
 
 class AgentorBase:
-    def __init__(self):
-        self._lock = asyncio.Lock()
-        self._stack = AsyncExitStack()
+    def __init__(self, name: str, instructions: str, model: str):
         self.agent = None
-        self._mcp_server = None
+        self.name = name
+        self.instructions = instructions
+        self.model = model
+
+        if os.environ.get("OPENAI_API_KEY") is None:
+            raise ValueError("""OPENAI_API_KEY is required to use the Agentor.
+            Please set the OPENAI_API_KEY environment variable.""")
 
 
 class Agentor(AgentorBase):
@@ -97,7 +97,7 @@ class Agentor(AgentorBase):
         tools: List[Union[FunctionTool, str, MCPServerStreamableHttp]] = [],
         debug: bool = False,
     ):
-        super().__init__()
+        super().__init__(name, instructions, model)
         self.tools: List[FunctionTool] = [
             ToolRegistry.get(tool)["tool"] if isinstance(tool, str) else tool
             for tool in tools
@@ -108,13 +108,6 @@ class Agentor(AgentorBase):
             tool if isinstance(tool, MCPServerStreamableHttp) else None
             for tool in tools
         ]
-        self.name = name
-        self.instructions = instructions
-        self.model = model
-
-        if os.environ.get("OPENAI_API_KEY") is None:
-            raise ValueError("""OPENAI_API_KEY is required to use the Agentor.
-            Please set the OPENAI_API_KEY environment variable.""")
 
         self.agent: Agent = Agent(
             name=name,

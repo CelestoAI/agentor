@@ -1,20 +1,20 @@
-from typing import Callable, Literal, Optional, List
+from typing import Callable, List, Literal, Optional
+
+from a2a import types as a2a_types
+from a2a.types import (
+    AgentCapabilities,
+    AgentCard,
+    AgentSkill,
+    JSONRPCError,
+    JSONRPCRequest,
+    JSONRPCResponse,
+)
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from .schema import (
     JSONRPCReturnCodes,
 )
-
-from a2a.types import (
-    AgentCard,
-    AgentCapabilities,
-    AgentSkill,
-    JSONRPCRequest,
-    JSONRPCResponse,
-    JSONRPCError,
-)
-from a2a import types as a2a_types
 
 
 class A2AController(APIRouter):
