@@ -334,10 +334,6 @@ class Agentor(AgentorBase):
             },
         )
 
-    def close(self):
-        """Clean up references held by the Agent wrapper."""
-        self.agent = None
-
 
 class CelestoMCPHub:
     def __init__(
