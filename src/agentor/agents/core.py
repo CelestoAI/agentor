@@ -100,6 +100,7 @@ class Agentor(AgentorBase):
         self.tools: List[FunctionTool] = [
             ToolRegistry.get(tool)["tool"] if isinstance(tool, str) else tool
             for tool in tools
+            if isinstance(tool, str) or isinstance(tool, FunctionTool)
         ]
 
         self.mcp_servers: List[MCPServerStreamableHttp] = [
@@ -124,6 +125,9 @@ class Agentor(AgentorBase):
 
     def run(self, input: str) -> List[str] | str:
         return Runner.run_sync(self.agent, input, context=CelestoConfig())
+
+    async def arun(self, input: str) -> List[str] | str:
+        return await Runner.run(self.agent, input, context=CelestoConfig())
 
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(
@@ -326,9 +330,9 @@ class Agentor(AgentorBase):
         self._mcp_server = None
 
 
-class CelestoMCPHub(MCPServerStreamableHttp):
-    def __init__(self):
-        super().__init__(
+class CelestoMCPHub:
+    def __init__(self) -> None:
+        self.mcp_server = MCPServerStreamableHttp(
             name="Celesto AI MCP Server",
             params={
                 "url": f"{CELESTO_BASE_URL}/mcp",
@@ -338,3 +342,10 @@ class CelestoMCPHub(MCPServerStreamableHttp):
                 "max_retry_attempts": 3,
             },
         )
+
+    async def __aenter__(self) -> MCPServerStreamableHttp:
+        await self.mcp_server.connect()
+        return self.mcp_server
+
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
+        await self.mcp_server.cleanup()

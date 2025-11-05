@@ -1,4 +1,4 @@
-from agentor.agents import Agentor, CelestoMCPHub
+from agentor.agents.core import Agentor, CelestoMCPHub
 from agentor.sdk.client import CelestoSDK
 from agents import function_tool
 
