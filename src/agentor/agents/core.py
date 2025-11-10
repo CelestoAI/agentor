@@ -129,7 +129,7 @@ class Agentor(AgentorBase):
             instructions=instructions,
             model=model,
             tools=self.tools,
-            mcp_servers=self.mcp_servers or None,
+            mcp_servers=self.mcp_servers or [],
         )
 
     def run(self, input: str) -> List[str] | str:
