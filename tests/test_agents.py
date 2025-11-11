@@ -1,9 +1,6 @@
-import pytest
-import os
 from agentor.agents import Agentor
 from agentor.prompts import THINKING_PROMPT, render_prompt
-
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+from unittest.mock import patch
 
 
 def test_prompt_rendering():
@@ -15,12 +12,14 @@ def test_prompt_rendering():
     assert "What is the weather in London?" in prompt
 
 
-@pytest.mark.skipif(not OPENAI_API_KEY, reason="OpenAI API token not set")
-def test_agentor():
+@patch("agentor.agents.core.Runner.run_sync")
+def test_agentor(mock_run_sync):
+    mock_run_sync.return_value = "The weather in London is sunny"
     agent = Agentor(
         name="Agentor",
         model="gpt-5-mini",
+        llm_api_key="test",
     )
-    result = agent.think("What is the weather in London?")
+    result = agent.run("What is the weather in London?")
     assert result is not None
     assert "The weather in London is sunny" in result

@@ -69,15 +69,19 @@ class AgentorBase:
         name: str,
         instructions: Optional[str],
         model: Optional[str],
+        llm_api_key: Optional[str],
     ):
         self.agent = None
         self.name = name
         self.instructions = instructions
         self.model = model
 
-        if os.environ.get("OPENAI_API_KEY") is None:
+        if llm_api_key is None:
+            llm_api_key = os.environ.get("OPENAI_API_KEY")
+        if llm_api_key is None:
             raise ValueError("""OPENAI_API_KEY is required to use the Agentor.
-            Please set the OPENAI_API_KEY environment variable.""")
+                Please set the OPENAI_API_KEY environment variable.""")
+        self.llm_api_key = llm_api_key
 
 
 class Agentor(AgentorBase):
@@ -101,8 +105,9 @@ class Agentor(AgentorBase):
         model: Optional[str] = "gpt-5-nano",
         tools: Optional[List[Union[FunctionTool, str, MCPServerStreamableHttp]]] = None,
         debug: bool = False,
+        llm_api_key: Optional[str] = None,
     ):
-        super().__init__(name, instructions, model)
+        super().__init__(name, instructions, model, llm_api_key)
         tools = tools or []
 
         resolved_tools: List[FunctionTool] = []
