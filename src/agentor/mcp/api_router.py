@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from mcp.types import (
     Icon,
     Implementation,
@@ -13,6 +13,7 @@ import inspect
 import json
 from dataclasses import dataclass
 import logging
+from fastapi.params import Depends as FastAPIDepends
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class ToolMetadata:
     name: str
     description: str
     input_schema: Dict[str, Any]
+    dependencies: Optional[Dict[str, FastAPIDepends]] = None
 
 
 @dataclass
@@ -145,6 +147,11 @@ class MCPAPIRouter:
             if param_name == "self":
                 continue
 
+            if isinstance(param.annotation, FastAPIDepends) or isinstance(
+                param.default, FastAPIDepends
+            ):
+                continue
+
             param_type = type_hints.get(param_name, str)
             properties[param_name] = {
                 "type": type_map.get(param_type, "string"),
@@ -159,6 +166,46 @@ class MCPAPIRouter:
             schema["required"] = required
 
         return schema
+
+    def _generate_dependencies_from_function(
+        self, func: Callable
+    ) -> Dict[str, Depends]:
+        """Generate dependencies from function signature using Depends"""
+        sig = inspect.signature(func)
+        dependencies: Dict[str, FastAPIDepends] = {}
+
+        for param_name, param in sig.parameters.items():
+            dependency_marker = None
+
+            if isinstance(param.annotation, FastAPIDepends):
+                dependency_marker = param.annotation
+            elif isinstance(param.default, FastAPIDepends):
+                dependency_marker = param.default
+
+            if dependency_marker is not None:
+                dependencies[param_name] = dependency_marker
+
+        return dependencies
+
+    async def _resolve_dependencies(
+        self, dependencies: Dict[str, FastAPIDepends]
+    ) -> Dict[str, Any]:
+        """Resolve dependency callables to concrete values"""
+
+        resolved: Dict[str, Any] = {}
+
+        for name, dependency in dependencies.items():
+            dep_callable = dependency.dependency
+            if dep_callable is None:
+                raise ValueError(f"Dependency '{name}' does not define a callable")
+
+            value = dep_callable()
+            if inspect.isawaitable(value):
+                value = await value
+
+            resolved[name] = value
+
+        return resolved
 
     def _register_default_handlers(self):
         """Register default MCP handlers"""
@@ -214,7 +261,7 @@ class MCPAPIRouter:
         async def default_tools_call(body: dict):
             params = body.get("params", {})
             tool_name = params.get("name")
-            arguments = params.get("arguments", {})
+            arguments = params.get("arguments") or {}
 
             if tool_name not in self.tools:
                 return {
@@ -224,11 +271,18 @@ class MCPAPIRouter:
 
             try:
                 tool_meta = self.tools[tool_name]
+                dependencies = tool_meta.dependencies or {}
+                resolved_dependencies = (
+                    await self._resolve_dependencies(dependencies)
+                    if dependencies
+                    else {}
+                )
+                call_kwargs = {**arguments, **resolved_dependencies}
 
                 if inspect.iscoroutinefunction(tool_meta.func):
-                    result = await tool_meta.func(**arguments)
+                    result = await tool_meta.func(**call_kwargs)
                 else:
-                    result = tool_meta.func(**arguments)
+                    result = tool_meta.func(**call_kwargs)
 
                 if isinstance(result, str):
                     content = [{"type": "text", "text": result}]
@@ -364,12 +418,13 @@ class MCPAPIRouter:
                 description or (func.__doc__ or f"Tool: {tool_name}").strip()
             )
             schema = input_schema or self._generate_schema_from_function(func)
-
+            dependencies = self._generate_dependencies_from_function(func)
             self.tools[tool_name] = ToolMetadata(
                 func=func,
                 name=tool_name,
                 description=tool_description,
                 input_schema=schema,
+                dependencies=dependencies,
             )
             return func
 
