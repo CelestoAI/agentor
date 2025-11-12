@@ -18,6 +18,7 @@ from typing import (
     Annotated,
     get_origin,
     get_args,
+    Set,
 )
 import inspect
 import json
@@ -219,6 +220,57 @@ class MCPAPIRouter:
 
         return dependencies
 
+    async def _resolve_dependency_marker(
+        self,
+        dependency: FastAPIDepends,
+        stack: Optional[Set[Callable]] = None,
+    ) -> Any:
+        dep_callable = dependency.dependency
+        if dep_callable is None:
+            raise ValueError("Dependency marker is missing a callable")
+
+        return await self._call_with_dependencies(dep_callable, stack)
+
+    async def _call_with_dependencies(
+        self,
+        func: Callable,
+        stack: Optional[Set[Callable]] = None,
+    ) -> Any:
+        stack = stack or set()
+        if func in stack:
+            raise RuntimeError(
+                f"Circular dependency detected while resolving '{func.__name__}'"
+            )
+
+        stack.add(func)
+
+        try:
+            sig = inspect.signature(func)
+            kwargs: Dict[str, Any] = {}
+
+            for param_name, param in sig.parameters.items():
+                marker = self._extract_dependency_marker(param)
+                if marker is not None:
+                    kwargs[param_name] = await self._resolve_dependency_marker(
+                        marker, stack
+                    )
+                    continue
+
+                if param.default != inspect.Parameter.empty:
+                    continue
+
+                raise ValueError(
+                    f"Cannot resolve parameter '{param_name}' for dependency '{func.__name__}'"
+                )
+
+            value = func(**kwargs)
+            if inspect.isawaitable(value):
+                value = await value
+
+            return value
+        finally:
+            stack.remove(func)
+
     async def _resolve_dependencies(
         self, dependencies: Dict[str, FastAPIDepends]
     ) -> Dict[str, Any]:
@@ -227,15 +279,7 @@ class MCPAPIRouter:
         resolved: Dict[str, Any] = {}
 
         for name, dependency in dependencies.items():
-            dep_callable = dependency.dependency
-            if dep_callable is None:
-                raise ValueError(f"Dependency '{name}' does not define a callable")
-
-            value = dep_callable()
-            if inspect.isawaitable(value):
-                value = await value
-
-            resolved[name] = value
+            resolved[name] = await self._resolve_dependency_marker(dependency, set())
 
         return resolved
 

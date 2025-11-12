@@ -39,13 +39,19 @@ async def test_mcp_router_tool_with_annotation_dep():
 async def test_mcp_router_tool_with_default_dep():
     router = MCPAPIRouter()
 
-    async def dependency():
-        return {"value": 42, "style": "default"}
+    class UserService(dict):
+        pass
+
+    async def dependency() -> UserService:
+        return UserService(value=42, style="default")
 
     @router.tool()
-    def sample_tool(payload: str, current_user=Depends(dependency)) -> str:
-        assert current_user["style"] == "default"
-        return f"{payload}-{current_user['value']}"
+    def sample_tool(
+        payload: str, user_service: UserService = Depends(dependency)
+    ) -> str:
+        assert isinstance(user_service, UserService)
+        assert user_service["style"] == "default"
+        return f"{payload}-{user_service['value']}"
 
     response = await router.method_handlers["tools/call"](
         {"params": {"name": "sample_tool", "arguments": {"payload": "ping"}}}
@@ -53,4 +59,31 @@ async def test_mcp_router_tool_with_default_dep():
 
     assert response == {
         "content": [{"type": "text", "text": "ping-42"}],
+    }
+
+
+@pytest.mark.asyncio
+async def test_mcp_router_tool_with_nested_dependencies():
+    router = MCPAPIRouter()
+
+    async def get_current_user():
+        return {"user_id": "user-123"}
+
+    async def get_org_context(
+        current_user: Annotated[dict[str, str], Depends(get_current_user)],
+    ):
+        return {"org_id": f"org-for-{current_user['user_id']}"}
+
+    @router.tool()
+    def sample_tool(context=Depends(get_org_context)):
+        return context["org_id"]
+
+    response = await router.method_handlers["tools/call"](
+        {"params": {"name": "sample_tool", "arguments": {}}}
+    )
+
+    assert response == {
+        "content": [
+            {"type": "text", "text": "org-for-user-123"},
+        ]
     }
