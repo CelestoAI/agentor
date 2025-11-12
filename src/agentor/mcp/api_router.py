@@ -25,8 +25,51 @@ import json
 from dataclasses import dataclass
 import logging
 from fastapi.params import Depends as FastAPIDepends
+from contextvars import ContextVar
 
 logger = logging.getLogger(__name__)
+
+# Context variable to store the current request
+_request_context: ContextVar[Optional[Request]] = ContextVar("request_context", default=None)
+
+
+@dataclass
+class Context:
+    """Context object providing access to request-level data in MCP tools
+    
+    This class provides access to HTTP headers and cookies from the incoming request.
+    Use it as a dependency in your tool functions to access request context.
+    
+    Example:
+        @mcp_router.tool()
+        def my_tool(location: str, ctx: Context = Depends(get_context)) -> str:
+            user_agent = ctx.headers.get("user-agent")
+            session_id = ctx.cookies.get("session_id")
+            return f"Processing {location}"
+    """
+    headers: Dict[str, str]
+    cookies: Dict[str, str]
+
+
+def get_context() -> Context:
+    """Dependency function to retrieve the current request context
+    
+    Returns:
+        Context: A Context object with headers and cookies from the current request
+        
+    Raises:
+        RuntimeError: If called outside of a request context
+    """
+    request = _request_context.get()
+    if request is None:
+        # Return empty context if no request is available
+        return Context(headers={}, cookies={})
+    
+    # Convert Headers to dict for easier access
+    headers = dict(request.headers)
+    cookies = dict(request.cookies)
+    
+    return Context(headers=headers, cookies=cookies)
 
 
 @dataclass
@@ -94,48 +137,55 @@ class MCPAPIRouter:
 
         @self._fastapi_router.post(self.prefix)
         async def mcp_handler(request: Request):
-            body = await request.json()
-            method = body.get("method")
-            request_id = body.get("id")
+            # Store request in context variable for tools to access
+            _request_context.set(request)
+            
+            try:
+                body = await request.json()
+                method = body.get("method")
+                request_id = body.get("id")
 
-            logger.debug("Received request: %s", body)
+                logger.debug("Received request: %s", body)
 
-            if method in self.method_handlers:
-                try:
-                    result = await self.method_handlers[method](body)
+                if method in self.method_handlers:
+                    try:
+                        result = await self.method_handlers[method](body)
 
-                    if isinstance(result, dict) and "jsonrpc" in result:
-                        response = result
-                    else:
-                        response = {
+                        if isinstance(result, dict) and "jsonrpc" in result:
+                            response = result
+                        else:
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": request_id,
+                                "result": result,
+                            }
+
+                        logger.debug("Sending response: %s", response)
+                        return response
+
+                    except Exception:
+                        logger.exception(
+                            "Exception occurred processing MCP method '%s' (id=%s):",
+                            method,
+                            request_id,
+                        )
+                        return {
                             "jsonrpc": "2.0",
                             "id": request_id,
-                            "result": result,
+                            "error": {
+                                "code": -32603,
+                                "message": "Internal error",
+                            },
                         }
-
-                    logger.debug("Sending response: %s", response)
-                    return response
-
-                except Exception:
-                    logger.exception(
-                        "Exception occurred processing MCP method '%s' (id=%s):",
-                        method,
-                        request_id,
-                    )
+                else:
                     return {
                         "jsonrpc": "2.0",
                         "id": request_id,
-                        "error": {
-                            "code": -32603,
-                            "message": "Internal error",
-                        },
+                        "error": {"code": -32601, "message": "Method not found"},
                     }
-            else:
-                return {
-                    "jsonrpc": "2.0",
-                    "id": request_id,
-                    "error": {"code": -32601, "message": "Method not found"},
-                }
+            finally:
+                # Clean up context variable
+                _request_context.set(None)
 
     def _generate_schema_from_function(self, func: Callable) -> Dict[str, Any]:
         """Generate JSON schema from function signature"""
