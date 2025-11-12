@@ -8,7 +8,17 @@ from mcp.types import (
     ResourcesCapability,
     PromptsCapability,
 )
-from typing import Callable, Dict, Optional, List, Any, get_type_hints
+from typing import (
+    Callable,
+    Dict,
+    Optional,
+    List,
+    Any,
+    get_type_hints,
+    Annotated,
+    get_origin,
+    get_args,
+)
 import inspect
 import json
 from dataclasses import dataclass
@@ -147,9 +157,7 @@ class MCPAPIRouter:
             if param_name == "self":
                 continue
 
-            if isinstance(param.annotation, FastAPIDepends) or isinstance(
-                param.default, FastAPIDepends
-            ):
+            if self._extract_dependency_marker(param) is not None:
                 continue
 
             param_type = type_hints.get(param_name, str)
@@ -167,6 +175,36 @@ class MCPAPIRouter:
 
         return schema
 
+    def _extract_dependency_from_annotation(
+        self, annotation: Any
+    ) -> Optional[FastAPIDepends]:
+        if annotation in (inspect._empty, None):
+            return None
+
+        if isinstance(annotation, FastAPIDepends):
+            return annotation
+
+        origin = get_origin(annotation)
+        if origin is Annotated:
+            metadata = get_args(annotation)[1:]
+            for meta in metadata:
+                if isinstance(meta, FastAPIDepends):
+                    return meta
+
+        return None
+
+    def _extract_dependency_marker(
+        self, param: inspect.Parameter
+    ) -> Optional[FastAPIDepends]:
+        marker = self._extract_dependency_from_annotation(param.annotation)
+        if marker is not None:
+            return marker
+
+        if isinstance(param.default, FastAPIDepends):
+            return param.default
+
+        return None
+
     def _generate_dependencies_from_function(
         self, func: Callable
     ) -> Dict[str, Depends]:
@@ -175,13 +213,7 @@ class MCPAPIRouter:
         dependencies: Dict[str, FastAPIDepends] = {}
 
         for param_name, param in sig.parameters.items():
-            dependency_marker = None
-
-            if isinstance(param.annotation, FastAPIDepends):
-                dependency_marker = param.annotation
-            elif isinstance(param.default, FastAPIDepends):
-                dependency_marker = param.default
-
+            dependency_marker = self._extract_dependency_marker(param)
             if dependency_marker is not None:
                 dependencies[param_name] = dependency_marker
 
