@@ -1,3 +1,4 @@
+import pytest
 from agentor.agents import Agentor
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from unittest.mock import MagicMock, patch
@@ -56,3 +57,13 @@ def test_agentor_create_app():
     assert app.router is not None
     assert app.router.routes is not None
     assert len(app.router.routes) == 8
+
+
+def test_agentor_without_llm_api_key():
+    with pytest.raises(
+        ValueError, match="An LLM API key is required to use the Agentor."
+    ):
+        Agentor(
+            name="Agentor",
+            model="gpt-5-mini",
+        )
