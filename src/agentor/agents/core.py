@@ -77,10 +77,12 @@ class AgentorBase:
         self.model = model
 
         if llm_api_key is None:
-            llm_api_key = os.environ.get("OPENAI_API_KEY")
+            llm_api_key = os.environ.get("LLM_API_KEY") or os.environ.get(
+                "OPENAI_API_KEY"
+            )
         if llm_api_key is None:
-            raise ValueError("""OPENAI_API_KEY is required to use the Agentor.
-                Please set the OPENAI_API_KEY environment variable.""")
+            raise ValueError("""An LLM API key is required to use the Agentor.
+                Please set either LLM_API_KEY/OPENAI_API_KEY environment variable or pass it as an argument.""")
         self.llm_api_key = llm_api_key
 
 
