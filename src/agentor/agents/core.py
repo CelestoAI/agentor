@@ -17,7 +17,7 @@ from typing import (
 import uvicorn
 from a2a import types as a2a_types
 from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
-from agents import Agent, FunctionTool, Runner, function_tool
+from agents import Agent, AgentOutputSchemaBase, FunctionTool, Runner, function_tool
 from agents.mcp import MCPServerStreamableHttp
 from fastapi import FastAPI
 from fastapi.responses import Response, StreamingResponse
@@ -106,6 +106,7 @@ class Agentor(AgentorBase):
         instructions: Optional[str] = None,
         model: Optional[str] = "gpt-5-nano",
         tools: Optional[List[Union[FunctionTool, str, MCPServerStreamableHttp]]] = None,
+        output_type: type[Any] | AgentOutputSchemaBase | None = None,
         debug: bool = False,
         llm_api_key: Optional[str] = None,
     ):
@@ -137,6 +138,7 @@ class Agentor(AgentorBase):
             model=model,
             tools=self.tools,
             mcp_servers=self.mcp_servers or [],
+            output_type=output_type,
         )
 
     def run(self, input: str) -> List[str] | str:
