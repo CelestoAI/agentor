@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -144,8 +145,24 @@ class Agentor(AgentorBase):
     def run(self, input: str) -> List[str] | str:
         return Runner.run_sync(self.agent, input, context=CelestoConfig())
 
-    async def arun(self, input: str) -> List[str] | str:
-        return await Runner.run(self.agent, input, context=CelestoConfig())
+    async def arun(self, input: list[str] | str) -> List[str] | str:
+        """
+        Run the agent with an input prompt or a batch of prompts.
+        In case of a batch of prompts, the agent will run each prompt concurrently.
+
+        Args:
+            input: A string prompt or a list of string prompts.
+
+        Returns:
+            A string result or a list of string results.
+        """
+        if isinstance(input, list):
+            futures = []
+            for task in input:
+                futures.append(Runner.run(self.agent, task, context=CelestoConfig()))
+            return await asyncio.gather(*futures)
+        else:
+            return await Runner.run(self.agent, input, context=CelestoConfig())
 
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(
