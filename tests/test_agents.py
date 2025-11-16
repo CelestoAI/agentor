@@ -67,3 +67,24 @@ def test_agentor_without_llm_api_key():
             name="Agentor",
             model="gpt-5-mini",
         )
+
+
+@patch("agentor.agents.core.Runner.run")
+@pytest.mark.asyncio
+async def test_agentor_batch_prompts(mock_run):
+    mock_run.side_effect = [
+        MagicMock(final_output="The weather in London is sunny"),
+        MagicMock(final_output="The weather in Paris is sunny"),
+    ]
+    agent = Agentor(
+        name="Agentor",
+        model="gpt-5-mini",
+        llm_api_key="test",
+    )
+    results = await agent.arun(
+        ["What is the weather in London?", "What is the weather in Paris?"]
+    )
+    assert results is not None
+    assert len(results) == 2
+    assert results[0].final_output == "The weather in London is sunny"
+    assert results[1].final_output == "The weather in Paris is sunny"
