@@ -108,14 +108,22 @@ def deploy(
 
         # Show deployment details
         deployment_id = result.get("id")
+        deployment_name = result.get("name")
         status = result.get("status")
         console.print(f"\n[bold]Deployment ID:[/bold] {deployment_id}")
         console.print(f"[bold]Status:[/bold] {status}")
 
         # Show URL once ready
         if status == "READY":
-            cloud_url = f"https://api.celesto.ai/v1/deploy/apps/{deployment_id}/chat"
-            console.print(f"[bold]URL:[/bold] [link={cloud_url}]{cloud_url}[/link]")
+            if not deployment_name:
+                console.print(
+                    "[yellow]⚠️ Unable to determine app name; deployment URL unavailable.[/yellow]"
+                )
+            else:
+                cloud_url = (
+                    f"https://api.celesto.ai/v1/deploy/apps/{deployment_name}/chat"
+                )
+                console.print(f"[bold]URL:[/bold] [link={cloud_url}]{cloud_url}[/link]")
         else:
             console.print(
                 "[yellow]⏳ Building... Run 'agentor ls' to check status[/yellow]"
@@ -160,10 +168,14 @@ def list(
         for deployment in deployments:
             # Construct the cloud URL
             deployment_id = deployment.get("id", "N/A")
-            if deployment_id != "N/A" and deployment.get("status") == "READY":
+            deployment_name = deployment.get("name")
+            status = deployment.get("status")
+            if deployment_name and status == "READY":
                 cloud_url = (
-                    f"https://api.celesto.ai/v1/deploy/apps/{deployment_id}/chat"
+                    f"https://api.celesto.ai/v1/deploy/apps/{deployment_name}/chat"
                 )
+            elif status == "READY":
+                cloud_url = "Name unavailable"
             else:
                 cloud_url = "Pending"
 
