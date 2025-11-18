@@ -16,14 +16,14 @@ console = Console()
 
 def _get_secrets_from_env_file(
     env_file: Optional[str] = None, secret_name: Optional[str] = None
-) -> dict:
+) -> Optional[str]:
     if not env_file:
         env_file = ".env"
     if not secret_name:
         secret_name = "CELESTO_API_KEY"
     dotenv_path = Path(env_file)
-    dotenv = DotEnv(dotenv_path, verbose=True, encoding="utf-8")
-    return dotenv.get(secret_name)
+    dot_env = DotEnv(dotenv_path, verbose=True, encoding="utf-8")
+    return dot_env.get(secret_name)
 
 
 def _get_api_key(
@@ -34,6 +34,8 @@ def _get_api_key(
     """Get API key from argument or environment variable."""
     if not ignore_env_file:
         final_api_key = api_key or _get_secrets_from_env_file(secret_name=secret_name)
+    else:
+        final_api_key = api_key
     if not final_api_key:
         console.print("❌ [bold red]Error:[/bold red] API key not found.")
         console.print(
@@ -190,7 +192,7 @@ def list(
     from rich.table import Table
 
     # Get API key
-    final_api_key = _get_api_key(api_key)
+    final_api_key = _get_api_key(api_key, secret_name="CELESTO_API_KEY")
 
     # List deployments
     try:
@@ -242,6 +244,7 @@ def list(
 
     except Exception as e:
         console.print(f"❌ [bold red]Failed to list deployments:[/bold red] {e}")
+        raise e
         raise typer.Exit(1)
 
 

@@ -128,7 +128,10 @@ class Deployment(_BaseClient):
             bundle.unlink()
 
     def list(self) -> List[dict]:
-        return self.session.get(f"{self.base_url}/deploy/apps").json()
+        response = self.session.get(f"{self.base_url}/deploy/apps")
+        if response.status_code not in (200, 201):
+            raise Exception(response.text)
+        return response.json()
 
 
 class CelestoSDK(_BaseConnection):
