@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from dotenv.main import DotEnv
 import typer
 from rich.console import Console
 from typing_extensions import Annotated
@@ -13,9 +14,26 @@ app = typer.Typer(help="Agentor CLI - Deploy and manage AI agents")
 console = Console()
 
 
-def _get_api_key(api_key: Optional[str] = None) -> str:
+def _get_secrets_from_env_file(
+    env_file: Optional[str] = None, secret_name: Optional[str] = None
+) -> dict:
+    if not env_file:
+        env_file = ".env"
+    if not secret_name:
+        secret_name = "CELESTO_API_KEY"
+    dotenv_path = Path(env_file)
+    dotenv = DotEnv(dotenv_path, verbose=True, encoding="utf-8")
+    return dotenv.get(secret_name)
+
+
+def _get_api_key(
+    api_key: Optional[str] = None,
+    ignore_env_file: Optional[bool] = False,
+    secret_name: Optional[str] = None,
+) -> str:
     """Get API key from argument or environment variable."""
-    final_api_key = api_key or os.environ.get("CELESTO_API_KEY")
+    if not ignore_env_file:
+        final_api_key = api_key or _get_secrets_from_env_file(secret_name=secret_name)
     if not final_api_key:
         console.print("❌ [bold red]Error:[/bold red] API key not found.")
         console.print(
@@ -64,10 +82,16 @@ def deploy(
         "-k",
         help="Celesto API key (or set CELESTO_API_KEY env var)",
     ),
+    ignore_env_file: Optional[bool] = typer.Option(
+        False,
+        "--ignore-env-file",
+        "-i",
+        help="Ignore environment file",
+    ),
 ):
     """Deploy an agent to Celesto."""
     # Get API key
-    final_api_key = _get_api_key(api_key)
+    final_api_key = _get_api_key(api_key, ignore_env_file, "CELESTO_API_KEY")
 
     # Parse environment variables
     env_dict = {}
