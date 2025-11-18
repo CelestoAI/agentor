@@ -51,7 +51,7 @@ issues = "https://github.com/CelestoAI/agentor/issues"
 
 
 [project.scripts]
-agentor="agentor.cli:app"
+celesto="agentor.cli:app"
 
 [project.optional-dependencies]
 models = [
