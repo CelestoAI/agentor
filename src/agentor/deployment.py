@@ -47,6 +47,35 @@ def _get_api_key(
     return final_api_key
 
 
+def _resolve_envs(
+    folder_path: Path, envs: Optional[str], ignore_env_file: bool
+) -> dict[str, str]:
+    """Build environment dictionary from .env file and CLI overrides."""
+    env_dict: dict[str, str] = {}
+    if not ignore_env_file:
+        env_file_path = folder_path / ".env"
+        if env_file_path.exists():
+            dotenv = DotEnv(env_file_path, verbose=True, encoding="utf-8")
+            for key, value in dotenv.dict().items():
+                if value:
+                    env_dict[key] = value
+
+    if envs:
+        for pair in envs.split(","):
+            pair = pair.strip()
+            if not pair:
+                continue
+            if "=" not in pair:
+                console.print(
+                    f"❌ [bold red]Error:[/bold red] Invalid env pair: '{pair}'. Expected format: key=value"
+                )
+                raise typer.Exit(1)
+            key, value = pair.split("=", 1)
+            env_dict[key.strip()] = value.strip()
+
+    return env_dict
+
+
 @app.command()
 def deploy(
     folder: Annotated[
@@ -89,22 +118,12 @@ def deploy(
         help="Ignore environment file",
     ),
 ):
-    """Deploy an agent to Celesto."""
+    """Deploy an agent to the Celesto AI platform.
+
+    It automatically loads the .env file and injects the environment variables into the deployment. To ignore the .env file, use the --ignore-env-file flag.
+    """
     # Get API key
     final_api_key = _get_api_key(api_key, ignore_env_file, "CELESTO_API_KEY")
-
-    # Parse environment variables
-    env_dict = {}
-    if envs:
-        for pair in envs.split(","):
-            pair = pair.strip()
-            if "=" not in pair:
-                console.print(
-                    f"❌ [bold red]Error:[/bold red] Invalid env pair: '{pair}'. Expected format: key=value"
-                )
-                raise typer.Exit(1)
-            key, value = pair.split("=", 1)
-            env_dict[key.strip()] = value.strip()
 
     # Validate folder path
     folder_path = Path(folder).resolve()
@@ -118,6 +137,9 @@ def deploy(
             f"❌ [bold red]Error:[/bold red] '{folder_path}' is not a directory."
         )
         raise typer.Exit(1)
+
+    # Parse environment variables
+    env_dict = _resolve_envs(folder_path, envs, bool(ignore_env_file))
 
     # Deploy
     try:
