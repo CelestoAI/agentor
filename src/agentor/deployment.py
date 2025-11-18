@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from dotenv.main import DotEnv
 import typer
 from rich.console import Console
 from typing_extensions import Annotated
@@ -13,9 +14,26 @@ app = typer.Typer(help="Agentor CLI - Deploy and manage AI agents")
 console = Console()
 
 
-def _get_api_key(api_key: Optional[str] = None) -> str:
+def _get_secrets_from_env_file(
+    env_file: Optional[str] = None, secret_name: Optional[str] = None
+) -> dict:
+    if not env_file:
+        env_file = ".env"
+    if not secret_name:
+        secret_name = "CELESTO_API_KEY"
+    dotenv_path = Path(env_file)
+    dotenv = DotEnv(dotenv_path, verbose=True, encoding="utf-8")
+    return dotenv.get(secret_name)
+
+
+def _get_api_key(
+    api_key: Optional[str] = None,
+    ignore_env_file: Optional[bool] = False,
+    secret_name: Optional[str] = None,
+) -> str:
     """Get API key from argument or environment variable."""
-    final_api_key = api_key or os.environ.get("CELESTO_API_KEY")
+    if not ignore_env_file:
+        final_api_key = api_key or _get_secrets_from_env_file(secret_name=secret_name)
     if not final_api_key:
         console.print("❌ [bold red]Error:[/bold red] API key not found.")
         console.print(
@@ -27,6 +45,35 @@ def _get_api_key(api_key: Optional[str] = None) -> str:
         console.print("3. Copy your API key")
         raise typer.Exit(1)
     return final_api_key
+
+
+def _resolve_envs(
+    folder_path: Path, envs: Optional[str], ignore_env_file: bool
+) -> dict[str, str]:
+    """Build environment dictionary from .env file and CLI overrides."""
+    env_dict: dict[str, str] = {}
+    if not ignore_env_file:
+        env_file_path = folder_path / ".env"
+        if env_file_path.exists():
+            dotenv = DotEnv(env_file_path, verbose=True, encoding="utf-8")
+            for key, value in dotenv.dict().items():
+                if value:
+                    env_dict[key] = value
+
+    if envs:
+        for pair in envs.split(","):
+            pair = pair.strip()
+            if not pair:
+                continue
+            if "=" not in pair:
+                console.print(
+                    f"❌ [bold red]Error:[/bold red] Invalid env pair: '{pair}'. Expected format: key=value"
+                )
+                raise typer.Exit(1)
+            key, value = pair.split("=", 1)
+            env_dict[key.strip()] = value.strip()
+
+    return env_dict
 
 
 @app.command()
@@ -64,23 +111,19 @@ def deploy(
         "-k",
         help="Celesto API key (or set CELESTO_API_KEY env var)",
     ),
+    ignore_env_file: Optional[bool] = typer.Option(
+        False,
+        "--ignore-env-file",
+        "-i",
+        help="Ignore environment file",
+    ),
 ):
-    """Deploy an agent to Celesto."""
-    # Get API key
-    final_api_key = _get_api_key(api_key)
+    """Deploy an agent to the Celesto AI platform.
 
-    # Parse environment variables
-    env_dict = {}
-    if envs:
-        for pair in envs.split(","):
-            pair = pair.strip()
-            if "=" not in pair:
-                console.print(
-                    f"❌ [bold red]Error:[/bold red] Invalid env pair: '{pair}'. Expected format: key=value"
-                )
-                raise typer.Exit(1)
-            key, value = pair.split("=", 1)
-            env_dict[key.strip()] = value.strip()
+    It automatically loads the .env file and injects the environment variables into the deployment. To ignore the .env file, use the --ignore-env-file flag.
+    """
+    # Get API key
+    final_api_key = _get_api_key(api_key, ignore_env_file, "CELESTO_API_KEY")
 
     # Validate folder path
     folder_path = Path(folder).resolve()
@@ -94,6 +137,9 @@ def deploy(
             f"❌ [bold red]Error:[/bold red] '{folder_path}' is not a directory."
         )
         raise typer.Exit(1)
+
+    # Parse environment variables
+    env_dict = _resolve_envs(folder_path, envs, bool(ignore_env_file))
 
     # Deploy
     try:

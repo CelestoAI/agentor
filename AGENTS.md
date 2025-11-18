@@ -120,6 +120,8 @@ uv run ruff check --fix .
 
 ## Testing
 
+We use PyTest and follow the functional style.
+
 ### Running Tests
 
 Run the full test suite:
