@@ -174,7 +174,7 @@ def deploy(
                 console.print(f"[bold]URL:[/bold] [link={cloud_url}]{cloud_url}[/link]")
         else:
             console.print(
-                "[yellow]⏳ Building... Run 'agentor ls' to check status[/yellow]"
+                "[yellow]⏳ Building... Run 'celesto ls' to check status[/yellow]"
             )
 
     except Exception as e:
