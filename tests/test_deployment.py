@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from agentor.deployment import _resolve_envs
+from agentor.cli.deployment import _resolve_envs
 
 
 def test_resolve_envs_merges_file_and_cli(tmp_path: Path) -> None:

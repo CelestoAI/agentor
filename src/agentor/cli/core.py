@@ -3,7 +3,7 @@ from rich import print
 from rich.console import Console
 
 from agentor import proxy
-from agentor.deployment import deploy, list as list_deployments
+from agentor.cli.deployment import deploy, list_deployments
 
 app = typer.Typer()
 app.add_typer(proxy.app)

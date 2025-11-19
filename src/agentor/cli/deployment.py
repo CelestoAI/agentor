@@ -10,7 +10,7 @@ from typing_extensions import Annotated
 
 from agentor.sdk.client import CelestoSDK
 
-app = typer.Typer(help="Agentor CLI - Deploy and manage AI agents")
+
 console = Console()
 
 
@@ -78,7 +78,6 @@ def _resolve_envs(
     return env_dict
 
 
-@app.command()
 def deploy(
     folder: Annotated[
         str,
@@ -182,8 +181,7 @@ def deploy(
         raise typer.Exit(1)
 
 
-@app.command()
-def list(
+def list_deployments(
     api_key: Optional[str] = typer.Option(
         None, "--api-key", "-k", help="Celesto API key (or set CELESTO_API_KEY env var)"
     ),
@@ -246,12 +244,3 @@ def list(
         console.print(f"❌ [bold red]Failed to list deployments:[/bold red] {e}")
         raise e
         raise typer.Exit(1)
-
-
-def main():
-    """CLI entrypoint."""
-    app()
-
-
-if __name__ == "__main__":
-    app()
