@@ -23,6 +23,7 @@ from agents.mcp import MCPServerStreamableHttp
 from fastapi import FastAPI
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
+from agents.extensions.models.litellm_model import LitellmModel
 
 from agentor.agents.a2a import A2AController, AgentSkill
 from agentor.output_text_formatter import AgentOutput, format_stream_events
@@ -85,6 +86,8 @@ class AgentorBase:
             raise ValueError("""An LLM API key is required to use the Agentor.
                 Please set either LLM_API_KEY/OPENAI_API_KEY environment variable or pass it as an argument.""")
         self.llm_api_key = llm_api_key
+        if isinstance(model, str) and "/" in model:
+            self.model = LitellmModel(model, api_key=llm_api_key)
 
 
 class Agentor(AgentorBase):
@@ -99,13 +102,16 @@ class Agentor(AgentorBase):
 
         >>> # Serve the Agent as an API
         >>> agent.serve(port=8000)
+
+    Use any model supported by LiteLLM, e.g. "gemini/gemini-pro" or "anthropic/claude-4".
+        >>> agent = Agentor(name="Weather Agent", model="gemini/gemini-pro")
     """
 
     def __init__(
         self,
         name: str,
         instructions: Optional[str] = None,
-        model: Optional[str] = "gpt-5-nano",
+        model: Optional[str | LitellmModel] = "gpt-5-nano",
         tools: Optional[List[Union[FunctionTool, str, MCPServerStreamableHttp]]] = None,
         output_type: type[Any] | AgentOutputSchemaBase | None = None,
         debug: bool = False,
@@ -136,7 +142,7 @@ class Agentor(AgentorBase):
         self.agent: Agent = Agent(
             name=name,
             instructions=instructions,
-            model=model,
+            model=self.model,
             tools=self.tools,
             mcp_servers=self.mcp_servers or [],
             output_type=output_type,
