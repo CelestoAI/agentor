@@ -69,16 +69,15 @@ def get_weather(city: str):
 
 agent = Agentor(
     name="Weather Agent",
-    model="gpt-5-mini",  # Use any LLM provider - gemini/gemini-3-pro-preview or anthropic/claude-3.5
-    tools=[get_weather],  # Bring your own tool, or
-    # tools=["get_weather"],  # 100+ Celesto AI managed tools — plug-and-play
+    model="gpt-5-mini",  # Use any LLM provider - gemini/gemini/gemini-2.5-pro or anthropic/claude-3.5
+    tools=[get_weather],  # Bring your own tool, or use Celesto ToolHub
 )
 
 result = agent.run("What is the weather in London?")  # Run the Agent
 print(result)
 
 # Serve Agent with a single line of code
-+agent.serve()
+agent.serve()
 ```
 
 Run the following command to query the Agent server:
