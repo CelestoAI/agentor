@@ -17,7 +17,7 @@ console = Console()
 
 # Conditionally add chat app - this will fail gracefully if Google creds not set up
 try:
-    from agentor import chat
+    from . import chat
 
     app.add_typer(chat.app)
 except Exception as e:
