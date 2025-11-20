@@ -1,5 +1,6 @@
+import httpx
 from agentor.tools.base import BaseTool
-from typing import Optional
+from typing import Optional, Any
 
 
 class CurrentWeather(BaseTool):
@@ -9,13 +10,25 @@ class CurrentWeather(BaseTool):
     def __init__(self, api_key: Optional[str] = None):
         super().__init__(api_key)
 
-    def run(self, location: str, unit: str = "celsius") -> str:
+    def run(self, location: str) -> Any:
         """
-        Get the current weather for a location.
+        Get the current weather for a location using WeatherAPI.com.
 
         Args:
-            location: The city and state, e.g. San Francisco, CA
-            unit: The unit of temperature, either 'celsius' or 'fahrenheit'
+            location: The location to get the weather for (e.g. 'London', 'Paris').
         """
-        # Mock implementation for demonstration
-        return f"The weather in {location} is sunny and 25 degrees {unit}."
+        if not self.api_key:
+            return "Error: API key is required for this tool."
+
+        base_url = "http://api.weatherapi.com/v1/current.json"
+        params = {"key": self.api_key, "q": location}
+
+        try:
+            with httpx.Client(timeout=10) as client:
+                response = client.get(base_url, params=params)
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            return f"Error: HTTP {e.response.status_code} - {e.response.text}"
+        except Exception as e:
+            return f"Error: {str(e)}"
