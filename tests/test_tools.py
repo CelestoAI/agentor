@@ -1,3 +1,4 @@
+import os
 from unittest.mock import MagicMock, patch
 from agentor.tools.base import BaseTool
 from agentor.tools.weather import WeatherAPI
@@ -49,8 +50,11 @@ def test_current_time_tool():
 
 def test_weather_tool_api_key():
     """Test WeatherAPI tool requires API key."""
-    weather = WeatherAPI()  # No key
-    assert "Error: API key is required" in weather.run("London")
+    with patch.dict(os.environ, {"WEATHER_API_KEY": ""}):
+        weather = WeatherAPI()  # No key available
+        result = weather.run("London")
+
+    assert "Error: API key is required" in result
 
 
 def test_weather_tool_mock_api():
