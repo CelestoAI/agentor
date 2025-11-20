@@ -14,6 +14,7 @@ from typing import (
     TypedDict,
     Union,
 )
+from agentor.tools.base import BaseTool
 
 import uvicorn
 from a2a import types as a2a_types
@@ -112,7 +113,9 @@ class Agentor(AgentorBase):
         name: str,
         instructions: Optional[str] = None,
         model: Optional[str | LitellmModel] = "gpt-5-nano",
-        tools: Optional[List[Union[FunctionTool, str, MCPServerStreamableHttp]]] = None,
+        tools: Optional[
+            List[Union[FunctionTool, str, MCPServerStreamableHttp, "BaseTool"]]
+        ] = None,
         output_type: type[Any] | AgentOutputSchemaBase | None = None,
         debug: bool = False,
         llm_api_key: Optional[str] = None,
@@ -128,12 +131,14 @@ class Agentor(AgentorBase):
                 resolved_tools.append(ToolRegistry.get(tool)["tool"])
             elif isinstance(tool, FunctionTool):
                 resolved_tools.append(tool)
+            elif isinstance(tool, BaseTool):
+                resolved_tools.append(tool.to_function_tool())
             elif isinstance(tool, MCPServerStreamableHttp):
                 mcp_servers.append(tool)
             else:
                 raise TypeError(
                     f"Unsupported tool type '{type(tool).__name__}'. "
-                    "Expected str, FunctionTool, or MCPServerStreamableHttp."
+                    "Expected str, FunctionTool, BaseTool, or MCPServerStreamableHttp."
                 )
 
         self.tools = resolved_tools
