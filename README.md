@@ -58,19 +58,13 @@ pip install git+https://github.com/celestoai/agentor@main
 Build an Agent, connect external tools or MCP Server and serve as an API in just few lines of code:
 
 ```python
-from agentor import Agentor, function_tool
-
-
-@function_tool
-def get_weather(city: str):
-    """Get the weather of city"""
-    return f"Weather in {city} is sunny"
-
+from agentor.tools import CurrentWeather
+from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
     model="gpt-5-mini",  # Use any LLM provider - gemini/gemini/gemini-2.5-pro or anthropic/claude-3.5
-    tools=[get_weather],  # Bring your own tool, or use Celesto ToolHub
+    tools=[CurrentWeather()]
 )
 result = agent.run("What is the weather in London?")  # Run the Agent
 print(result)
