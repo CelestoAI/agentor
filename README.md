@@ -63,7 +63,7 @@ from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
-    model="gpt-5-mini",  # Use any LLM provider - gemini/gemini/gemini-2.5-pro or anthropic/claude-3.5
+    model="gpt-5-mini",  # Use any LLM provider - gemini/gemini-2.5-pro or anthropic/claude-3.5
     tools=[CurrentWeather()]
 )
 result = agent.run("What is the weather in London?")  # Run the Agent
