@@ -1,45 +1,48 @@
+import inspect
+import json
+import logging
+from contextvars import ContextVar
+from dataclasses import dataclass
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
+
 from fastapi import APIRouter, Depends, Request
+from fastapi.params import Depends as FastAPIDepends
 from mcp.types import (
     Icon,
     Implementation,
     InitializeResult,
+    PromptsCapability,
+    ResourcesCapability,
     ServerCapabilities,
     ToolsCapability,
-    ResourcesCapability,
-    PromptsCapability,
 )
-from typing import (
-    Callable,
-    Dict,
-    Optional,
-    List,
-    Any,
-    get_type_hints,
-    Annotated,
-    get_origin,
-    get_args,
-    Set,
-)
-import inspect
-import json
-from dataclasses import dataclass
-import logging
-from fastapi.params import Depends as FastAPIDepends
-from contextvars import ContextVar
 
 logger = logging.getLogger(__name__)
 
 # Context variable to store the current request
-_request_context: ContextVar[Optional[Request]] = ContextVar("request_context", default=None)
+_request_context: ContextVar[Optional[Request]] = ContextVar(
+    "request_context", default=None
+)
 
 
 @dataclass
 class Context:
     """Context object providing access to request-level data in MCP tools
-    
+
     This class provides access to HTTP headers and cookies from the incoming request.
     Use it as a dependency in your tool functions to access request context.
-    
+
     Example:
         @mcp_router.tool()
         def my_tool(location: str, ctx: Context = Depends(get_context)) -> str:
@@ -47,16 +50,17 @@ class Context:
             session_id = ctx.cookies.get("session_id")
             return f"Processing {location}"
     """
+
     headers: Dict[str, str]
     cookies: Dict[str, str]
 
 
 def get_context() -> Context:
     """Dependency function to retrieve the current request context
-    
+
     Returns:
         Context: A Context object with headers and cookies from the current request
-        
+
     Raises:
         RuntimeError: If called outside of a request context
     """
@@ -64,11 +68,11 @@ def get_context() -> Context:
     if request is None:
         # Return empty context if no request is available
         return Context(headers={}, cookies={})
-    
+
     # Convert Headers to dict for easier access
     headers = dict(request.headers)
     cookies = dict(request.cookies)
-    
+
     return Context(headers=headers, cookies=cookies)
 
 
@@ -139,7 +143,7 @@ class MCPAPIRouter:
         async def mcp_handler(request: Request):
             # Store request in context variable for tools to access
             _request_context.set(request)
-            
+
             try:
                 body = await request.json()
                 method = body.get("method")

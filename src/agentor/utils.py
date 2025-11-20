@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 
+from superauth.google import CalendarAPI, GmailAPI
+
 from agentor.memory.api import Memory
-
-
-from superauth.google import GmailAPI, CalendarAPI
 
 
 @dataclass

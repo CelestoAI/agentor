@@ -3,13 +3,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from dotenv.main import DotEnv
 import typer
+from dotenv.main import DotEnv
 from rich.console import Console
 from typing_extensions import Annotated
 
 from agentor.sdk.client import CelestoSDK
-
 
 console = Console()
 

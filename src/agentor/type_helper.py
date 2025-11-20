@@ -3,10 +3,10 @@ from __future__ import annotations
 import dataclasses
 import datetime as dt
 import enum
-from decimal import Decimal
 import json
+from decimal import Decimal
 from pathlib import Path
-from typing import Any, Mapping, Iterable
+from typing import Any, Iterable, Mapping
 from uuid import UUID
 
 from pydantic import BaseModel

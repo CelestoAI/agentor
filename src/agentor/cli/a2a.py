@@ -1,13 +1,12 @@
-from uuid import uuid4
+import asyncio
 from typing import Tuple
+from uuid import uuid4
 
 import httpx
-from a2a.client import ClientFactory, ClientConfig, Client
+import typer
+from a2a.client import Client, ClientConfig, ClientFactory
 from a2a.types import Message, TextPart
 from rich.console import Console
-import asyncio
-import typer
-
 
 app = typer.Typer()
 console = Console()

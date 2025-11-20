@@ -18,7 +18,7 @@
 
 ## Agentor
 
-Agentor is an open-source framework that makes it easy to build Agentic system with secure integrations across email, calendars, CRMs, and more.
+Agentor is an open-source framework that makes it easy to build Agentic systems with secure integrations across email, calendars, CRMs, and more.
 
 It lets you connect LLMs to tools — like email, calendar, CRMs, or any data stack.
 
@@ -55,16 +55,16 @@ pip install git+https://github.com/celestoai/agentor@main
 
 ### Build and Deploy an Agent
 
-Build an Agent, connect external tools or MCP Server and serve as an API in just few lines of code:
+Build an Agent, connect external tools or MCP Server and serve as an API in just a few lines of code:
 
 ```python
-from agentor.tools import CurrentWeather
+from agentor.tools import WeatherAPI
 from agentor import Agentor
 
 agent = Agentor(
     name="Weather Agent",
     model="gpt-5-mini",  # Use any LLM provider - gemini/gemini-2.5-pro or anthropic/claude-3.5
-    tools=[CurrentWeather()]
+    tools=[WeatherAPI()]
 )
 result = agent.run("What is the weather in London?")  # Run the Agent
 print(result)
