@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 from agentor.tools.base import BaseTool
-from agentor.tools.weather import CurrentWeather
+from agentor.tools.weather import WeatherAPI
 from agentor.tools.calculator import Calculator
 from agentor.tools.time import CurrentTime
 from agentor.mcp.server import LiteMCP
@@ -48,13 +48,13 @@ def test_current_time_tool():
 
 
 def test_weather_tool_api_key():
-    """Test CurrentWeather tool requires API key."""
-    weather = CurrentWeather()  # No key
+    """Test WeatherAPI tool requires API key."""
+    weather = WeatherAPI()  # No key
     assert "Error: API key is required" in weather.run("London")
 
 
 def test_weather_tool_mock_api():
-    """Test CurrentWeather tool with mocked API."""
+    """Test WeatherAPI tool with mocked API."""
     with patch("httpx.Client") as mock_client_cls:
         mock_client = MagicMock()
         mock_client_cls.return_value.__enter__.return_value = mock_client
@@ -67,7 +67,7 @@ def test_weather_tool_mock_api():
         }
         mock_client.get.return_value = mock_response
 
-        weather = CurrentWeather(api_key="test-key")
+        weather = WeatherAPI(api_key="test-key")
         result = weather.run("London")
 
         assert result["location"]["name"] == "London"
