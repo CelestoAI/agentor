@@ -72,7 +72,6 @@ agent = Agentor(
     model="gpt-5-mini",  # Use any LLM provider - gemini/gemini/gemini-2.5-pro or anthropic/claude-3.5
     tools=[get_weather],  # Bring your own tool, or use Celesto ToolHub
 )
-
 result = agent.run("What is the weather in London?")  # Run the Agent
 print(result)
 
