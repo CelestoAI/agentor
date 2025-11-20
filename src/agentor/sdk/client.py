@@ -1,12 +1,11 @@
-import os
 import json
-from pathlib import Path
+import os
 import tarfile
 import tempfile
+from pathlib import Path
 from typing import List, Optional
 
 import httpx
-
 
 _BASE_URL = os.environ.get("CELESTO_BASE_URL", "https://api.celesto.ai/v1")
 

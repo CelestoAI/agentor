@@ -1,6 +1,5 @@
-from superauth.google import desktop_creds_provider_factory
-from superauth.google import GmailAPI
 from rich import print
+from superauth.google import GmailAPI, desktop_creds_provider_factory
 
 
 def main():

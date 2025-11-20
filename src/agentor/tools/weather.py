@@ -1,10 +1,12 @@
-import httpx
-from agentor.tools.base import BaseTool
-from typing import Optional, Any
 import os
+from typing import Any, Optional
+
+import httpx
+
+from agentor.tools.base import BaseTool
 
 
-class CurrentWeather(BaseTool):
+class WeatherAPI(BaseTool):
     name = "get_weather"
     description = "Get the current weather for a location"
 

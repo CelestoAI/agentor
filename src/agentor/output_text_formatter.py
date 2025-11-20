@@ -2,16 +2,16 @@ import json
 from typing import Any, AsyncIterator, List, Literal, Optional, Union
 from xml.etree.ElementTree import Element, SubElement, tostring
 
+from agents import (
+    AgentUpdatedStreamEvent,
+    ItemHelpers,
+    RawResponsesStreamEvent,
+    RunItemStreamEvent,
+    StreamEvent,
+)
 from attr import dataclass
 from openai.types.responses import ResponseTextDeltaEvent
 from pydantic import BaseModel
-from agents import (
-    StreamEvent,
-    RawResponsesStreamEvent,
-    RunItemStreamEvent,
-    AgentUpdatedStreamEvent,
-    ItemHelpers,
-)
 
 from agentor.type_helper import serialize
 

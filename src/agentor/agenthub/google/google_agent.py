@@ -6,10 +6,9 @@ from typing import List, Optional
 
 from agents import Agent, ModelSettings, RunContextWrapper, Runner, function_tool
 from openai.types.shared import Reasoning
+from superauth.google import CalendarAPI, GmailAPI, load_user_credentials
 
 from agentor.utils import AppContext
-
-from superauth.google import GmailAPI, CalendarAPI, load_user_credentials
 
 
 @function_tool(name_override="search_gmail")

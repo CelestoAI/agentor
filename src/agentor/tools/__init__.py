@@ -1,6 +1,6 @@
 from .base import BaseTool
-from .weather import CurrentWeather
 from .calculator import Calculator
 from .time import CurrentTime
+from .weather import WeatherAPI
 
-__all__ = ["BaseTool", "CurrentWeather", "Calculator", "CurrentTime"]
+__all__ = ["BaseTool", "WeatherAPI", "Calculator", "CurrentTime"]

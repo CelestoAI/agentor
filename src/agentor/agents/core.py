@@ -14,21 +14,21 @@ from typing import (
     TypedDict,
     Union,
 )
-from agentor.tools.base import BaseTool
 
 import uvicorn
 from a2a import types as a2a_types
 from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
 from agents import Agent, AgentOutputSchemaBase, FunctionTool, Runner, function_tool
+from agents.extensions.models.litellm_model import LitellmModel
 from agents.mcp import MCPServerStreamableHttp
 from fastapi import FastAPI
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
-from agents.extensions.models.litellm_model import LitellmModel
 
 from agentor.agents.a2a import A2AController, AgentSkill
 from agentor.output_text_formatter import AgentOutput, format_stream_events
 from agentor.prompts import THINKING_PROMPT, render_prompt
+from agentor.tools.base import BaseTool
 from agentor.tools.registry import CelestoConfig, ToolRegistry
 
 logger = logging.getLogger(__name__)

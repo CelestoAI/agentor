@@ -1,9 +1,11 @@
-from .api_router import MCPAPIRouter
+from typing import Any
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 from rich import print as print_rich
-from typing import Any
+
+from .api_router import MCPAPIRouter
 
 
 class LiteMCP(MCPAPIRouter):
