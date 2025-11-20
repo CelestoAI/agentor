@@ -17,7 +17,8 @@ class BaseTool(ABC):
     description: str
     args_schema: Optional[Type[BaseModel]] = None
 
-    def __init__(self):
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key
         self._mcp_server: Optional[LiteMCP] = None
 
     @abstractmethod

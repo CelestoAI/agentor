@@ -1,9 +1,13 @@
 from agentor.tools.base import BaseTool
+from typing import Optional
 
 
 class CurrentWeather(BaseTool):
     name = "get_weather"
     description = "Get the current weather for a location"
+
+    def __init__(self, api_key: Optional[str] = None):
+        super().__init__(api_key)
 
     def run(self, location: str, unit: str = "celsius") -> str:
         """
