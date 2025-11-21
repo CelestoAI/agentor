@@ -7,7 +7,7 @@ try:
     from slack_sdk.errors import SlackApiError
 except ImportError:
     WebClient = None
-    SlackApiError = None
+    SlackApiError = Exception
 
 
 class SlackTool(BaseTool):

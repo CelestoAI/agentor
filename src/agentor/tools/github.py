@@ -7,7 +7,7 @@ try:
     from github import GithubException
 except ImportError:
     PyGithub = None
-    GithubException = None
+    GithubException = Exception
 
 
 class GitHubTool(BaseTool):
