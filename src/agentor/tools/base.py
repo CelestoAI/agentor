@@ -1,4 +1,3 @@
-import functools
 from abc import ABC
 from typing import Any, Callable, List, Optional, Type
 
@@ -55,14 +54,7 @@ class BaseTool(ABC):
         for attr_name in dir(self):
             attr = getattr(self, attr_name)
             if getattr(attr, "_is_capability", False) is True:
-                # Create a wrapper to bind self
-                @functools.wraps(attr)
-                def wrapper(*args, **kwargs):
-                    return attr(*args, **kwargs)
-
-                wrapper.__name__ = attr.__name__
-                wrapper.__doc__ = attr.__doc__
-                tools.append(function_tool(wrapper))
+                tools.append(function_tool(attr, strict_mode=False))
 
         return tools
 

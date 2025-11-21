@@ -118,10 +118,6 @@ uv run ruff check --fix .
 - Document public APIs with docstrings
 - Never use placeholders like `# ... rest of code ...` - always include complete implementations
 
-## Testing
-
-We use PyTest and follow the functional style.
-
 ### Running Tests
 
 Run the full test suite:
@@ -155,6 +151,7 @@ uv run coverage report -m
 - Test files should mirror the source structure
 - Include unit tests for new features
 - Ensure tests are isolated and reproducible
+- Prefer the functional style tests
 
 ## Build and Deployment
 
