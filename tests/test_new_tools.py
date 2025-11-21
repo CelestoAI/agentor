@@ -67,7 +67,7 @@ class TestNewTools(unittest.TestCase):
         self.assertEqual(result, "On branch main")
 
         tools = tool.to_openai_function()
-        self.assertTrue(len(tools) >= 4)
+        self.assertGreaterEqual(len(tools), 4)
         names = [t.name for t in tools]
         self.assertIn("status", names)
 
