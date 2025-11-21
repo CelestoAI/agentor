@@ -73,6 +73,12 @@ all = [
 [tool.hatch.version]
 path = "src/agentor/__init__.py"
 
+[tool.hatch.build]
+exclude = [
+    "docs",
+    "assets",
+]
+
 [tool.uv]
 package = true
 
