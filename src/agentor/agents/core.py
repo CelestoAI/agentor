@@ -132,7 +132,8 @@ class Agentor(AgentorBase):
             elif isinstance(tool, FunctionTool):
                 resolved_tools.append(tool)
             elif isinstance(tool, BaseTool):
-                resolved_tools.append(tool.to_function_tool())
+                # Convert all capabilities to individual OpenAI functions
+                resolved_tools.extend(tool.to_openai_function())
             elif isinstance(tool, MCPServerStreamableHttp):
                 mcp_servers.append(tool)
             else:
