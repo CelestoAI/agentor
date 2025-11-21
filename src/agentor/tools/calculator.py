@@ -1,28 +1,52 @@
-from agentor.tools.base import BaseTool
+from agentor.tools.base import BaseTool, capability
 
 
-class Calculator(BaseTool):
+class CalculatorTool(BaseTool):
     name = "calculator"
     description = "Perform basic arithmetic operations"
 
-    def run(self, operation: str, a: float, b: float) -> str:
+    @capability
+    def add(self, a: float, b: float) -> str:
         """
-        Perform a basic arithmetic operation.
+        Add two numbers.
 
         Args:
-            operation: The operation to perform. One of 'add', 'subtract', 'multiply', 'divide'.
             a: The first number.
             b: The second number.
         """
-        if operation == "add":
-            return str(a + b)
-        elif operation == "subtract":
-            return str(a - b)
-        elif operation == "multiply":
-            return str(a * b)
-        elif operation == "divide":
-            if b == 0:
-                return "Error: Division by zero"
-            return str(a / b)
-        else:
-            return f"Error: Unknown operation '{operation}'"
+        return str(a + b)
+
+    @capability
+    def subtract(self, a: float, b: float) -> str:
+        """
+        Subtract two numbers.
+
+        Args:
+            a: The first number.
+            b: The second number.
+        """
+        return str(a - b)
+
+    @capability
+    def multiply(self, a: float, b: float) -> str:
+        """
+        Multiply two numbers.
+
+        Args:
+            a: The first number.
+            b: The second number.
+        """
+        return str(a * b)
+
+    @capability
+    def divide(self, a: float, b: float) -> str:
+        """
+        Divide two numbers.
+
+        Args:
+            a: The first number.
+            b: The second number (divisor).
+        """
+        if b == 0:
+            return "Error: Division by zero"
+        return str(a / b)

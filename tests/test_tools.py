@@ -1,11 +1,13 @@
 import os
 from unittest.mock import MagicMock, patch
-from agentor.tools.base import BaseTool
-from agentor.tools.weather import WeatherAPI
-from agentor.tools.calculator import Calculator
-from agentor.tools.time import CurrentTime
-from agentor.mcp.server import LiteMCP
+
 from agents import FunctionTool
+
+from agentor.mcp.server import LiteMCP
+from agentor.tools.base import BaseTool, capability
+from agentor.tools.calculator import CalculatorTool
+from agentor.tools.timezone import TimezoneTool
+from agentor.tools.weather import WeatherAPI
 
 
 def test_base_tool_conversion():
@@ -15,7 +17,8 @@ def test_base_tool_conversion():
         name = "simple_tool"
         description = "A simple tool"
 
-        def run(self, x: int) -> int:
+        @capability
+        def increment(self, x: int) -> int:
             """Returns x + 1"""
             return x + 1
 
@@ -25,25 +28,43 @@ def test_base_tool_conversion():
     assert isinstance(fn_tool, FunctionTool)
     assert fn_tool.name == "simple_tool"
     assert fn_tool.description == "A simple tool"
-    # Verify the wrapped function works
-    assert tool.run(1) == 2
+    # Verify the wrapped function works via dispatcher
+    assert tool.run("increment", x=1) == 2
 
 
 def test_calculator_tool():
     """Test the Calculator tool logic."""
-    calc = Calculator()
-    assert calc.run("add", 5, 3) == "8"
-    assert calc.run("subtract", 10, 4) == "6"
-    assert calc.run("multiply", 2, 3) == "6"
-    assert calc.run("divide", 10, 2) == "5.0"
-    assert "Error" in calc.run("divide", 5, 0)
+    calc = CalculatorTool()
+    assert calc.add(5, 3) == "8"
+    assert calc.subtract(10, 4) == "6"
+    assert calc.multiply(2, 3) == "6"
+    assert calc.divide(10, 2) == "5.0"
+    assert "Error" in calc.divide(5, 0)
+
+    # Test via dispatcher
+    assert calc.run("add", a=5, b=3) == "8"
+    assert calc.run("multiply", a=2, b=3) == "6"
+
+    # Test to_openai_function
+    functions = calc.to_openai_function()
+    assert len(functions) == 4  # add, subtract, multiply, divide
+    names = [f.name for f in functions]
+    assert "add" in names
+    assert "subtract" in names
+    assert "multiply" in names
+    assert "divide" in names
 
 
-def test_current_time_tool():
-    """Test the CurrentTime tool."""
-    time_tool = CurrentTime()
+def test_timezone_tool():
+    """Test the TimezoneTool."""
+    time_tool = TimezoneTool()
     # We just check it returns a string and doesn't crash
-    result = time_tool.run("UTC")
+    result = time_tool.get_current_time("UTC")
+    assert isinstance(result, str)
+    assert "UTC" in result
+
+    # Test via dispatcher
+    result = time_tool.run("get_current_time", timezone="UTC")
     assert isinstance(result, str)
     assert "UTC" in result
 
@@ -52,7 +73,7 @@ def test_weather_tool_api_key():
     """Test WeatherAPI tool requires API key."""
     with patch.dict(os.environ, {"WEATHER_API_KEY": ""}):
         weather = WeatherAPI()  # No key available
-        result = weather.run("London")
+        result = weather.get_current_weather("London")
 
     assert "Error: API key is required" in result
 
@@ -66,16 +87,23 @@ def test_weather_tool_mock_api():
         # Mock successful response
         mock_response = MagicMock()
         mock_response.json.return_value = {
-            "location": {"name": "London"},
-            "current": {"temp_c": 15.0, "condition": {"text": "Partly cloudy"}},
+            "location": {"name": "London", "country": "UK"},
+            "current": {
+                "temp_c": 15.0,
+                "temp_f": 59.0,
+                "condition": {"text": "Partly cloudy"},
+                "humidity": 70,
+                "wind_kph": 10,
+            },
         }
         mock_client.get.return_value = mock_response
 
         weather = WeatherAPI(api_key="test-key")
-        result = weather.run("London")
+        result = weather.get_current_weather("London")
 
-        assert result["location"]["name"] == "London"
-        assert result["current"]["temp_c"] == 15.0
+        assert "London" in result
+        assert "15.0°C" in result
+        assert "Partly cloudy" in result
 
 
 def test_tool_mcp_serving():
@@ -85,7 +113,9 @@ def test_tool_mcp_serving():
         name = "mcp_tool"
         description = "MCP Tool"
 
-        def run(self):
+        @capability
+        def do_something(self):
+            """Does something"""
             pass
 
     tool = McpTool()
