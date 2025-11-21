@@ -1,6 +1,18 @@
-from .base import BaseTool
-from .calculator import Calculator
-from .time import CurrentTime
-from .weather import WeatherAPI
+from .base import BaseTool, capability
+from .exa import ExaSearchTool
+from .fetch import FetchTool
+from .git import GitTool
+from .github import GitHubTool
+from .postgres import PostgreSQLTool
+from .slack import SlackTool
 
-__all__ = ["BaseTool", "WeatherAPI", "Calculator", "CurrentTime"]
+__all__ = [
+    "BaseTool",
+    "capability",
+    "ExaSearchTool",
+    "FetchTool",
+    "GitTool",
+    "GitHubTool",
+    "PostgreSQLTool",
+    "SlackTool",
+]

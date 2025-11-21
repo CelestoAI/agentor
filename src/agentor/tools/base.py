@@ -1,11 +1,17 @@
 import functools
-from abc import ABC, abstractmethod
-from typing import Any, Optional, Type
+from abc import ABC
+from typing import Any, Callable, List, Optional, Type
 
 from agents import FunctionTool, function_tool
 from pydantic import BaseModel
 
 from agentor.mcp.server import LiteMCP
+
+
+def capability(func: Callable):
+    """Decorator to mark a method as a tool capability."""
+    func._is_capability = True
+    return func
 
 
 class BaseTool(ABC):
@@ -22,38 +28,56 @@ class BaseTool(ABC):
         self.api_key = api_key
         self._mcp_server: Optional[LiteMCP] = None
 
-    @abstractmethod
-    def run(self, *args, **kwargs) -> Any:
-        """Execute the tool logic."""
-        pass
+    def run(self, action: str, **kwargs) -> Any:
+        """
+        Execute a specific action (capability) of the tool.
 
-    def to_function_tool(self) -> FunctionTool:
-        """Convert the tool to an OpenAI-compatible FunctionTool."""
+        Args:
+            action: The name of the capability to execute.
+            **kwargs: Arguments to pass to the capability.
+        """
+        if not hasattr(self, action):
+            raise ValueError(f"Tool '{self.name}' has no capability '{action}'")
 
-        # If args_schema is provided, we can use it for validation/schema generation
-        # For now, we'll rely on the function signature of the run method
-        # or a wrapper that uses the schema if implemented.
+        method = getattr(self, action)
+        if getattr(method, "_is_capability", False) is not True:
+            raise ValueError(
+                f"'{action}' is not a valid capability of tool '{self.name}'"
+            )
 
-        # We wrap the run method to ensure it has the correct metadata
-        # We use functools.wraps to preserve the signature which is crucial for schema generation
+        return method(**kwargs)
 
-        @functools.wraps(self.run)
-        def func(*args, **kwargs):
-            return self.run(*args, **kwargs)
+    def to_openai_function(self) -> List[FunctionTool]:
+        """Convert all capabilities to OpenAI-compatible FunctionTools."""
+        tools = []
 
-        func.__name__ = self.name
-        func.__doc__ = self.description
+        # Check for capabilities
+        for attr_name in dir(self):
+            attr = getattr(self, attr_name)
+            if getattr(attr, "_is_capability", False) is True:
+                # Create a wrapper to bind self
+                @functools.wraps(attr)
+                def wrapper(*args, **kwargs):
+                    return attr(*args, **kwargs)
 
-        return function_tool(func)
+                wrapper.__name__ = attr.__name__
+                wrapper.__doc__ = attr.__doc__
+                tools.append(function_tool(wrapper))
+
+        return tools
 
     def serve(self, name: Optional[str] = None, port: int = 8000):
         """Serve the tool as an MCP server using LiteMCP."""
         server_name = name or self.name
         self._mcp_server = LiteMCP(name=server_name, version="1.0.0")
 
-        # Register the tool with LiteMCP
-        # We need to bind the run method to the server
-        self._mcp_server.tool(name=self.name, description=self.description)(self.run)
+        # Register all capabilities with LiteMCP
+        for attr_name in dir(self):
+            attr = getattr(self, attr_name)
+            if getattr(attr, "_is_capability", False) is True:
+                self._mcp_server.tool(name=attr.__name__, description=attr.__doc__)(
+                    attr
+                )
 
         # LiteMCP run method handles starting the server
         self._mcp_server.run(port=port)
