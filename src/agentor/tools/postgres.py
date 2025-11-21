@@ -1,3 +1,5 @@
+import sys
+from types import ModuleType
 from typing import Any, List, Optional
 
 from agentor.tools.base import BaseTool, capability
@@ -5,7 +7,19 @@ from agentor.tools.base import BaseTool, capability
 try:
     import psycopg2
 except ImportError:
-    psycopg2 = None
+    psycopg2 = ModuleType("psycopg2")
+
+    class Error(Exception):
+        """Raised when psycopg2 dependency is not installed."""
+
+    def connect(*args, **kwargs):
+        raise Error(
+            "PostgreSQL dependency is missing. Please install it with `pip install agentor[postgres]`."
+        )
+
+    psycopg2.Error = Error  # type: ignore[attr-defined]
+    psycopg2.connect = connect  # type: ignore[attr-defined]
+    sys.modules["psycopg2"] = psycopg2
 
 
 class PostgreSQLTool(BaseTool):

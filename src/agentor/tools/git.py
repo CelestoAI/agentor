@@ -1,3 +1,5 @@
+import sys
+from types import ModuleType
 from typing import Optional
 
 from agentor.tools.base import BaseTool, capability
@@ -5,7 +7,19 @@ from agentor.tools.base import BaseTool, capability
 try:
     import git
 except ImportError:
-    git = None
+    git = ModuleType("git")
+
+    class _MissingGitDependency(Exception):
+        """Raised when gitpython dependency is not installed."""
+
+    class Repo:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            raise _MissingGitDependency(
+                "Git dependency is missing. Please install it with `pip install agentor[git]`."
+            )
+
+    git.Repo = Repo  # type: ignore[attr-defined]
+    sys.modules["git"] = git
 
 
 class GitTool(BaseTool):

@@ -46,6 +46,15 @@ class BaseTool(ABC):
 
         return method(**kwargs)
 
+    def to_function_tool(self) -> FunctionTool:
+        """Wrap the tool as a FunctionTool for agent consumption."""
+        return function_tool(
+            self.run,
+            name_override=self.name,
+            description_override=self.description,
+            strict_mode=False,
+        )
+
     def to_openai_function(self) -> List[FunctionTool]:
         """Convert all capabilities to OpenAI-compatible FunctionTools."""
         tools = []
