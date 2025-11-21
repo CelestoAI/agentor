@@ -1,8 +1,7 @@
 from abc import ABC
-from typing import Any, Callable, List, Optional, Type
+from typing import Any, Callable, List, Optional
 
 from agents import FunctionTool, function_tool
-from pydantic import BaseModel
 
 from agentor.mcp.server import LiteMCP
 
@@ -21,7 +20,6 @@ class BaseTool(ABC):
 
     name: str
     description: str
-    args_schema: Optional[Type[BaseModel]] = None
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key

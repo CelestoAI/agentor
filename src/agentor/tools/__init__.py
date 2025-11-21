@@ -5,6 +5,7 @@ from .git import GitTool
 from .github import GitHubTool
 from .postgres import PostgreSQLTool
 from .slack import SlackTool
+from .weather import WeatherAPI
 
 __all__ = [
     "BaseTool",
@@ -15,4 +16,5 @@ __all__ = [
     "GitHubTool",
     "PostgreSQLTool",
     "SlackTool",
+    "WeatherAPI",
 ]
