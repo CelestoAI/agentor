@@ -2,7 +2,7 @@ import warnings
 
 from agents import function_tool
 
-from agentor.agents.core import Agentor, CelestoMCPHub
+from agentor.agents.core import Agentor, CelestoMCPHub, ModelSettings, LitellmModel
 from agentor.sdk.client import CelestoSDK
 
 from .memory.api import Memory
@@ -12,7 +12,7 @@ from .utils import AppContext
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-__version__ = "0.0.14"
+__version__ = "0.0.15"
 
 __all__ = [
     "Agentor",
@@ -23,6 +23,8 @@ __all__ = [
     "CelestoSDK",
     "function_tool",
     "CelestoMCPHub",
+    "ModelSettings",
+    "LitellmModel",
 ]
 
 

@@ -30,6 +30,7 @@ from agentor.output_text_formatter import AgentOutput, format_stream_events
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.tools.base import BaseTool
 from agentor.tools.registry import CelestoConfig, ToolRegistry
+from agents import ModelSettings
 
 logger = logging.getLogger(__name__)
 
@@ -97,15 +98,20 @@ class Agentor(AgentorBase):
 
     Example:
         >>> from agentor import Agentor
-        >>> agent = Agentor(name="Weather Agent", model="gpt-5-mini", tools=["celesto/weather"])
-        >>> result = agent.run("What is the weather in London?")
+        >>> agent = Agentor(name="Assistant", instructions="You are a helpful assistant")
+        >>> result = agent.run("Write a haiku about recursion in programming.")
         >>> print(result)
 
         >>> # Serve the Agent as an API
         >>> agent.serve(port=8000)
 
     Use any model supported by LiteLLM, e.g. "gemini/gemini-pro" or "anthropic/claude-4".
-        >>> agent = Agentor(name="Weather Agent", model="gemini/gemini-pro")
+        >>> agent = Agentor(name="Assistant", model="gemini/gemini-pro", llm_api_key=os.environ.get("GEMINI_API_KEY"))
+
+    Set model settings to configure the model behavior, e.g. temperature, top_p, etc.
+        >>> from agentor import ModelSettings
+        >>> model_settings = ModelSettings(temperature=0.5)
+        >>> agent = Agentor(name="Assistant", model="gemini/gemini-pro", llm_api_key=os.environ.get("GEMINI_API_KEY"), model_settings=model_settings)
     """
 
     def __init__(
@@ -119,6 +125,7 @@ class Agentor(AgentorBase):
         output_type: type[Any] | AgentOutputSchemaBase | None = None,
         debug: bool = False,
         llm_api_key: Optional[str] = None,
+        model_settings: Optional[ModelSettings] = None,
     ):
         super().__init__(name, instructions, model, llm_api_key)
         tools = tools or []
@@ -152,6 +159,7 @@ class Agentor(AgentorBase):
             tools=self.tools,
             mcp_servers=self.mcp_servers or [],
             output_type=output_type,
+            model_settings=model_settings,
         )
 
     def run(self, input: str) -> List[str] | str:
