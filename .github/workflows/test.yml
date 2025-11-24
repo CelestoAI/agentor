@@ -38,7 +38,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ matrix.uv-cache }}
-          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-uv-
             ${{ runner.os }}-
