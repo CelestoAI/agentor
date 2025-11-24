@@ -15,6 +15,7 @@ from typing import (
     Union,
 )
 
+from agents.models.default_models import get_default_model_settings
 import uvicorn
 from a2a import types as a2a_types
 from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
@@ -151,6 +152,9 @@ class Agentor(AgentorBase):
 
         self.tools = resolved_tools
         self.mcp_servers = mcp_servers
+
+        if model_settings is None:
+            model_settings = get_default_model_settings()
 
         self.agent: Agent = Agent(
             name=name,
