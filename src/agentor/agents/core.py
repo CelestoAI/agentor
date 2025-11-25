@@ -180,7 +180,10 @@ class Agentor(AgentorBase):
         return Runner.run_sync(self.agent, input, context=CelestoConfig())
 
     async def arun(
-        self, input: list[str] | str, limit_concurrency: int = 10
+        self,
+        input: list[str] | str,
+        limit_concurrency: int = 10,
+        max_turns: int = 10,
     ) -> List[str] | str:
         """
         Run the agent with an input prompt or a batch of prompts.
@@ -189,9 +192,7 @@ class Agentor(AgentorBase):
         Args:
             input: A string prompt or a list of string prompts.
             limit_concurrency: The maximum number of concurrent tasks to run in case of a batch of prompts.
-
-        Returns:
-            A string result or a list of string results.
+            max_turns: The maximum number of turns to run the agent.
         """
         if isinstance(input, list):
             futures = []
@@ -201,7 +202,10 @@ class Agentor(AgentorBase):
                 async def _run_task(task: str) -> str:
                     async with semaphore:
                         return await Runner.run(
-                            self.agent, task, context=CelestoConfig()
+                            self.agent,
+                            task,
+                            context=CelestoConfig(),
+                            max_turns=max_turns,
                         )
 
                 futures = [_run_task(task) for task in input]
@@ -209,7 +213,12 @@ class Agentor(AgentorBase):
             else:
                 return await asyncio.gather(
                     *[
-                        Runner.run(self.agent, task, context=CelestoConfig())
+                        Runner.run(
+                            self.agent,
+                            task,
+                            context=CelestoConfig(),
+                            max_turns=max_turns,
+                        )
                         for task in input
                     ],
                     return_exceptions=True,
