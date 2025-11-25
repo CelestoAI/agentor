@@ -82,6 +82,16 @@ exclude = [
 [tool.uv]
 package = true
 
+[tool.isort]
+profile = "black"
+src_paths = ["src"]
+
+[tool.ruff]
+src = ["src"]
+
+[tool.ruff.lint]
+extend-select = ["I"]  # Enable import sorting (isort) in addition to default rules
+
 [dependency-groups]
 dev = [
     "coverage>=7.10.2",
