@@ -9,6 +9,10 @@ except ImportError:
     WebClient = None
     SlackApiError = Exception
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class SlackTool(BaseTool):
     name = "slack"
@@ -29,6 +33,7 @@ class SlackTool(BaseTool):
             response = self.client.chat_postMessage(channel=channel, text=text)
             return f"Message sent: {response['ts']}"
         except SlackApiError as e:
+            logger.exception("Slack API Error", e)
             return f"Slack API Error: {e.response['error']}"
         except Exception as e:
             return f"Error sending message: {str(e)}"
@@ -41,6 +46,8 @@ class SlackTool(BaseTool):
             channels = response["channels"]
             return "\n".join([f"#{c['name']} ({c['id']})" for c in channels])
         except SlackApiError as e:
+            logger.exception("Slack API Error", e)
             return f"Slack API Error: {e.response['error']}"
         except Exception as e:
+            logger.error(f"Error listing channels: {str(e)}")
             return f"Error listing channels: {str(e)}"
