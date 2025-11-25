@@ -2,7 +2,7 @@ import warnings
 
 from agents import function_tool
 
-from agentor.agents.core import Agentor, CelestoMCPHub, ModelSettings, LitellmModel
+from agentor.agents.core import Agentor, CelestoMCPHub, LitellmModel, ModelSettings
 from agentor.sdk.client import CelestoSDK
 
 from .memory.api import Memory

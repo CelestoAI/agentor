@@ -15,13 +15,21 @@ from typing import (
     Union,
 )
 
-from agents.models.default_models import get_default_model_settings
 import uvicorn
 from a2a import types as a2a_types
 from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
-from agents import Agent, AgentOutputSchemaBase, FunctionTool, Runner, function_tool
+from agents import (
+    Agent,
+    AgentOutputSchemaBase,
+    FunctionTool,
+    ModelSettings,
+    Runner,
+    function_tool,
+    set_default_openai_key,
+)
 from agents.extensions.models.litellm_model import LitellmModel
 from agents.mcp import MCPServerStreamableHttp
+from agents.models.default_models import get_default_model_settings
 from fastapi import FastAPI
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
@@ -31,7 +39,6 @@ from agentor.output_text_formatter import AgentOutput, format_stream_events
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.tools.base import BaseTool
 from agentor.tools.registry import CelestoConfig, ToolRegistry
-from agents import ModelSettings
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +162,9 @@ class Agentor(AgentorBase):
 
         if model_settings is None:
             model_settings = get_default_model_settings()
+
+        if self.llm_api_key:
+            set_default_openai_key(self.llm_api_key)
 
         self.agent: Agent = Agent(
             name=name,
