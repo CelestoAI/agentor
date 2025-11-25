@@ -4,6 +4,7 @@ from .exa import ExaSearchTool
 from .fetch import FetchTool
 from .git import GitTool
 from .github import GitHubTool
+from .gmail import GmailTool
 from .postgres import PostgreSQLTool
 from .slack import SlackTool
 from .timezone import TimezoneTool
@@ -17,6 +18,7 @@ __all__ = [
     "FetchTool",
     "GitTool",
     "GitHubTool",
+    "GmailTool",
     "PostgreSQLTool",
     "SlackTool",
     "TimezoneTool",
