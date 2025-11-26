@@ -428,7 +428,7 @@ class CelestoMCPHub:
         cache_tools_list: bool = True,
         api_key: Optional[str] = None,
     ) -> None:
-        api_key = api_key or celesto_config.api_key
+        api_key = api_key or celesto_config.api_key.get_secret_value()
         if api_key is None:
             raise ValueError("API key is required to use the Celesto MCP Hub.")
         self.mcp_server = MCPServerStreamableHttp(
