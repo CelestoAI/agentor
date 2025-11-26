@@ -76,6 +76,33 @@ def get_context() -> Context:
     return Context(headers=headers, cookies=cookies)
 
 
+def get_cookies() -> Dict[str, str]:
+    request = _request_context.get()
+    if request is None:
+        return {}
+    return dict(request.cookies)
+
+
+def get_headers() -> Dict[str, str]:
+    request = _request_context.get()
+    if request is None:
+        return {}
+    return dict(request.headers)
+
+
+def get_token() -> str:
+    """Get the token from the request headers.
+    Returns:
+        The token from the request headers. Doesn't include the "Bearer " prefix.
+        Returns None if no token is found.
+    """
+    headers = get_headers()
+    auth = headers.get("Authorization", None) or headers.get("authorization", None)
+    if auth is None:
+        return None
+    return auth.split(" ")[1]
+
+
 @dataclass
 class ToolMetadata:
     func: Callable
