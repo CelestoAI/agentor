@@ -35,16 +35,13 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from agentor.agents.a2a import A2AController, AgentSkill
+from agentor.config import celesto_config
 from agentor.output_text_formatter import AgentOutput, format_stream_events
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.tools.base import BaseTool
 from agentor.tools.registry import CelestoConfig, ToolRegistry
 
 logger = logging.getLogger(__name__)
-
-
-CELESTO_BASE_URL = os.environ.get("CELESTO_BASE_URL", "https://api.celesto.ai/v1")
-CELESTO_API_KEY = os.environ.get("CELESTO_API_KEY")
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -431,13 +428,13 @@ class CelestoMCPHub:
         cache_tools_list: bool = True,
         api_key: Optional[str] = None,
     ) -> None:
-        api_key = api_key or CELESTO_API_KEY
+        api_key = api_key or celesto_config.api_key
         if api_key is None:
             raise ValueError("API key is required to use the Celesto MCP Hub.")
         self.mcp_server = MCPServerStreamableHttp(
             name="Celesto AI MCP Server",
             params={
-                "url": f"{CELESTO_BASE_URL}/mcp",
+                "url": f"{celesto_config.base_url}/mcp",
                 "headers": {"Authorization": f"Bearer {api_key}"},
                 "timeout": timeout,
                 "cache_tools_list": cache_tools_list,
