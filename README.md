@@ -85,45 +85,22 @@ curl -X 'POST' \
 }'
 ```
 
-## MCP Hub
+## Build a custom MCP Server with LiteMCP
 
-Integrating multiple MCP servers usually means maintaining OAuth flows, tracking version drift, and wiring up streaming support before your agent can run.
-
-Enable Agentor’s managed MCP Hub. Connectors arrive pre-authenticated, version-locked, and streaming-ready, while the hub takes care of discovery, retries, and lifecycle management.
+Agentor enables you to build a custom [MCP Server](https://modelcontextprotocol.io) using LiteMCP. You can run it inside a FastAPI application or as a standalone MCP server.
 
 ```python
-import asyncio, os
-from agentor import Agentor, CelestoMCPHub
-
-
-async def main() -> None:
-    async with CelestoMCPHub() as hub:
-        agent = Agentor(
-            name="Weather Agent",
-            model="gpt-5-mini",
-            tools=[hub],  # Auto-registers 10+ managed connectors
-        )
-        result = await agent.arun("What is the weather in London?")
-        print(result)
-
-
-asyncio.run(main())
-```
-
-## LiteMCP - Build a custom MCP Server
-
-Lightweight [Model Context Protocol](https://modelcontextprotocol.io) server with FastAPI-like decorators:
-
-```python
-from agentor.mcp import LiteMCP
+from agentor.mcp import LiteMCP, get_token
 
 app = LiteMCP(name="my-server", version="1.0.0")
 
-
-@app.tool(description="Get weather")
+@app.tool(description="Get weather for a given location")
 def get_weather(location: str) -> str:
-    return f"Weather in {location}: Sunny, 72°F"
+    token = get_token()  # Access the request-level authorization token
+    if token != "SOME_SECRET":
+        return "Not authorized"
 
+    return f"Weather in {location}: Sunny, 72°F"
 
 if __name__ == "__main__":
     app.run()  # or: uvicorn server:app
