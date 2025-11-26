@@ -53,7 +53,7 @@ pip install git+https://github.com/celestoai/agentor@main
 
 </details>
 
-### Build and Deploy an Agent
+## Build and Deploy an Agent
 
 Build an Agent, connect external tools or MCP Server and serve as an API in just a few lines of code:
 
