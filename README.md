@@ -85,6 +85,20 @@ curl -X 'POST' \
 }'
 ```
 
+This agent can be deployed to any cloud environment. Celesto AI also offers a platform optimized for serverless agent hosting.
+
+To deploy using Celesto, run:
+
+```bash
+celesto deploy
+```
+
+Once deployed, your agent will be accessible via a REST endpoint, for example:
+
+```bash
+https://api.celesto.ai/deploy/apps/<app-name>
+```
+
 ## Build a custom MCP Server with LiteMCP
 
 Agentor enables you to build a custom [MCP Server](https://modelcontextprotocol.io) using LiteMCP. You can run it inside a FastAPI application or as a standalone MCP server.
