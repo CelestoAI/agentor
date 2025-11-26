@@ -122,15 +122,15 @@ if __name__ == "__main__":
 
 ## Agent-to-Agent (A2A) Protocol
 
-The A2A Protocol defines standard specifications for agent communication and message formatting, enabling seamless interoperability between different AI agents. Agentor provides built-in A2A support, making it effortless to create agents that can discover, communicate, and collaborate with other A2A-compatible agents.
+The A2A Protocol defines standard specifications for agent communication and message formatting, enabling seamless interoperability between different AI agents.
 
 **Key Features:**
-
 - **Standard Communication**: JSON-RPC based messaging with support for both streaming and non-streaming responses
 - **Agent Discovery**: Automatic agent card generation at `/.well-known/agent-card.json` describing agent capabilities, skills, and endpoints
 - **Rich Interactions**: Built-in support for tasks, status updates, and artifact sharing between agents
 
-**Quick Example:**
+
+Agentor makes it easy to serve any agent as an A2A protocol.
 
 ```python
 from agentor import Agentor
