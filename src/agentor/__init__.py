@@ -5,7 +5,6 @@ from agents import function_tool
 from agentor.agents.core import Agentor, CelestoMCPHub, LitellmModel, ModelSettings
 from agentor.sdk.client import CelestoSDK
 
-from .memory.api import Memory
 from .output_text_formatter import pydantic_to_xml
 from .proxy import create_proxy
 from .utils import AppContext
@@ -28,7 +27,7 @@ __all__ = [
 ]
 
 
-# Lazy import agents to avoid triggering Google agent initialization
+# Lazy import agents and Memory to avoid triggering heavy dependency loading
 def __getattr__(name):
     if name == "agents":
         import importlib
@@ -37,4 +36,9 @@ def __getattr__(name):
         # Cache the module to avoid repeated imports
         globals()["agents"] = agents_module
         return agents_module
+    if name == "Memory":
+        from .memory.api import Memory
+
+        globals()["Memory"] = Memory
+        return Memory
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

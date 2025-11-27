@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from superauth.google import CalendarAPI, GmailAPI
 
-from agentor.memory.api import Memory
+if TYPE_CHECKING:
+    from agentor.memory.api import Memory
 
 
 @dataclass
