@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import uvicorn
@@ -6,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from rich import print as print_rich
 
 from .api_router import MCPAPIRouter
+
+logger = logging.getLogger(__name__)
 
 
 class LiteMCP(MCPAPIRouter):
@@ -52,7 +55,7 @@ class LiteMCP(MCPAPIRouter):
         """
         await self.app(scope, receive, send)
 
-    def run(
+    def serve(
         self,
         host: str = "0.0.0.0",
         port: int = 8000,
@@ -75,3 +78,8 @@ class LiteMCP(MCPAPIRouter):
         uvicorn_config = {"host": host, "port": port, **uvicorn_kwargs}
         print_rich(f"Running MCP server at http://{host}:{port}{self.prefix}")
         uvicorn.run(self.app, **uvicorn_config)
+
+    def run(self, *args, **kwargs):
+        """Run the MCP server using uvicorn"""
+        logger.warning("This method is deprecated. Use serve() instead.")
+        return self.serve(*args, **kwargs)
