@@ -106,18 +106,19 @@ Agentor enables you to build a custom [MCP Server](https://modelcontextprotocol.
 ```python
 from agentor.mcp import LiteMCP, get_token
 
-app = LiteMCP(name="my-server", version="1.0.0")
+mcp = LiteMCP(name="my-server", version="1.0.0")
 
-@app.tool(description="Get weather for a given location")
+@mcp.tool(description="Get weather for a given location")
 def get_weather(location: str) -> str:
-    token = get_token()  # Access the request-level authorization token
+
+    # *********** Control authentication ***********
+    token = get_token()
     if token != "SOME_SECRET":
         return "Not authorized"
 
     return f"Weather in {location}: Sunny, 72°F"
 
-if __name__ == "__main__":
-    app.run()  # or: uvicorn server:app
+mcp.serve()
 ```
 
 ### LiteMCP vs FastMCP
