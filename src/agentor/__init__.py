@@ -18,7 +18,6 @@ __all__ = [
     "create_proxy",
     "pydantic_to_xml",
     "AppContext",
-    "Memory",
     "CelestoSDK",
     "function_tool",
     "CelestoMCPHub",
@@ -27,7 +26,7 @@ __all__ = [
 ]
 
 
-# Lazy import agents and Memory to avoid triggering heavy dependency loading
+# Lazy import agents to avoid triggering Google agent initialization
 def __getattr__(name):
     if name == "agents":
         import importlib
@@ -36,9 +35,4 @@ def __getattr__(name):
         # Cache the module to avoid repeated imports
         globals()["agents"] = agents_module
         return agents_module
-    if name == "Memory":
-        from .memory.api import Memory
-
-        globals()["Memory"] = Memory
-        return Memory
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
