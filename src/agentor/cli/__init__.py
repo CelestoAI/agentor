@@ -1,6 +1,3 @@
-from .a2a import app as a2a_app
-from .core import app
-
-app.add_typer(a2a_app, name="a2a")
+from celesto_cli import app
 
 __all__ = ["app"]

@@ -50,7 +50,7 @@ issues = "https://github.com/CelestoAI/agentor/issues"
 
 
 [project.scripts]
-celesto="agentor.cli:app"
+celesto="celesto_cli:app"
 
 [project.optional-dependencies]
 exa = ["exa-py>=1.0.0"]

@@ -1,5 +1,4 @@
 import typer
-from fastmcp import FastMCP
 
 app = typer.Typer()
 
@@ -19,6 +18,8 @@ def create_proxy(remote_url: str, name: str | None = None):
         FastMCP: The proxy server.
     """
     try:
+        from fastmcp import FastMCP
+
         mcp_server = FastMCP.as_proxy(remote_url, name=name)
         mcp_server.run()
     except Exception as e:
