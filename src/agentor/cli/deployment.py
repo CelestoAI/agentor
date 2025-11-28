@@ -205,20 +205,20 @@ def list_deployments(
             title="🚀 Deployments", show_header=True, header_style="bold cyan"
         )
         table.add_column("Name", style="green")
-        table.add_column("ID", style="dim")
         table.add_column("Status", style="cyan")
         table.add_column("Created At", style="magenta")
         table.add_column("URL", style="blue")
 
         for deployment in deployments:
             # Construct the cloud URL
-            deployment_id = deployment.get("id", "N/A")
             deployment_name = deployment.get("name")
             status = deployment.get("status")
             if deployment_name and status == "READY":
                 cloud_url = (
                     f"https://api.celesto.ai/v1/deploy/apps/{deployment_name}/chat"
                 )
+            elif status == "FAILED":
+                cloud_url = "-"
             elif status == "READY":
                 cloud_url = "Name unavailable"
             else:
@@ -226,9 +226,6 @@ def list_deployments(
 
             table.add_row(
                 deployment.get("name", "N/A"),
-                deployment_id[:8] + "..."
-                if deployment_id != "N/A"
-                else "N/A",  # Shorten ID
                 deployment.get("status", "N/A"),
                 deployment.get("created_at", "N/A").split("T")[0]
                 if deployment.get("created_at")
