@@ -1,1 +1,1 @@
-agentor==0.0.4
+agentor>=0.0.15
