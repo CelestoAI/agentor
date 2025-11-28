@@ -10,12 +10,13 @@ class LLM:
     def _prepare_tools(self, tools: list[FunctionTool]):
         if not tools:
             return
-        tools = []
+        json_tools = []
         for tool in tools:
-            tools.append(
+            json_tools.append(
                 {
                     "name": tool.name,
                     "description": tool.description,
+                    "type": "function",
                     "parameters": {
                         "type": "object",
                         "properties": tool.params_json_schema["properties"],
@@ -23,11 +24,16 @@ class LLM:
                     },
                 }
             )
-        return tools
+        return json_tools
 
     def chat(self, input: str, tools: list[FunctionTool] | None = None):
-        if tools is not None:
+        json_tools = None
+        if tools:
             json_tools = self._prepare_tools(tools)
+
+        print(tools)
+        print(json_tools)
+        breakpoint()
 
         response = responses(
             model=self.model,
