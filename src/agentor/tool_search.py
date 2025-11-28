@@ -55,6 +55,14 @@ class ToolSearch(BaseTool):
 
     @capability
     def tool(self, query: str, score_threshold: float = 0.25):
+        """
+        Search for a tool based on a query and return the tool.
+        Args:
+            query: The query to search for a tool.
+            score_threshold: The threshold for the score of the tool.
+        Returns:
+            The tool if found, otherwise None.
+        """
         tool = self.search(query, score_threshold)
         if tool is not None:
             return tool.run(query)
