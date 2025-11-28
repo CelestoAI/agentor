@@ -35,19 +35,12 @@ except Exception as e:
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context):
     if ctx.invoked_subcommand is None:
-        print("""
-[bold green]
-    ╭──────────────╮
-    │   agentor    │
-    ╰──────────────╯
-        LLMs in
-        ZEN mode
-[/bold green]
-
-[bold cyan]🚀 Quick Start:[/bold cyan]
-  agentor setup-google  # Set up Gmail/Calendar access
-  agentor chat          # Start chatting with your AI agent
-
+        print("""[bold orange_red1]
+    ╭──────────────────────────────────────────────────────────────────────╮
+    │   Agentor - Fastest way to build, prototype and deploy AI Agents.    │
+    │                         [italic][link=https://celesto.ai]by Celesto AI[/link][/italic]                                │
+    ╰──────────────────────────────────────────────────────────────────────┘
+[/bold orange_red1]
 """)
         typer.echo(ctx.get_help())
 
