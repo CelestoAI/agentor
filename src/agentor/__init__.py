@@ -1,12 +1,12 @@
 import warnings
 
+breakpoint()
 from agents import function_tool
 
 from agentor.agents.core import Agentor, CelestoMCPHub, LitellmModel, ModelSettings
 from agentor.sdk.client import CelestoSDK
 
 from .output_text_formatter import pydantic_to_xml
-from .proxy import create_proxy
 from .utils import AppContext
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -15,7 +15,6 @@ __version__ = "0.0.15"
 
 __all__ = [
     "Agentor",
-    "create_proxy",
     "pydantic_to_xml",
     "AppContext",
     "CelestoSDK",

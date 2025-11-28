@@ -2,11 +2,12 @@ import typer
 from rich import print
 from rich.console import Console
 
-from agentor import proxy
+breakpoint()
 from agentor.cli.deployment import deploy, list_deployments
+from agentor.mcp.proxy import app as proxy_app
 
 app = typer.Typer()
-app.add_typer(proxy.app)
+app.add_typer(proxy_app)
 
 # Add deployment commands at top level
 app.command("deploy")(deploy)
