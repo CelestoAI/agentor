@@ -4,7 +4,7 @@ import Stemmer
 from agentor.tools.base import BaseTool
 
 
-class ToolSearch(BaseTool):
+class ToolSearch:
     def __init__(self):
         self._collection_name = "tool_search"
         self._tools = list[BaseTool]()
