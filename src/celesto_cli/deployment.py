@@ -83,7 +83,7 @@ def deploy(
         typer.Argument(
             ...,
             help="Path to the folder containing your agent code",
-            default_factory=lambda: os.getcwd(),
+            default_factory=os.getcwd,
         ),
     ],
     name: Annotated[
