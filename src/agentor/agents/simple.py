@@ -1,5 +1,9 @@
-from agents.tool import FunctionTool
+import json
+from typing import Any, Dict, List, Tuple
+
 from litellm import responses
+
+from agentor.agents.tool_convertor import ToolConvertor
 
 
 class LLM:
@@ -7,34 +11,30 @@ class LLM:
         self.model = model
         self._api_key = api_key
 
-    def _prepare_tools(self, tools: list[FunctionTool]):
+    def _prepare_tools(
+        self, tools: List[ToolConvertor]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, ToolConvertor]]:
         if not tools:
-            return
-        json_tools = []
-        functions = {}
+            return [], {}
+        json_tools: List[Dict[str, Any]] = []
+        functions: Dict[str, ToolConvertor] = {}
         for tool in tools:
+            if not isinstance(tool, ToolConvertor):
+                raise TypeError(
+                    f"Unsupported tool type '{type(tool).__name__}'. Expected ToolConvertor."
+                )
             functions[tool.name] = tool
-            json_tools.append(
-                {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "type": "function",
-                    "parameters": {
-                        "type": "object",
-                        "properties": tool.params_json_schema["properties"],
-                        "required": tool.params_json_schema["required"],
-                    },
-                }
-            )
+            json_tools.append(tool.to_llm_function())
         return json_tools, functions
 
     def chat(
         self,
         input: str,
-        tools: list[FunctionTool] | None = None,
+        tools: List[ToolConvertor] | None = None,
         call_tools: bool = True,
     ):
-        json_tools = None
+        json_tools: List[Dict[str, Any]] | None = None
+        functions: Dict[str, ToolConvertor] = {}
         if tools:
             json_tools, functions = self._prepare_tools(tools)
 
@@ -42,11 +42,20 @@ class LLM:
             model=self.model,
             input=input,
             api_key=self._api_key,
-            tools=json_tools,
+            functions=json_tools,
         )
         if response.output[-1].type == "function_call" and call_tools:
             tool_name = response.output[-1].function_call.name
-            func = functions[tool_name]
-            return func(**response.output[-1].function_call.arguments)
+            func = functions.get(tool_name)
+            if func is None:
+                raise ValueError(f"Tool '{tool_name}' not found in provided tools.")
+
+            arguments = response.output[-1].function_call.arguments
+            if isinstance(arguments, str):
+                try:
+                    arguments = json.loads(arguments)
+                except json.JSONDecodeError:
+                    pass
+            return func(**arguments)
 
         return response
