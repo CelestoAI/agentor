@@ -11,7 +11,9 @@ class LLM:
         if not tools:
             return
         json_tools = []
+        functions = {}
         for tool in tools:
+            functions[tool.name] = tool
             json_tools.append(
                 {
                     "name": tool.name,
@@ -24,16 +26,17 @@ class LLM:
                     },
                 }
             )
-        return json_tools
+        return json_tools, functions
 
-    def chat(self, input: str, tools: list[FunctionTool] | None = None):
+    def chat(
+        self,
+        input: str,
+        tools: list[FunctionTool] | None = None,
+        call_tools: bool = True,
+    ):
         json_tools = None
         if tools:
-            json_tools = self._prepare_tools(tools)
-
-        print(tools)
-        print(json_tools)
-        breakpoint()
+            json_tools, functions = self._prepare_tools(tools)
 
         response = responses(
             model=self.model,
@@ -41,4 +44,9 @@ class LLM:
             api_key=self._api_key,
             tools=json_tools,
         )
+        if response.output[-1].type == "function_call" and call_tools:
+            tool_name = response.output[-1].function_call.name
+            func = functions[tool_name]
+            return func(**response.output[-1].function_call.arguments)
+
         return response
