@@ -39,8 +39,9 @@ class LLM:
     def chat(
         self,
         input: str,
+        instructions: str | None = None,
         tools: List[ToolConvertor] | None = None,
-        call_tools: bool = True,
+        call_tools: bool = False,
     ):
         json_tools: List[Dict[str, Any]] | None = None
         functions: Dict[str, ToolConvertor] = {}
@@ -50,6 +51,7 @@ class LLM:
         response = responses(
             model=self.model,
             input=input,
+            instructions=instructions,
             api_key=self._api_key,
             tools=json_tools,
         )

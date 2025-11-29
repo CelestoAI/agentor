@@ -65,10 +65,12 @@ class ToolSearch:
 
     def to_function_tool(self) -> ToolConvertor:
         """Expose the search capability as a tool callable by the LLM or Agentor."""
+        if self._retriever is None:
+            self._build_retriever()
         if self._tool_wrapper is None:
 
             def _search(
-                query: str, score_threshold: float = 0.25
+                query: str, score_threshold: float = 0.1
             ) -> Optional[Dict[str, str]]:
                 """
                 Search for a tool based on a query.
