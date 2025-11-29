@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Tuple
 import logging
+from typing import Any, Dict, List, Tuple
 
 from litellm import responses
 
@@ -43,20 +43,22 @@ class LLM:
             model=self.model,
             input=input,
             api_key=self._api_key,
-            functions=json_tools,
+            tools=json_tools,
         )
         if response.output[-1].type == "function_call" and call_tools:
-            tool_name = response.output[-1].function_call.name
+            tool_name = response.output[-1].name
             func = functions.get(tool_name)
             if func is None:
                 raise ValueError(f"Tool '{tool_name}' not found in provided tools.")
 
-            arguments = response.output[-1].function_call.arguments
+            arguments = response.output[-1].arguments
             if isinstance(arguments, str):
                 try:
                     arguments = json.loads(arguments)
                 except json.JSONDecodeError as e:
-                    logging.warning(f"Failed to decode JSON arguments for tool function '{tool_name}': {e}. Using raw arguments string.")
+                    logging.warning(
+                        f"Failed to decode JSON arguments for tool function '{tool_name}': {e}. Using raw arguments string."
+                    )
             return func(**arguments)
 
         return response
