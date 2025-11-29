@@ -44,13 +44,10 @@ def greet(name: str) -> str:
 
 @patch("agentor.agents.simple.responses")
 def test_llm_uses_llm_function_format(mock_responses):
-    function_call = MagicMock()
-    function_call.name = "greet"
-    function_call.arguments = {"name": "Alex"}
-
     output_item = MagicMock()
     output_item.type = "function_call"
-    output_item.function_call = function_call
+    output_item.name = "greet"
+    output_item.arguments = {"name": "Alex"}
 
     mock_response = MagicMock()
     mock_response.output = [output_item]
@@ -61,5 +58,5 @@ def test_llm_uses_llm_function_format(mock_responses):
 
     assert result == "Hello Alex"
     assert mock_responses.called
-    sent_tools = mock_responses.call_args.kwargs["functions"]
+    sent_tools = mock_responses.call_args.kwargs["tools"]
     assert sent_tools[0]["name"] == "greet"
