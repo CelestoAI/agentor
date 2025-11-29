@@ -27,6 +27,7 @@ __all__ = [
     "ModelSettings",
     "LitellmModel",
     "LLM",
+    "ToolSearch",
 ]
 
 
