@@ -6,6 +6,7 @@ from agentor.agents.core import Agentor, CelestoMCPHub, LitellmModel, ModelSetti
 from agentor.agents.simple import LLM
 from agentor.agents.tool_convertor import tool
 from agentor.sdk.client import CelestoSDK
+from agentor.tool_search import ToolSearch
 
 from .output_text_formatter import pydantic_to_xml
 from .utils import AppContext
@@ -20,6 +21,7 @@ __all__ = [
     "AppContext",
     "CelestoSDK",
     "function_tool",
+    "ToolSearch",
     "tool",
     "CelestoMCPHub",
     "ModelSettings",

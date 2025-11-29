@@ -1,16 +1,24 @@
 import json
 import logging
+import os
 from typing import Any, Dict, List, Tuple
 
 from litellm import responses
 
 from agentor.agents.tool_convertor import ToolConvertor
 
+_LLM_API_KEY_ENV_VAR = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY")
+
 
 class LLM:
-    def __init__(self, model: str, api_key: str):
+    def __init__(self, model: str, api_key: str | None = None):
         self.model = model
-        self._api_key = api_key
+        self._api_key = api_key or _LLM_API_KEY_ENV_VAR
+        if self._api_key is None:
+            raise ValueError(
+                "An LLM API key is required to use the LLM. "
+                "Set LLM(api_key=<your_api_key>) or set OPENAI_API_KEY or LLM_API_KEY environment variable."
+            )
 
     def _prepare_tools(
         self, tools: List[ToolConvertor]
