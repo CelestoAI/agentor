@@ -85,7 +85,7 @@ curl -X 'POST' \
 }'
 ```
 
-This agent can be deployed to any cloud environment. Celesto AI also offers a platform optimized for serverless agent hosting.
+Celesto AI provides a developer-first platform for deployment of Agents, MCP Servers, any LLM application.
 
 To deploy using Celesto, run:
 
