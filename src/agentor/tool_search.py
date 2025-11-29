@@ -60,7 +60,11 @@ class ToolSearch:
             doc, score = results[0, i], scores[0, i]
             if score >= score_threshold:
                 match = self._tools[int(doc)]
-                return {"name": match.name, "description": match.description}
+                return {
+                    "tool_index": int(doc),
+                    "tool": match,
+                    "type": "tool_search_output",
+                }
         return None
 
     def to_function_tool(self) -> ToolConvertor:

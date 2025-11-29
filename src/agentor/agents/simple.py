@@ -1,13 +1,26 @@
 import json
 import logging
 import os
-from typing import Any, Dict, List, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, List, Literal, Tuple
 
 from litellm import responses
 
 from agentor.agents.tool_convertor import ToolConvertor
+from agentor.tool_search import ToolSearch
 
 _LLM_API_KEY_ENV_VAR = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY")
+
+
+@dataclass
+class FunctionOutput:
+    type: Literal["function_output"]
+    tool_output: Any
+
+
+@dataclass
+class LLMResponse:
+    outputs: List[FunctionOutput]
 
 
 class LLM:
@@ -21,16 +34,19 @@ class LLM:
             )
 
     def _prepare_tools(
-        self, tools: List[ToolConvertor]
+        self, tools: List[ToolConvertor | ToolSearch]
     ) -> Tuple[List[Dict[str, Any]], Dict[str, ToolConvertor]]:
         if not tools:
             return [], {}
         json_tools: List[Dict[str, Any]] = []
         functions: Dict[str, ToolConvertor] = {}
         for tool in tools:
+            # Allow passing ToolSearch directly; convert to its wrapped FunctionTool.
+            if isinstance(tool, ToolSearch):
+                tool = tool.to_function_tool()
             if not isinstance(tool, ToolConvertor):
                 raise TypeError(
-                    f"Unsupported tool type '{type(tool).__name__}'. Expected ToolConvertor."
+                    f"Unsupported tool type '{type(tool).__name__}'. Expected ToolConvertor or ToolSearch."
                 )
             functions[tool.name] = tool
             json_tools.append(tool.to_llm_function())
@@ -69,6 +85,12 @@ class LLM:
                     logging.warning(
                         f"Failed to decode JSON arguments for tool function '{tool_name}': {e}. Using raw arguments string."
                     )
-            return func(**arguments)
+            return LLMResponse(
+                outputs=[
+                    FunctionOutput(
+                        type="function_output", tool_output=func(**arguments)
+                    )
+                ]
+            )
 
         return response
