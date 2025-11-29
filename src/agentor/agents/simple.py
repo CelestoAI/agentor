@@ -1,5 +1,6 @@
 import json
 from typing import Any, Dict, List, Tuple
+import logging
 
 from litellm import responses
 
@@ -54,8 +55,8 @@ class LLM:
             if isinstance(arguments, str):
                 try:
                     arguments = json.loads(arguments)
-                except json.JSONDecodeError:
-                    pass
+                except json.JSONDecodeError as e:
+                    logging.warning(f"Failed to decode JSON arguments for tool function '{tool_name}': {e}. Using raw arguments string.")
             return func(**arguments)
 
         return response
