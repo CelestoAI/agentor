@@ -64,8 +64,8 @@ class ToolConvertor:
 def tool(
     func: Optional[Callable[..., Any]] = None,
     *,
-    name_override: Optional[str] = None,
-    description_override: Optional[str] = None,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
 ) -> ToolConvertor | Callable[[Callable[..., Any]], ToolConvertor]:
     """
     Decorator to create a dual-mode tool usable by both Agentor and the simple LLM client.
@@ -79,8 +79,8 @@ def tool(
     def decorator(fn: Callable[..., Any]) -> ToolConvertor:
         return ToolConvertor(
             fn,
-            name_override=name_override,
-            description_override=description_override,
+            name_override=name,
+            description_override=description,
         )
 
     if callable(func):
