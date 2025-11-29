@@ -25,6 +25,23 @@ class BaseTool(ABC):
         self.api_key = api_key
         self._mcp_server: Optional[LiteMCP] = None
 
+    def list_capabilities(self) -> List[str]:
+        """List all capabilities of the tool."""
+        return [
+            attr
+            for attr in dir(self)
+            if getattr(getattr(self, attr), "_is_capability", False) is True
+        ]
+
+    def get_capability(self, name: str) -> Callable:
+        """Get a capability of the tool."""
+        capability = getattr(self, name)
+        if getattr(capability, "_is_capability", False) is not True:
+            raise ValueError(
+                f"Capability '{name}' is not a valid capability of tool '{self.name}'"
+            )
+        return capability
+
     def run(self, action: str, **kwargs) -> Any:
         """
         Execute a specific action (capability) of the tool.

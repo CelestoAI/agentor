@@ -35,6 +35,7 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from agentor.agents.a2a import A2AController, AgentSkill
+from agentor.agents.tool_convertor import ToolConvertor
 from agentor.config import celesto_config
 from agentor.output_text_formatter import AgentOutput, format_stream_events
 from agentor.prompts import THINKING_PROMPT, render_prompt
@@ -125,7 +126,15 @@ class Agentor(AgentorBase):
         instructions: Optional[str] = None,
         model: Optional[str | LitellmModel] = "gpt-5-nano",
         tools: Optional[
-            List[Union[FunctionTool, str, MCPServerStreamableHttp, "BaseTool"]]
+            List[
+                Union[
+                    FunctionTool,
+                    str,
+                    MCPServerStreamableHttp,
+                    "BaseTool",
+                    ToolConvertor,
+                ]
+            ]
         ] = None,
         output_type: type[Any] | AgentOutputSchemaBase | None = None,
         debug: bool = False,
@@ -143,6 +152,8 @@ class Agentor(AgentorBase):
                 resolved_tools.append(ToolRegistry.get(tool)["tool"])
             elif isinstance(tool, FunctionTool):
                 resolved_tools.append(tool)
+            elif isinstance(tool, ToolConvertor):
+                resolved_tools.append(tool.to_function_tool())
             elif isinstance(tool, BaseTool):
                 # Convert all capabilities to individual OpenAI functions
                 resolved_tools.extend(tool.to_openai_function())
@@ -151,7 +162,7 @@ class Agentor(AgentorBase):
             else:
                 raise TypeError(
                     f"Unsupported tool type '{type(tool).__name__}'. "
-                    "Expected str, FunctionTool, BaseTool, or MCPServerStreamableHttp."
+                    "Expected str, FunctionTool, ToolConvertor, BaseTool, or MCPServerStreamableHttp."
                 )
 
         self.tools = resolved_tools
