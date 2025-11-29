@@ -21,6 +21,7 @@ __all__ = [
     "AppContext",
     "CelestoSDK",
     "function_tool",
+    "ToolSearch",
     "tool",
     "CelestoMCPHub",
     "ModelSettings",
