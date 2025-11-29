@@ -31,6 +31,7 @@ class ToolConvertor:
         self._llm_function: Dict[str, Any] = {
             "name": self._function_tool.name,
             "description": self._function_tool.description,
+            "type": "function",
             # LiteLLM deprecated `functions` format expects this shape
             "parameters": self._function_tool.params_json_schema,
         }
