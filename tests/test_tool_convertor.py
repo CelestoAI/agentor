@@ -54,9 +54,9 @@ def test_llm_uses_llm_function_format(mock_responses):
     mock_responses.return_value = mock_response
 
     llm = LLM(model="gpt-5-mini", api_key="test")
-    result = llm.chat("Say hi", tools=[greet])
+    result = llm.chat("Say hi", tools=[greet], call_tools=True)
 
-    assert result == "Hello Alex"
+    assert result.outputs[0].tool_output == "Hello Alex"
     assert mock_responses.called
     sent_tools = mock_responses.call_args.kwargs["tools"]
     assert sent_tools[0]["name"] == "greet"

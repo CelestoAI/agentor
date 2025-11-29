@@ -1,7 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
+
 from agentor.agents import Agentor
 from agentor.prompts import THINKING_PROMPT, render_prompt
-from unittest.mock import MagicMock, patch
 
 
 def test_prompt_rendering():
@@ -60,13 +62,14 @@ def test_agentor_create_app():
 
 
 def test_agentor_without_llm_api_key():
-    with pytest.raises(
-        ValueError, match="An LLM API key is required to use the Agentor."
-    ):
-        Agentor(
-            name="Agentor",
-            model="gpt-5-mini",
-        )
+    with patch.dict("os.environ", {}, clear=True):
+        with pytest.raises(
+            ValueError, match="An LLM API key is required to use the Agentor."
+        ):
+            Agentor(
+                name="Agentor",
+                model="gpt-5-mini",
+            )
 
 
 @patch("agentor.agents.core.Runner.run")
