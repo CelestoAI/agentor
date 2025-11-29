@@ -1,69 +1,86 @@
+from __future__ import annotations
+
+from typing import Dict, List, Optional
+
 import bm25s
 import Stemmer
 
-from agentor.tools.base import BaseTool, capability
+from agentor.agents.tool_convertor import ToolConvertor
 
 
-class ToolSearch(BaseTool):
-    name = "tool_search"
-    description = "Search for tools based on a query"
+class ToolSearch:
+    """Enable tool search capability in your LLM.
 
-    def __init__(self):
-        super().__init__()
-        self._collection_name = "tool_search"
-        self._tools = list[BaseTool]()
+    >>> from agentor import ToolSearch, LLM, tool
+    >>> @tool
+    ... def get_weather(city: str):
+    ...     return "The weather in London is sunny"
+    >>> tool_search = ToolSearch()
+    >>> tool_search.add(get_weather)
+    >>> llm = LLM(model="gpt-5-mini", api_key="test")
+    >>> llm.chat("What is the weather in London?", tools=[tool_search.to_function_tool()])
+    >>> # output: {"name": "get_weather", "description": "The weather in London is sunny"}
+    """
+
+    def __init__(self) -> None:
+        self._tools: List[ToolConvertor] = []
         self._stemmer = Stemmer.Stemmer("english")
         self._retriever = None
-
-    def _update_description(self) -> None:
-        capabilities = [
-            func
-            for func in dir(self)
-            if callable(getattr(self, func))
-            and getattr(getattr(self, func), "_is_capability", False)
-        ]
-        if capabilities:
-            self.description += "\n\nAvailable capabilities: " + ", ".join(capabilities)
-            for capability in capabilities:
-                self.description += f"- {capability}\n"
+        self._tool_wrapper: Optional[ToolConvertor] = None
 
     def _build_retriever(self) -> None:
-        corpus = [tool.name + "\n\n" + tool.description for tool in self._tools]
+        """Build a BM25 retriever over the added tools."""
+        corpus = [tool.name + "\n\n" + (tool.description or "") for tool in self._tools]
         corpus_tokens = bm25s.tokenize(corpus, stopwords="en", stemmer=self._stemmer)
         retriever = bm25s.BM25()
         retriever.index(corpus_tokens)
         self._retriever = retriever
-        self._update_description()
 
-    def add(self, tool: BaseTool) -> None:
+    def add(self, tool: ToolConvertor) -> None:
+        """Add a tool to the search index."""
         self._tools.append(tool)
+        self._retriever = None  # rebuild on next search
 
-    def search(self, query: str, score_threshold: float = 0.25):
+    def search(
+        self, query: str, score_threshold: float = 0.25
+    ) -> Optional[Dict[str, str]]:
+        """Search for a tool based on a natural language query."""
+        if not self._tools:
+            return None
+
         if self._retriever is None:
-            print("Building retriever")
             self._build_retriever()
 
         query_tokens = bm25s.tokenize(query, stemmer=self._stemmer)
         results, scores = self._retriever.retrieve(
             query_tokens, k=min(10, len(self._tools))
         )
+
         for i in range(results.shape[1]):
             doc, score = results[0, i], scores[0, i]
             if score >= score_threshold:
-                return self._tools[int(doc)].to_function_tool()
+                match = self._tools[int(doc)]
+                return {"name": match.name, "description": match.description}
         return None
 
-    @capability
-    def tool(self, query: str, score_threshold: float = 0.25):
-        """
-        Search for a tool based on a query and return the tool.
-        Args:
-            query: The query to search for a tool.
-            score_threshold: The threshold for the score of the tool.
-        Returns:
-            The tool if found, otherwise None.
-        """
-        tool = self.search(query, score_threshold)
-        if tool is not None:
-            return tool.run(query)
-        return None
+    def to_function_tool(self) -> ToolConvertor:
+        """Expose the search capability as a tool callable by the LLM or Agentor."""
+        if self._tool_wrapper is None:
+
+            def _search(
+                query: str, score_threshold: float = 0.25
+            ) -> Optional[Dict[str, str]]:
+                """
+                Search for a tool based on a query.
+                Args:
+                    query: The query to search for a tool.
+                    score_threshold: The threshold for the score of the tool.
+                """
+                return self.search(query, score_threshold)
+
+            self._tool_wrapper = ToolConvertor(
+                _search,
+                name_override="tool_search",
+                description_override="Search for a tool based on a query.",
+            )
+        return self._tool_wrapper
