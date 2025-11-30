@@ -24,13 +24,14 @@ It lets you connect LLMs to tools — like email, calendar, CRMs, or any data st
 
 ## Features
 
-| Feature | Description |
-|-----------------------------------------------|-----------------------------------------------|
-| ✅ MCP Hub | Ready-to-use MCP Servers and Agents |
-| 🚀 LiteMCP | The only **full FastAPI compatible** MCP Server with decorator API |
-| 🦾 [A2A Protocol](https://a2a-protocol.org/latest/topics/what-is-a2a/) | [Docs](https://docs.celesto.ai/agentor/agent-to-agent) |
-| ☁️ [Fast Agent deployment](https://github.com/CelestoAI/agentor/tree/main/examples/agent-server) | `celesto deploy` |
-| 🔐 Secure integrations | Email, calendar, CRMs, and more |
+|        Feature            |            Description                   |         Docs
+|---------------------------|------------------------------------------|-----------------------|
+|     🚀 LiteMCP            | The only **full FastAPI compatible** MCP Server with decorator API | [Link](https://docs.celesto.ai/agentor/tools/LiteMCP)
+|   🦾 A2A Protocol         | Multi-agent communication                | [Link](https://docs.celesto.ai/agentor/agent-to-agent)
+|   ☁️ Fast Agent deployment| One click (serverless) deployment        | [Link](https://celesto.ai)
+|   🔐 Secure integrations  | Multi-tenancy and fine-grained authorization | [Link](https://docs.celesto.ai/agentor/tools/auth)
+|   🔍 Tool Search API      | Reduced tool context bloat               | [Link](https://docs.celesto.ai/agentor/tools/tool-search)
+
 
 ## 🚅 Quick Start
 
