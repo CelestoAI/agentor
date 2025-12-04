@@ -33,6 +33,10 @@ dependencies = [
     "pytz>=2024.1",
     "bm25s>=0.2.14",
     "pystemmer>=3.0.0",
+    "sqlalchemy>=2.0.44",
+    "asyncpg>=0.31.0",
+    "greenlet>=3.2.4",
+    "aiosqlite>=0.21.0",
 ]
 license-files = ["LICENSE"]
 authors = [

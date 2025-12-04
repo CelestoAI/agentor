@@ -37,6 +37,13 @@ from pydantic import BaseModel
 from agentor.agents.a2a import A2AController, AgentSkill
 from agentor.agents.tool_convertor import ToolConvertor
 from agentor.config import celesto_config
+from agentor.durable import (
+    DurableAgentRunner,
+    DurableRunHandle,
+    build_async_sessionmaker,
+    create_async_engine_from_url,
+    init_db,
+)
 from agentor.output_text_formatter import AgentOutput, format_stream_events
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.tools.base import BaseTool
@@ -140,6 +147,11 @@ class Agentor(AgentorBase):
         debug: bool = False,
         llm_api_key: Optional[str] = None,
         model_settings: Optional[ModelSettings] = None,
+        durable: bool = False,
+        durable_db_url: Optional[str] = None,
+        durable_inline: bool = True,
+        org_id: Optional[str] = None,
+        deployment_id: Optional[str] = None,
     ):
         super().__init__(name, instructions, model, llm_api_key)
         tools = tools or []
@@ -174,6 +186,14 @@ class Agentor(AgentorBase):
         if self.llm_api_key:
             set_default_openai_key(self.llm_api_key)
 
+        self.durable = durable
+        self.durable_db_url = durable_db_url
+        self.durable_inline = durable_inline
+        self.org_id = org_id
+        self.deployment_id = deployment_id
+        self._durable_runner: DurableAgentRunner | None = None
+        self._durable_engine = None
+
         self.agent: Agent = Agent(
             name=name,
             instructions=instructions,
@@ -184,7 +204,11 @@ class Agentor(AgentorBase):
             model_settings=model_settings,
         )
 
-    def run(self, input: str) -> List[str] | str:
+    def run(self, input: str) -> List[str] | str | DurableRunHandle:
+        if self.durable:
+            runner = self._ensure_durable_runner()
+            handle = runner.start_run_sync(goal=input, inline=self.durable_inline)
+            return handle
         return Runner.run_sync(self.agent, input, context=CelestoConfig())
 
     async def arun(
@@ -203,6 +227,10 @@ class Agentor(AgentorBase):
             max_turns: The maximum number of turns to run the agent.
         """
         if isinstance(input, list):
+            if self.durable:
+                raise ValueError(
+                    "Durable mode currently supports single input per run."
+                )
             futures = []
             if limit_concurrency > 0:
                 semaphore = asyncio.Semaphore(limit_concurrency)
@@ -232,7 +260,29 @@ class Agentor(AgentorBase):
                     return_exceptions=True,
                 )
         else:
+            if self.durable:
+                runner = self._ensure_durable_runner()
+                return await runner.start_run(
+                    goal=input, inline=self.durable_inline, parent_run_id=None
+                )
             return await Runner.run(self.agent, input, context=CelestoConfig())
+
+    def _ensure_durable_runner(self) -> DurableAgentRunner:
+        if self._durable_runner:
+            return self._durable_runner
+
+        engine = create_async_engine_from_url(self.durable_db_url)
+        asyncio.run(init_db(engine))
+        session_factory = build_async_sessionmaker(engine)
+        self._durable_engine = engine
+        self._durable_runner = DurableAgentRunner(
+            agent=self.agent,
+            engine=engine,
+            session_factory=session_factory,
+            org_id=self.org_id,
+            deployment_id=self.deployment_id,
+        )
+        return self._durable_runner
 
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(
