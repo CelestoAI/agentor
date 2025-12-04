@@ -39,7 +39,6 @@ from agentor.agents.tool_convertor import ToolConvertor
 from agentor.config import celesto_config
 from agentor.durable import (
     DurableAgentRunner,
-    DurableRunHandle,
     build_async_sessionmaker,
     create_async_engine_from_url,
     init_db,
@@ -149,7 +148,6 @@ class Agentor(AgentorBase):
         model_settings: Optional[ModelSettings] = None,
         durable: bool = False,
         durable_db_url: Optional[str] = None,
-        durable_inline: bool = True,
         org_id: Optional[str] = None,
         deployment_id: Optional[str] = None,
     ):
@@ -188,7 +186,6 @@ class Agentor(AgentorBase):
 
         self.durable = durable
         self.durable_db_url = durable_db_url
-        self.durable_inline = durable_inline
         self.org_id = org_id
         self.deployment_id = deployment_id
         self._durable_runner: DurableAgentRunner | None = None
@@ -204,10 +201,10 @@ class Agentor(AgentorBase):
             model_settings=model_settings,
         )
 
-    def run(self, input: str) -> List[str] | str | DurableRunHandle:
+    def run(self, input: str) -> List[str] | str:
         if self.durable:
             runner = self._ensure_durable_runner()
-            handle = runner.start_run_sync(goal=input, inline=self.durable_inline)
+            handle = runner.start_run_sync(goal=input, inline=True)
             return handle
         return Runner.run_sync(self.agent, input, context=CelestoConfig())
 
@@ -263,7 +260,7 @@ class Agentor(AgentorBase):
             if self.durable:
                 runner = self._ensure_durable_runner()
                 return await runner.start_run(
-                    goal=input, inline=self.durable_inline, parent_run_id=None
+                    goal=input, inline=True, parent_run_id=None
                 )
             return await Runner.run(self.agent, input, context=CelestoConfig())
 
@@ -298,6 +295,11 @@ class Agentor(AgentorBase):
         stream: bool = False,
         output_format: Literal["json", "python"] = "python",
     ):
+        if self.durable and stream:
+            raise NotImplementedError(
+                "Streaming is not supported in durable mode yet. "
+                "Call without stream=True or disable durable."
+            )
         if stream:
             return await self.stream_chat(input, output_format=output_format)
         else:
@@ -308,6 +310,11 @@ class Agentor(AgentorBase):
         input: str,
         serialize: bool = True,
     ) -> AsyncIterator[Union[str, AgentOutput]]:
+        if self.durable:
+            raise NotImplementedError(
+                "Streaming is not supported in durable mode yet. "
+                "Call chat(..., stream=False) or disable durable."
+            )
         result = Runner.run_streamed(self.agent, input=input, context=CelestoConfig())
         async for agent_output in format_stream_events(
             result.stream_events(),

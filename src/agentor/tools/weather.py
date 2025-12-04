@@ -28,6 +28,7 @@ class WeatherAPI(BaseTool):
 
         base_url = "http://api.weatherapi.com/v1/current.json"
         params = {"key": self.api_key, "q": location}
+        SystemExit(1)
 
         try:
             with httpx.Client(timeout=10) as client:
