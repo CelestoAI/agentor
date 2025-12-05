@@ -2,6 +2,7 @@ import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
+from agents import ModelSettings
 
 from agentor.agents import Agentor
 from agentor.prompts import THINKING_PROMPT, render_prompt
@@ -183,8 +184,6 @@ You are a helpful assistant."""
 
 
 def test_agentor_from_md_temperature_merged_with_model_settings(tmp_path):
-    from agents import ModelSettings
-
     md_content = """---
 name: WeatherBot
 temperature: 0.5
@@ -204,8 +203,6 @@ You are a helpful assistant."""
 
 
 def test_agentor_from_md_temperature_not_overridden(tmp_path):
-    from agents import ModelSettings
-
     md_content = """---
 name: WeatherBot
 temperature: 0.5
