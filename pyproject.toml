@@ -12,6 +12,7 @@ dependencies = [
     "fastmcp>=2.7.1",
     "rich>=14.0.0",
     "python-dotenv>=1.0.0",
+    "python-frontmatter>=1.1.0",
     "openai>=1.97.0",
     "google-api-python-client>=2.178.0",
     "google-auth-httplib2>=0.2.0",

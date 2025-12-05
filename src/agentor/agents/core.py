@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import uuid
+from pathlib import Path
 from typing import (
     Any,
     AsyncGenerator,
@@ -15,6 +16,7 @@ from typing import (
     Union,
 )
 
+import frontmatter
 import uvicorn
 from a2a import types as a2a_types
 from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
@@ -131,7 +133,7 @@ class Agentor(AgentorBase):
                     FunctionTool,
                     str,
                     MCPServerStreamableHttp,
-                    "BaseTool",
+                    BaseTool,
                     ToolConvertor,
                 ]
             ]
@@ -182,6 +184,131 @@ class Agentor(AgentorBase):
             mcp_servers=self.mcp_servers or [],
             output_type=output_type,
             model_settings=model_settings,
+        )
+
+    @classmethod
+    def from_md(
+        cls,
+        md_path: str | Path,
+        *,
+        model: Optional[str | LitellmModel] = None,
+        tools: Optional[
+            List[
+                Union[
+                    FunctionTool,
+                    str,
+                    MCPServerStreamableHttp,
+                    BaseTool,
+                    ToolConvertor,
+                ]
+            ]
+        ] = None,
+        output_type: type[Any] | AgentOutputSchemaBase | None = None,
+        debug: bool = False,
+        llm_api_key: Optional[str] = None,
+        model_settings: Optional[ModelSettings] = None,
+    ) -> "Agentor":
+        """
+        Create an Agentor instance from a markdown file.
+
+        Expected markdown structure:
+
+            ---
+            name: Agent name
+            tools: [get_weather, gmail]
+            model: gpt-4o
+            temperature: 0.3
+            ---
+            System prompt goes here
+
+        The `tools` field is optional. Unknown tools are ignored for now to
+        keep the v0 experience simple.
+        """
+        path = Path(md_path)
+        if not path.is_file():
+            raise FileNotFoundError(f"Markdown file not found: {path}")
+
+        post = frontmatter.loads(path.read_text(encoding="utf-8"))
+        metadata = {key.lower(): value for key, value in (post.metadata or {}).items()}
+
+        name = metadata.get("name")
+        if not name:
+            raise ValueError("Agent name is required in the markdown frontmatter.")
+
+        instructions = post.content.strip()
+        if not instructions:
+            raise ValueError("Agent instructions are required in the markdown body.")
+
+        temperature = metadata.get("temperature")
+        parsed_temperature: Optional[float] = None
+        if temperature is not None:
+            try:
+                parsed_temperature = float(temperature)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    "Temperature in markdown frontmatter must be a number."
+                )
+
+        resolved_tools: Optional[
+            List[
+                Union[
+                    FunctionTool,
+                    str,
+                    MCPServerStreamableHttp,
+                    BaseTool,
+                    ToolConvertor,
+                ]
+            ]
+        ]
+        if tools is not None:
+            resolved_tools = tools
+        else:
+            tool_names = metadata.get("tools")
+            if tool_names:
+                if isinstance(tool_names, str):
+                    parsed_tools = [item.strip() for item in tool_names.split(",")]
+                elif isinstance(tool_names, (list, tuple)):
+                    parsed_tools = [str(item).strip() for item in tool_names]
+                else:
+                    raise ValueError(
+                        "Tools in markdown frontmatter must be a string or a list."
+                    )
+                available_tools = set(ToolRegistry.list())
+                unknown_tools = [
+                    tool_name
+                    for tool_name in parsed_tools
+                    if tool_name and tool_name not in available_tools
+                ]
+                if unknown_tools:
+                    logger.warning(
+                        "Ignoring unknown tools in %s: %s",
+                        path,
+                        ", ".join(unknown_tools),
+                    )
+                resolved_tools = [
+                    tool_name
+                    for tool_name in parsed_tools
+                    if tool_name and tool_name in available_tools
+                ] or None
+            else:
+                resolved_tools = None
+
+        resolved_model_settings = model_settings
+        if resolved_model_settings is None and parsed_temperature is not None:
+            resolved_model_settings = ModelSettings(temperature=parsed_temperature)
+
+        metadata_model = metadata.get("model")
+        resolved_model = model or metadata_model or "gpt-5-nano"
+
+        return cls(
+            name=name,
+            instructions=instructions,
+            model=resolved_model,
+            tools=resolved_tools,
+            output_type=output_type,
+            debug=debug,
+            llm_api_key=llm_api_key,
+            model_settings=resolved_model_settings,
         )
 
     def run(self, input: str) -> List[str] | str:
