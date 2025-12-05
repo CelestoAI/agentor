@@ -77,6 +77,9 @@ exclude = [
     "assets",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentor", "src/celesto_cli"]
+
 [tool.uv]
 package = true
 
