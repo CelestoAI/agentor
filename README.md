@@ -100,6 +100,29 @@ Once deployed, your agent will be accessible via a REST endpoint, for example:
 https://api.celesto.ai/deploy/apps/<app-name>
 ```
 
+## Create an Agent from Markdown
+
+Bootstrap an Agent directly from a markdown file with metadata for name, tools, model, and temperature:
+
+```markdown
+---
+name: WeatherBot
+tools: [get_weather]
+model: gpt-4o-mini
+temperature: 0.3
+---
+You are a concise weather assistant.
+```
+
+Load it with:
+
+```python
+from agentor import Agentor
+
+agent = Agentor.from_md("agent.md")
+result = agent.run("Weather in Paris?")
+```
+
 ## Build a custom MCP Server with LiteMCP
 
 Agentor enables you to build a custom [MCP Server](https://modelcontextprotocol.io) using LiteMCP. You can run it inside a FastAPI application or as a standalone MCP server.
