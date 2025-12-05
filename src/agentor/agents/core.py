@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import json
 import logging
 import os
@@ -215,7 +216,7 @@ class Agentor(AgentorBase):
 
             ---
             name: Agent name
-            tools: [get_weather, gmail]
+            tools: ["get_weather", "gmail"]  # or as a string: "get_weather, gmail"
             model: gpt-4o
             temperature: 0.3
             ---
@@ -223,6 +224,9 @@ class Agentor(AgentorBase):
 
         The `tools` field is optional. Unknown tools are ignored for now to
         keep the v0 experience simple.
+
+        Note: If `model_settings` is provided without a temperature, the temperature
+        from the markdown frontmatter will be merged into it.
         """
         path = Path(md_path)
         if not path.is_file():
@@ -294,8 +298,14 @@ class Agentor(AgentorBase):
                 resolved_tools = None
 
         resolved_model_settings = model_settings
-        if resolved_model_settings is None and parsed_temperature is not None:
-            resolved_model_settings = ModelSettings(temperature=parsed_temperature)
+        if parsed_temperature is not None:
+            if resolved_model_settings is None:
+                resolved_model_settings = ModelSettings(temperature=parsed_temperature)
+            elif getattr(resolved_model_settings, "temperature", None) is None:
+                # Merge temperature from markdown into provided model_settings
+                settings_dict = dataclasses.asdict(resolved_model_settings)
+                settings_dict["temperature"] = parsed_temperature
+                resolved_model_settings = ModelSettings(**settings_dict)
 
         metadata_model = metadata.get("model")
         resolved_model = model or metadata_model or "gpt-5-nano"
