@@ -1,9 +1,12 @@
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
+from agents import ModelSettings
 
 from agentor.agents import Agentor
 from agentor.prompts import THINKING_PROMPT, render_prompt
+from agentor.tools.registry import ToolRegistry
 
 
 def test_prompt_rendering():
@@ -91,3 +94,127 @@ async def test_agentor_batch_prompts(mock_run):
     assert len(results) == 2
     assert results[0].final_output == "The weather in London is sunny"
     assert results[1].final_output == "The weather in Paris is sunny"
+
+
+def test_agentor_from_md(tmp_path, caplog):
+    md_content = """---
+name: WeatherBot
+tools:
+  - get_weather
+  - missing_tool
+model: gpt-4o-mini
+temperature: 0.3
+---
+You are a concise weather assistant."""
+    md_file = tmp_path / "agent.md"
+    md_file.write_text(md_content)
+
+    with caplog.at_level(logging.WARNING):
+        agent = Agentor.from_md(md_file, llm_api_key="test-key")
+
+    assert agent.name == "WeatherBot"
+    assert agent.instructions == "You are a concise weather assistant."
+    assert agent.model == "gpt-4o-mini"
+    model_settings = agent.agent.model_settings
+    assert model_settings is not None
+    temperature = getattr(model_settings, "temperature", None)
+    if temperature is None and isinstance(model_settings, dict):
+        temperature = model_settings.get("temperature")
+    assert temperature == 0.3
+    assert len(agent.tools) == 1
+    assert agent.tools[0] is ToolRegistry.get("get_weather")["tool"]
+    assert any("missing_tool" in message for message in caplog.messages)
+
+
+def test_agentor_from_md_missing_frontmatter(tmp_path):
+    md_content = "No frontmatter or metadata block."
+    md_file = tmp_path / "agent.md"
+    md_file.write_text(md_content)
+
+    with pytest.raises(ValueError, match="Agent name"):
+        Agentor.from_md(md_file, llm_api_key="test-key")
+
+
+def test_agentor_from_md_invalid_temperature(tmp_path):
+    md_content = """---
+name: WeatherBot
+temperature: not-a-number
+---
+Be helpful."""
+    md_file = tmp_path / "agent.md"
+    md_file.write_text(md_content)
+
+    with pytest.raises(ValueError, match="Temperature"):
+        Agentor.from_md(md_file, llm_api_key="test-key")
+
+
+def test_agentor_from_md_file_not_found(tmp_path):
+    non_existent = tmp_path / "missing.md"
+    with pytest.raises(FileNotFoundError, match="Markdown file not found"):
+        Agentor.from_md(non_existent, llm_api_key="test-key")
+
+
+def test_agentor_from_md_empty_instructions(tmp_path):
+    md_content = """---
+name: WeatherBot
+---
+"""
+    md_file = tmp_path / "agent.md"
+    md_file.write_text(md_content)
+    with pytest.raises(ValueError, match="instructions are required"):
+        Agentor.from_md(md_file, llm_api_key="test-key")
+
+
+def test_agentor_from_md_tools_as_string(tmp_path, caplog):
+    md_content = """---
+name: WeatherBot
+tools: get_weather, missing_tool
+---
+You are a helpful assistant."""
+    md_file = tmp_path / "agent.md"
+    md_file.write_text(md_content)
+
+    with caplog.at_level(logging.WARNING):
+        agent = Agentor.from_md(md_file, llm_api_key="test-key")
+
+    assert agent.name == "WeatherBot"
+    assert len(agent.tools) == 1
+    assert agent.tools[0] is ToolRegistry.get("get_weather")["tool"]
+    assert any("missing_tool" in message for message in caplog.messages)
+
+
+def test_agentor_from_md_temperature_merged_with_model_settings(tmp_path):
+    md_content = """---
+name: WeatherBot
+temperature: 0.5
+---
+You are a helpful assistant."""
+    md_file = tmp_path / "agent.md"
+    md_file.write_text(md_content)
+
+    # Provide model_settings without temperature - should merge markdown temperature
+    model_settings = ModelSettings(top_p=0.9)
+    agent = Agentor.from_md(
+        md_file, llm_api_key="test-key", model_settings=model_settings
+    )
+
+    assert agent.agent.model_settings.temperature == 0.5
+    assert agent.agent.model_settings.top_p == 0.9
+
+
+def test_agentor_from_md_temperature_not_overridden(tmp_path):
+    md_content = """---
+name: WeatherBot
+temperature: 0.5
+---
+You are a helpful assistant."""
+    md_file = tmp_path / "agent.md"
+    md_file.write_text(md_content)
+
+    # Provide model_settings with temperature - should NOT override with markdown temperature
+    model_settings = ModelSettings(temperature=0.8)
+    agent = Agentor.from_md(
+        md_file, llm_api_key="test-key", model_settings=model_settings
+    )
+
+    assert agent.agent.model_settings.temperature == 0.8
