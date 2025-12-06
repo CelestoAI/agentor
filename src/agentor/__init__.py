@@ -13,7 +13,7 @@ from .utils import AppContext
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-__version__ = "0.0.17.dev0"
+__version__ = "0.0.17.dev1"
 
 __all__ = [
     "Agentor",
