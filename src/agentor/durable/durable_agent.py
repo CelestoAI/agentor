@@ -4,7 +4,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Callable, Dict, List, Literal, Optional
 
 import litellm
 
@@ -109,6 +109,8 @@ class DurableAgent:
                             "status": "pending",
                         },
                     )
+
+                # If we filtered out everything, we need to continue the loop to let LLM try again with the error message
                 continue
             else:
                 # no tools -> treat as final answer
@@ -185,26 +187,13 @@ class DurableAgent:
     def _find_pending_tool_call(
         self, events: List[Dict[str, Any]]
     ) -> Optional[Dict[str, Any]]:
-        # Track the latest status for each tool_call_id
-        tool_status = {}
-        tool_events = {}
+        # With in-place updates, we can just look for the first tool_call with status="pending"
+        # Note: events are loaded sequentially. If we updated the file, the loaded events should reflect "done".
 
         for e in events:
             if e["type"] == "tool_call":
-                tc_id = e["payload"]["tool_call_id"]
-                status = e["payload"].get("status")
-                tool_status[tc_id] = status
-                # Store the event if it's pending, but we might want the pending one specifically to execute it
-                # actually we want the event that has the details (args etc).
-                # Presumable the 'done' event also has them or we just need the id to lookup?
-                # The 'pending' event has the args. The 'done' event kept them too in my implementation.
-                if status == "pending":
-                    tool_events[tc_id] = e
-
-        # return the first one that is still pending
-        for tc_id, status in tool_status.items():
-            if status == "pending":
-                return tool_events[tc_id]
+                if e["payload"].get("status") == "pending":
+                    return e
         return None
 
     def _execute_tool_call(self, run_id: str, tool_call_event: Dict[str, Any]) -> None:
@@ -224,26 +213,12 @@ class DurableAgent:
                     "error": error_msg,
                 },
             )
+            # We treat missing tool as a fatal error for this design
             self._append_event(
                 run_id,
                 "run_status",
                 {"status": "failed", "error": error_msg},
             )
-            # We treat missing tool as a fatal error for this design
-            # Alternatively, we could feed the error back to LLM.
-            # For now, following the design document's flow (implying failure or simple result).
-            # But the prompt said "failed" marker.
-            # Let's return normally after logging failure so run() can see it next loop?
-            # Actually, run() loop continues. If we failed the run, we should probably throw or let next check catch it.
-            # The _is_completed check looks for "completed", not "failed".
-            # Let's double check design.
-            # Design: status = "failed".
-            # So next loop, _is_completed is False. But we have a failure.
-            # We probably need _is_failed check or just return if failed.
-            # Let's leave it as is for now, but maybe the loop should check for failed status too?
-            # The design says: Events... "run_status": optional "completed" / "failed".
-            # And run() returns when "an error occurs (status = 'failed')".
-            # So we should probably handle that in the loop.
             return
 
         tool_fn = self.tools[tool_name]
@@ -260,24 +235,15 @@ class DurableAgent:
                     "output": str(output),  # Ensure string
                 },
             )
-            # mark tool_call as done: append a small status update event?
-            # actually design says: "update the tool_call event"? No, JSONL is append only.
-            # Design says: "mark tool_call as done: append a small status update event"
-            # Wait, the design pseudo code did:
-            # self._append_event(run_id, "tool_call", { **payload, "status": "done" })
-            # This virtually "updates" the state of that tool call if we read strictly latest status.
-            # My _find_pending_tool_call needs to know if a tool call is done.
-            # If I append a new "tool_call" event with same ID and status="done",
-            # _find_pending_tool_call needs to see that.
 
-            self._append_event(
+            # Update the original tool_call status to "done" in the file
+            self._update_event_payload(
                 run_id,
                 "tool_call",
-                {
-                    **payload,
-                    "status": "done",
-                },
+                lambda p: p["tool_call_id"] == tc_id,
+                {"status": "done"},
             )
+
         except Exception as e:
             self._append_event(
                 run_id,
@@ -369,6 +335,44 @@ class DurableAgent:
             tool_choice="auto" if self.tool_schemas else None,
         )
         return response
+
+    def _update_event_payload(
+        self,
+        run_id: str,
+        event_type: str,
+        match_fn: Callable[[Dict[str, Any]], bool],
+        updates: Dict[str, Any],
+    ) -> None:
+        """
+        Rewrites the run log file to update specific events.
+        This is an expensive operation (O(N) read/write), but keeps the log clean as requested.
+        """
+        path = self._log_path(run_id)
+        if not path.exists():
+            return
+
+        # Read ALL events
+        events = []
+        with path.open("r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    events.append(json.loads(line))
+
+        # Update matching events
+        updated = False
+        for e in events:
+            if e["type"] == event_type and match_fn(e["payload"]):
+                e["payload"].update(updates)
+                updated = True
+
+        # Write back ONLY if changed
+        if updated:
+            # Atomic write pattern to avoid corruption
+            temp_path = path.with_suffix(".tmp")
+            with temp_path.open("w", encoding="utf-8") as f:
+                for e in events:
+                    f.write(json.dumps(e) + "\n")
+            temp_path.replace(path)
 
     def _parse_tools(self, tools: List[Any]):
         self.tools = {}
