@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -6,6 +7,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 import litellm
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -390,7 +393,9 @@ class DurableAgent:
                             }
                         )
                     except ValueError:
-                        # Capability name mismatch or not found?
+                        logger.error(
+                            f"Capability name mismatch or not found for tool: {t.name}"
+                        )
                         pass
             elif hasattr(t, "to_llm_function"):  # ToolConvertor
                 self.tools[t.name] = t
