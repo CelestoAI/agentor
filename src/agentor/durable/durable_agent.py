@@ -3,7 +3,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 import litellm
 
@@ -20,7 +20,7 @@ class DurableAgent:
     def __init__(
         self,
         model: str,
-        tools: List[Any] | Dict[str, Callable],
+        tools: List[Any],
         runs_dir: str = "runs",
     ):
         """
@@ -28,7 +28,7 @@ class DurableAgent:
 
         Args:
             model: litellm model name (e.g. "gpt-4-turbo")
-            tools: List of BaseTool/ToolConvertor or Dictionary mapping tool names to callable functions
+            tools: List of BaseTool/ToolConvertor objects
             runs_dir: Directory where run logs will be stored
         """
         self.model = model
@@ -359,54 +359,6 @@ class DurableAgent:
         # I'll implement a VERY basic schema generator here to match `dict[str, callable]` contract
         # so it actually works for simple functions.
 
-        tools_schema = []
-        if self.tools:
-            for name, func in self.tools.items():
-                # This is a naive schema generator
-                tools_schema.append(
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": name,
-                            "description": func.__doc__ or "",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {},  # TODO: Use introspection for real params
-                            },
-                        },
-                    }
-                )
-
-        # Note: In a real robust app, we'd use `pydantic` or `inspect` to generate proper JSON schema.
-        # Given "v1" and "prototype" nature, I will add a TODO or basic support.
-        # Actually, let's check if I can import `tool_convertor`.
-        # usage: from ..agents.tool_convertor import function_to_schema (guessing name)
-
-        # Since I am writing the file now, I'll stick to a placeholder schema generator
-        # that assumes no arguments if not specified, prevents crashing.
-        # Better: use `litellm`'s `utils.function_to_dict` if available?
-        # No, I'll just leave `tools=None` if no schema logic is robustly available in this file,
-        # BUT the agent is useless without tools.
-        # I will leave the tool schema generation as a placeholder or naive implementation.
-
-        # Refined Plan: define a helper `_get_tool_schemas()` using `agentor.sdk` or similar if I knew it.
-        # I'll write the class without complex schema generation first, relying on `litellm` to maybe handle it
-        # if I pass functions? No, litellm expects dict schemas.
-
-        # Let's add a robust-enough introspection inside `_call_llm` or `__init__`.
-        # I will write the code to just try to pass `tools` schemas.
-        # I'll inspect `tools` and if they are simple functions, I'll generate a dummy schema that allows any args,
-        # or just rely on the LLM to hallucinate args correctly (risky).
-
-        # Best bet: Assume existing `agentor` tools convention.
-        # I'll write the code to accept `tools` as a list of dicts (schemas) OR dict of callables.
-        # But the type hint says `Dict[str, Callable]`.
-        # I will just execute `litellm.completion` without tools if `self.tools` is empty.
-        # If `self.tools` is present, I need to pass `tools`.
-
-        # I will check `src/agentor/agents/tool_convertor.py` in next turn to improve this.
-        # For now, I will implement `_call_llm` to just pass `tools=self._get_tool_schemas()`.
-
         response = litellm.completion(
             model=self.model,
             messages=messages,
@@ -415,92 +367,35 @@ class DurableAgent:
         )
         return response
 
-    def _parse_tools(self, tools: List[Any] | Dict[str, Callable]):
-        if isinstance(tools, dict):
-            # Legacy/Simple dict mode - try to best effort schema
-            for name, func in tools.items():
-                self.tools[name] = func
-                # If the func has schema attached (unlikely for raw func), use it
-                if hasattr(func, "params_json_schema"):
-                    # Should verify format, but assume it might be a FunctionTool-like callable
-                    pass
-
-                # Create a generic fallback schema so the LLM at least knows existence
-                # This is what allows plain functions to hopefully work if LLM guesses args right
-                self.tool_schemas.append(
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": name,
-                            "description": func.__doc__ or f"Tool {name}",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {},
-                                "additionalProperties": True,  # Allow any args
-                            },
-                        },
-                    }
-                )
-        elif isinstance(tools, list):
-            for t in tools:
-                if hasattr(t, "to_openai_function"):  # BaseTool
-                    # It returns a list of FunctionTool objects
-                    fns = t.to_openai_function()
-                    for fn in fns:
-                        # Extract the actual callable method from the BaseTool instance
-                        try:
-                            callable_method = t.get_capability(fn.name)
-                            self.tools[fn.name] = callable_method
-                            self.tool_schemas.append(
-                                {
-                                    "type": "function",
-                                    "function": {
-                                        "name": fn.name,
-                                        "description": fn.description,
-                                        "parameters": fn.params_json_schema,
-                                    },
-                                }
-                            )
-                        except ValueError:
-                            # Capability name mismatch or not found?
-                            # Safe fallback: if we can't find it via get_capability,
-                            # skip or warn. But it should exist if to_openai_function found it.
-                            pass
-                elif hasattr(t, "to_llm_function"):  # ToolConvertor
-                    self.tools[t.name] = t
-                    self.tool_schemas.append(t.to_llm_function())
-                elif hasattr(t, "params_json_schema"):  # FunctionTool direct
-                    self.tools[t.name] = t
-                    self.tool_schemas.append(
-                        {
-                            "type": "function",
-                            "function": {
-                                "name": t.name,
-                                "description": t.description,
-                                "parameters": t.params_json_schema,
-                            },
-                        }
-                    )
-                else:
-                    # Fallback for generic callable in list?
-                    if callable(t):
-                        name = getattr(t, "__name__", str(t))
-                        self.tools[name] = t
-                        # fallback schema
+    def _parse_tools(self, tools: List[Any]):
+        self.tools = {}
+        self.tool_schemas = []
+        for t in tools:
+            if hasattr(t, "to_openai_function"):  # BaseTool
+                # It returns a list of FunctionTool objects
+                fns = t.to_openai_function()
+                for fn in fns:
+                    # Extract the actual callable method from the BaseTool instance
+                    try:
+                        callable_method = t.get_capability(fn.name)
+                        self.tools[fn.name] = callable_method
                         self.tool_schemas.append(
                             {
                                 "type": "function",
                                 "function": {
-                                    "name": name,
-                                    "description": t.__doc__ or f"Tool {name}",
-                                    "parameters": {
-                                        "type": "object",
-                                        "properties": {},
-                                        "additionalProperties": True,
-                                    },
+                                    "name": fn.name,
+                                    "description": fn.description,
+                                    "parameters": fn.params_json_schema,
                                 },
                             }
                         )
+                    except ValueError:
+                        # Capability name mismatch or not found?
+                        pass
+            elif hasattr(t, "to_llm_function"):  # ToolConvertor
+                self.tools[t.name] = t
+                self.tool_schemas.append(t.to_llm_function())
+            # Removed direct FunctionTool handling and generic callable fallback as per instructions.
 
     def _get_tool_schemas(self):
         # Deprecated by _parse_tools populating self.tool_schemas

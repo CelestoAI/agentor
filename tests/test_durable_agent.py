@@ -51,67 +51,6 @@ def test_new_run(mock_litellm, clean_runs_dir):
     assert run_file.exists()
 
 
-def test_tool_execution(mock_litellm, clean_runs_dir):
-    # 1. LLM calls tool
-    msg1 = MagicMock()
-    msg1.content = None
-    tc = MagicMock()
-    tc.id = "call_123"
-    tc.function.name = "reverse"
-    tc.function.arguments = '{"text": "abc"}'
-    msg1.tool_calls = [tc]
-
-    # 2. LLM gives final answer after tool
-    msg2 = MagicMock()
-    msg2.content = "cba"
-    msg2.tool_calls = None
-
-    # Setup mock side effects
-    resp1 = MagicMock()
-    resp1.choices = [MagicMock(message=msg1)]
-    resp1.model_dump.return_value = {
-        "choices": [
-            {
-                "message": {
-                    "tool_calls": [
-                        {
-                            "id": "call_123",
-                            "function": {
-                                "name": "reverse",
-                                "arguments": '{"text": "abc"}',
-                            },
-                        }
-                    ]
-                }
-            }
-        ]
-    }
-
-    resp2 = MagicMock()
-    resp2.choices = [MagicMock(message=msg2)]
-    resp2.model_dump.return_value = {"choices": [{"message": {"content": "cba"}}]}
-
-    mock_litellm.completion.side_effect = [resp1, resp2]
-
-    # Tool definition
-    def reverse(text):
-        return text[::-1]
-
-    # Legacy dict mode
-    agent = DurableAgent(
-        model="gpt-4-mini", tools={"reverse": reverse}, runs_dir=str(clean_runs_dir)
-    )
-
-    result = agent.run("Reverse abc")
-
-    assert result.status == "completed"
-    assert result.final_answer == "cba"
-
-    tool_results = [e for e in result.events if e["type"] == "tool_result"]
-    assert len(tool_results) == 1
-    assert tool_results[0]["payload"]["output"] == "cba"
-
-
 def test_resume_run(mock_litellm, clean_runs_dir):
     run_id = "test_resume"
     runs_dir = clean_runs_dir
