@@ -25,6 +25,7 @@ class DurableAgent:
         model: str,
         tools: List[Any],
         runs_dir: str = "runs",
+        verbose: bool = False,
     ):
         """
         Initialize the DurableAgent.
@@ -33,10 +34,12 @@ class DurableAgent:
             model: litellm model name (e.g. "gpt-4-turbo")
             tools: List of BaseTool/ToolConvertor objects
             runs_dir: Directory where run logs will be stored
+            verbose: If True, print run status to stdout.
         """
         self.model = model
         self.runs_dir = Path(runs_dir)
         self.runs_dir.mkdir(parents=True, exist_ok=True)
+        self.verbose = verbose
 
         # Parse tools
         self.tools = {}
@@ -64,9 +67,11 @@ class DurableAgent:
             if not input_text:
                 raise ValueError("input_text is required for a new run")
             run_id = self._new_run(input_text)
-            print(f"--- Starting Run {run_id} ---")
+            if self.verbose:
+                print(f"--- Starting Run {run_id} ---")
         else:
-            print(f"--- Resuming Run {run_id} ---")
+            if self.verbose:
+                print(f"--- Resuming Run {run_id} ---")
         events = self._load_events(run_id)
 
         # If already completed, just return
