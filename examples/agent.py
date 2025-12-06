@@ -1,7 +1,8 @@
-import dotenv
 import asyncio
 
-from agentor.agents import Agentor, get_dummy_weather
+import dotenv
+
+from agentor.core import Agentor, get_dummy_weather
 
 dotenv.load_dotenv()
 

@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 from agents import FunctionTool
 
 from agentor import Agentor, tool
-from agentor.agents.simple import LLM
-from agentor.agents.tool_convertor import ToolConvertor
+from agentor.core.llm import LLM
+from agentor.core.tool_convertor import ToolConvertor
 
 
 @tool
@@ -42,7 +42,7 @@ def greet(name: str) -> str:
     return f"Hello {name}"
 
 
-@patch("agentor.agents.simple.responses")
+@patch("agentor.core.simple.responses")
 def test_llm_uses_llm_function_format(mock_responses):
     output_item = MagicMock()
     output_item.type = "function_call"

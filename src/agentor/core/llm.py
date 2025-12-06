@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Literal, Tuple
 
 from litellm import responses
 
-from agentor.agents.tool_convertor import ToolConvertor
+from agentor.core.tool_convertor import ToolConvertor
 from agentor.tool_search import ToolSearch
 
 _LLM_API_KEY_ENV_VAR = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY")
