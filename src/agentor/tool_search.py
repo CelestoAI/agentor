@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 import bm25s
 import Stemmer
 
-from agentor.agents.tool_convertor import ToolConvertor
+from agentor.core.tool_convertor import ToolConvertor
 
 
 class ToolSearch:

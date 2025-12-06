@@ -2,9 +2,9 @@ import warnings
 
 from agents import function_tool
 
-from agentor.agents.core import Agentor, CelestoMCPHub, LitellmModel, ModelSettings
-from agentor.agents.simple import LLM
-from agentor.agents.tool_convertor import tool
+from agentor.core.agent import Agentor, CelestoMCPHub, LitellmModel, ModelSettings
+from agentor.core.llm import LLM
+from agentor.core.tool_convertor import tool
 from agentor.sdk.client import CelestoSDK
 from agentor.tool_search import ToolSearch
 
@@ -31,13 +31,13 @@ __all__ = [
 ]
 
 
-# Lazy import agents to avoid triggering Google agent initialization
+# Lazy import core to avoid triggering Google agent initialization
 def __getattr__(name):
-    if name == "agents":
+    if name == "core":
         import importlib
 
-        agents_module = importlib.import_module(".agents", package=__name__)
+        agents_module = importlib.import_module(".core", package=__name__)
         # Cache the module to avoid repeated imports
-        globals()["agents"] = agents_module
+        globals()["core"] = agents_module
         return agents_module
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

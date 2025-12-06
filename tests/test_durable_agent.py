@@ -152,7 +152,7 @@ def test_basetool_support(mock_litellm, clean_runs_dir):
     # Verify schema was generated
     assert len(agent.tool_schemas) == 1
     assert agent.tool_schemas[0]["function"]["name"] == "shout"
-    # Ensure parameter schema is present (assuming agents lib does it)
+    # Ensure parameter schema is present (assuming core lib does it)
     props = agent.tool_schemas[0]["function"]["parameters"]["properties"]
     assert "text" in props
 

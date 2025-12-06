@@ -10,7 +10,7 @@ class ToolConvertor:
     """
     Wrapper returned by the @tool decorator.
 
-    - For Agentor usage, convert to an `agents.function_tool` via `to_function_tool`.
+    - For Agentor usage, convert to an `core.function_tool` via `to_function_tool`.
     - For the lightweight LLM client, expose an OpenAI/LiteLLM compatible function
       definition via `to_llm_function`.
     """

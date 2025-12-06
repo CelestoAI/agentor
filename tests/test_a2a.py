@@ -1,8 +1,10 @@
-from agentor.agents.a2a import A2AController
-from typing import Dict, Any
+from typing import Any, Dict
+
 import pytest
-from fastapi.testclient import TestClient
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from agentor.a2a import A2AController
 
 
 @pytest.fixture
