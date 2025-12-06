@@ -42,7 +42,7 @@ def greet(name: str) -> str:
     return f"Hello {name}"
 
 
-@patch("agentor.core.simple.responses")
+@patch("agentor.core.llm.responses")
 def test_llm_uses_llm_function_format(mock_responses):
     output_item = MagicMock()
     output_item.type = "function_call"

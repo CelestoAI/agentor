@@ -18,7 +18,7 @@ def test_prompt_rendering():
     assert "What is the weather in London?" in prompt
 
 
-@patch("agentor.core.core.Runner.run_sync")
+@patch("agentor.core.agent.Runner.run_sync")
 def test_agentor(mock_run_sync):
     mock_run_sync.return_value = "The weather in London is sunny"
     agent = Agentor(
@@ -31,7 +31,7 @@ def test_agentor(mock_run_sync):
     assert "The weather in London is sunny" in result
 
 
-@patch("agentor.core.core.uvicorn.run")
+@patch("agentor.core.agent.uvicorn.run")
 def test_agentor_serve(mock_uvicorn_run):
     agent = Agentor(
         name="Agentor",
@@ -75,7 +75,7 @@ def test_agentor_without_llm_api_key():
             )
 
 
-@patch("agentor.core.core.Runner.run")
+@patch("agentor.core.agent.Runner.run")
 @pytest.mark.asyncio
 async def test_agentor_batch_prompts(mock_run):
     mock_run.side_effect = [
