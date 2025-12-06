@@ -12,7 +12,7 @@ from a2a.types import (
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .schema import (
+from agentor.agents.schema import (
     JSONRPCReturnCodes,
 )
 

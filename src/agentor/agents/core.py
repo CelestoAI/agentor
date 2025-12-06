@@ -37,7 +37,7 @@ from fastapi import FastAPI
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
-from agentor.agents.a2a import A2AController, AgentSkill
+from agentor.a2a import A2AController, AgentSkill
 from agentor.agents.tool_convertor import ToolConvertor
 from agentor.config import celesto_config
 from agentor.output_text_formatter import AgentOutput, format_stream_events
