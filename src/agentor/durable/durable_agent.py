@@ -389,7 +389,7 @@ class DurableAgent:
                 for fn in fns:
                     # Extract the actual callable method from the BaseTool instance
                     try:
-                        callable_method = t.get_capability(fn.name)
+                        callable_method = t._get_capability(fn.name)
                         self.tools[fn.name] = callable_method
                         self.tool_schemas.append(
                             {

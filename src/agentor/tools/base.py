@@ -33,7 +33,7 @@ class BaseTool(ABC):
             if getattr(getattr(self, attr), "_is_capability", False) is True
         ]
 
-    def get_capability(self, name: str) -> Callable:
+    def _get_capability(self, name: str) -> Callable:
         """Get a capability of the tool."""
         capability = getattr(self, name)
         if getattr(capability, "_is_capability", False) is not True:
@@ -89,10 +89,10 @@ class BaseTool(ABC):
 
         # Register all capabilities with LiteMCP
         for attr_name in dir(self):
-            attr = getattr(self, attr_name)
-            if getattr(attr, "_is_capability", False) is True:
-                self._mcp_server.tool(name=attr.__name__, description=attr.__doc__)(
-                    attr
+            func = getattr(self, attr_name)
+            if getattr(func, "_is_capability", False) is True:
+                self._mcp_server.tool(name=func.__name__, description=func.__doc__)(
+                    func
                 )
 
         # LiteMCP run method handles starting the server
