@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, Callable, List, Optional
+from typing import Callable, List, Optional
 
 from agents import FunctionTool, function_tool
 
@@ -41,25 +41,6 @@ class BaseTool(ABC):
                 f"Capability '{name}' is not a valid capability of tool '{self.name}'"
             )
         return capability
-
-    def run(self, action: str, **kwargs) -> Any:
-        """
-        Execute a specific action (capability) of the tool.
-
-        Args:
-            action: The name of the capability to execute.
-            **kwargs: Arguments to pass to the capability.
-        """
-        if not hasattr(self, action):
-            raise ValueError(f"Tool '{self.name}' has no capability '{action}'")
-
-        method = getattr(self, action)
-        if getattr(method, "_is_capability", False) is not True:
-            raise ValueError(
-                f"'{action}' is not a valid capability of tool '{self.name}'"
-            )
-
-        return method(**kwargs)
 
     def to_openai_function(self) -> List[FunctionTool]:
         """Convert all capabilities to OpenAI-compatible FunctionTools."""

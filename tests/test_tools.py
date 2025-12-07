@@ -21,7 +21,7 @@ def test_base_tool_conversion():
             return x + 1
 
     tool = SimpleTool()
-    assert tool.run("increment", x=1) == 2
+    assert tool.increment(x=1) == 2
 
 
 def test_calculator_tool():
@@ -34,8 +34,8 @@ def test_calculator_tool():
     assert "Error" in calc.divide(5, 0)
 
     # Test via dispatcher
-    assert calc.run("add", a=5, b=3) == "8"
-    assert calc.run("multiply", a=2, b=3) == "6"
+    assert calc.add(a=5, b=3) == "8"
+    assert calc.multiply(a=2, b=3) == "6"
 
     # Test to_openai_function
     functions = calc.to_openai_function()
@@ -56,7 +56,7 @@ def test_timezone_tool():
     assert "UTC" in result
 
     # Test via dispatcher
-    result = time_tool.run("get_current_time", timezone="UTC")
+    result = time_tool.get_current_time(timezone="UTC")
     assert isinstance(result, str)
     assert "UTC" in result
 
