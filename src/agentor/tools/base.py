@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, Callable, List, Optional
+from typing import Callable, List, Optional
 
 from agents import FunctionTool, function_tool
 
@@ -33,7 +33,7 @@ class BaseTool(ABC):
             if getattr(getattr(self, attr), "_is_capability", False) is True
         ]
 
-    def get_capability(self, name: str) -> Callable:
+    def _get_capability(self, name: str) -> Callable:
         """Get a capability of the tool."""
         capability = getattr(self, name)
         if getattr(capability, "_is_capability", False) is not True:
@@ -41,34 +41,6 @@ class BaseTool(ABC):
                 f"Capability '{name}' is not a valid capability of tool '{self.name}'"
             )
         return capability
-
-    def run(self, action: str, **kwargs) -> Any:
-        """
-        Execute a specific action (capability) of the tool.
-
-        Args:
-            action: The name of the capability to execute.
-            **kwargs: Arguments to pass to the capability.
-        """
-        if not hasattr(self, action):
-            raise ValueError(f"Tool '{self.name}' has no capability '{action}'")
-
-        method = getattr(self, action)
-        if getattr(method, "_is_capability", False) is not True:
-            raise ValueError(
-                f"'{action}' is not a valid capability of tool '{self.name}'"
-            )
-
-        return method(**kwargs)
-
-    def to_function_tool(self) -> FunctionTool:
-        """Wrap the tool as a FunctionTool for agent consumption."""
-        return function_tool(
-            self.run,
-            name_override=self.name,
-            description_override=self.description,
-            strict_mode=False,
-        )
 
     def to_openai_function(self) -> List[FunctionTool]:
         """Convert all capabilities to OpenAI-compatible FunctionTools."""
@@ -89,10 +61,10 @@ class BaseTool(ABC):
 
         # Register all capabilities with LiteMCP
         for attr_name in dir(self):
-            attr = getattr(self, attr_name)
-            if getattr(attr, "_is_capability", False) is True:
-                self._mcp_server.tool(name=attr.__name__, description=attr.__doc__)(
-                    attr
+            func = getattr(self, attr_name)
+            if getattr(func, "_is_capability", False) is True:
+                self._mcp_server.tool(name=func.__name__, description=func.__doc__)(
+                    func
                 )
 
         # LiteMCP run method handles starting the server

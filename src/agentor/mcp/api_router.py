@@ -571,9 +571,7 @@ class MCPAPIRouter:
 
         def decorator(func: Callable):
             tool_name = name or func.__name__
-            tool_description = (
-                description or (func.__doc__ or f"Tool: {tool_name}").strip()
-            )
+            tool_description = description or (func.__doc__ or "").strip()
             schema = input_schema or self._generate_schema_from_function(func)
             dependencies = self._generate_dependencies_from_function(func)
             self.tools[tool_name] = ToolMetadata(
@@ -598,7 +596,7 @@ class MCPAPIRouter:
 
         def decorator(func: Callable):
             resource_name = name or uri
-            resource_description = description or func.__doc__ or f"Resource: {uri}"
+            resource_description = description or func.__doc__ or ""
 
             self.resources[uri] = ResourceMetadata(
                 func=func,

@@ -1,8 +1,6 @@
 import os
 from unittest.mock import MagicMock, patch
 
-from agents import FunctionTool
-
 from agentor.mcp.server import LiteMCP
 from agentor.tools.base import BaseTool, capability
 from agentor.tools.calculator import CalculatorTool
@@ -23,13 +21,7 @@ def test_base_tool_conversion():
             return x + 1
 
     tool = SimpleTool()
-    fn_tool = tool.to_function_tool()
-
-    assert isinstance(fn_tool, FunctionTool)
-    assert fn_tool.name == "simple_tool"
-    assert fn_tool.description == "A simple tool"
-    # Verify the wrapped function works via dispatcher
-    assert tool.run("increment", x=1) == 2
+    assert tool.increment(x=1) == 2
 
 
 def test_calculator_tool():
@@ -42,8 +34,8 @@ def test_calculator_tool():
     assert "Error" in calc.divide(5, 0)
 
     # Test via dispatcher
-    assert calc.run("add", a=5, b=3) == "8"
-    assert calc.run("multiply", a=2, b=3) == "6"
+    assert calc.add(a=5, b=3) == "8"
+    assert calc.multiply(a=2, b=3) == "6"
 
     # Test to_openai_function
     functions = calc.to_openai_function()
@@ -64,7 +56,7 @@ def test_timezone_tool():
     assert "UTC" in result
 
     # Test via dispatcher
-    result = time_tool.run("get_current_time", timezone="UTC")
+    result = time_tool.get_current_time(timezone="UTC")
     assert isinstance(result, str)
     assert "UTC" in result
 

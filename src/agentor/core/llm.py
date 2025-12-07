@@ -24,8 +24,11 @@ class LLMResponse:
 
 
 class LLM:
-    def __init__(self, model: str, api_key: str | None = None):
+    def __init__(
+        self, model: str, system_prompt: str | None = None, api_key: str | None = None
+    ):
         self.model = model
+        self._system_prompt = system_prompt
         self._api_key = api_key or _LLM_API_KEY_ENV_VAR
         if self._api_key is None:
             raise ValueError(
@@ -55,9 +58,9 @@ class LLM:
     def chat(
         self,
         input: str,
-        instructions: str | None = None,
         tools: List[ToolConvertor] | None = None,
         call_tools: bool = False,
+        previous_response_id: str | None = None,
     ):
         json_tools: List[Dict[str, Any]] | None = None
         functions: Dict[str, ToolConvertor] = {}
@@ -67,9 +70,10 @@ class LLM:
         response = responses(
             model=self.model,
             input=input,
-            instructions=instructions,
+            instructions=self._system_prompt,
             api_key=self._api_key,
             tools=json_tools,
+            previous_response_id=previous_response_id,
         )
         if response.output[-1].type == "function_call" and call_tools:
             tool_name = response.output[-1].name

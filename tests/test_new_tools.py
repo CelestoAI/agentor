@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-
 from agentor.tools.exa import ExaSearchTool
 from agentor.tools.fetch import FetchTool
 from agentor.tools.git import GitTool
@@ -26,8 +25,8 @@ class TestNewTools(unittest.TestCase):
         result = tool.search("query")
         self.assertEqual(result, "search results")
 
-        # Test run dispatcher
-        result = tool.run("search", query="query")
+        # Test direct method call
+        result = tool.search("query")
         self.assertEqual(result, "search results")
 
         # Test to_openai_function
@@ -45,8 +44,8 @@ class TestNewTools(unittest.TestCase):
         result = tool.fetch_url("http://example.com")
         self.assertEqual(result, "content")
 
-        # Test run dispatcher
-        result = tool.run("fetch_url", url="http://example.com")
+        # Test direct method call
+        result = tool.fetch_url("http://example.com")
         self.assertEqual(result, "content")
 
         tools = tool.to_openai_function()
@@ -62,8 +61,8 @@ class TestNewTools(unittest.TestCase):
         result = tool.status("/path/to/repo")
         self.assertEqual(result, "On branch main")
 
-        # Test run dispatcher
-        result = tool.run("status", repo_path="/path/to/repo")
+        # Test direct method call
+        result = tool.status("/path/to/repo")
         self.assertEqual(result, "On branch main")
 
         tools = tool.to_openai_function()
@@ -81,8 +80,8 @@ class TestNewTools(unittest.TestCase):
         result = tool.execute_query("SELECT * FROM table")
         self.assertEqual(result, "[('result',)]")
 
-        # Test run dispatcher
-        result = tool.run("execute_query", query="SELECT * FROM table")
+        # Test direct method call
+        result = tool.execute_query("SELECT * FROM table")
         self.assertEqual(result, "[('result',)]")
 
         tools = tool.to_openai_function()
@@ -103,8 +102,8 @@ class TestNewTools(unittest.TestCase):
         result = tool.get_issue("owner/repo", 1)
         self.assertIn("Issue Title", result)
 
-        # Test run dispatcher
-        result = tool.run("get_issue", repo_name="owner/repo", issue_number=1)
+        # Test direct method call
+        result = tool.get_issue("owner/repo", 1)
         self.assertIn("Issue Title", result)
 
         tools = tool.to_openai_function()
@@ -120,8 +119,8 @@ class TestNewTools(unittest.TestCase):
         result = tool.send_message("#general", "Hello")
         self.assertIn("Message sent", result)
 
-        # Test run dispatcher
-        result = tool.run("send_message", channel="#general", text="Hello")
+        # Test direct method call
+        result = tool.send_message("#general", "Hello")
         self.assertIn("Message sent", result)
 
         tools = tool.to_openai_function()
