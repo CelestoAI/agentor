@@ -5,8 +5,9 @@ from functools import wraps
 from typing import Callable, List, Union
 
 from agents import FunctionTool, RunContextWrapper, function_tool
-from celesto_cli.sdk.client import CelestoSDK
 from dotenv import load_dotenv
+
+from celesto_sdk.sdk.client import CelestoSDK
 
 load_dotenv()
 

@@ -1,12 +1,12 @@
 import warnings
 
 from agents import function_tool
-from celesto_cli.sdk.client import CelestoSDK
 
 from agentor.core.agent import Agentor, CelestoMCPHub, LitellmModel, ModelSettings
 from agentor.core.llm import LLM
 from agentor.core.tool_convertor import tool
 from agentor.tool_search import ToolSearch
+from celesto_sdk.sdk.client import CelestoSDK
 
 from .output_text_formatter import pydantic_to_xml
 from .utils import AppContext
