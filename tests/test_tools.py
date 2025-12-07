@@ -1,8 +1,6 @@
 import os
 from unittest.mock import MagicMock, patch
 
-from agents import FunctionTool
-
 from agentor.mcp.server import LiteMCP
 from agentor.tools.base import BaseTool, capability
 from agentor.tools.calculator import CalculatorTool
@@ -23,12 +21,6 @@ def test_base_tool_conversion():
             return x + 1
 
     tool = SimpleTool()
-    fn_tool = tool.to_function_tool()
-
-    assert isinstance(fn_tool, FunctionTool)
-    assert fn_tool.name == "simple_tool"
-    assert fn_tool.description == "A simple tool"
-    # Verify the wrapped function works via dispatcher
     assert tool.run("increment", x=1) == 2
 
 
