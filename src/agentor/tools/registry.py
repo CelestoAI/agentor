@@ -7,7 +7,7 @@ from typing import Callable, List, Union
 from agents import FunctionTool, RunContextWrapper, function_tool
 from dotenv import load_dotenv
 
-from agentor.sdk.client import CelestoSDK
+from celesto_sdk.sdk.client import CelestoSDK
 
 load_dotenv()
 
