@@ -33,13 +33,11 @@ class BaseTool(ABC):
             if getattr(getattr(self, attr), "_is_capability", False) is True
         ]
 
-    def _get_capability(self, name: str) -> Callable:
+    def _get_tool(self, name: str) -> Callable:
         """Get a capability of the tool."""
         capability = getattr(self, name)
         if getattr(capability, "_is_capability", False) is not True:
-            raise ValueError(
-                f"Capability '{name}' is not a valid capability of tool '{self.name}'"
-            )
+            raise ValueError(f"Tool '{name}' doesn't exist for the class '{self.name}'")
         return capability
 
     def to_openai_function(self) -> List[FunctionTool]:
