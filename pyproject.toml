@@ -53,7 +53,7 @@ issues = "https://github.com/CelestoAI/agentor/issues"
 
 
 [project.scripts]
-celesto="celesto_cli:app"
+celesto="celesto_sdk:app"
 
 [project.optional-dependencies]
 exa = ["exa-py>=1.0.0"]
@@ -79,7 +79,7 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentor", "src/celesto_cli"]
+packages = ["src/agentor", "src/celesto_sdk"]
 
 [tool.uv]
 package = true

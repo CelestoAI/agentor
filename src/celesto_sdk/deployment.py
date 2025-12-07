@@ -10,6 +10,8 @@ from dotenv.main import DotEnv
 from rich.console import Console
 from typing_extensions import Annotated
 
+from celesto_sdk.sdk.client import CelestoSDK
+
 console = Console()
 
 
@@ -146,7 +148,6 @@ def deploy(
         console.print(
             f"🚀 [bold cyan]Deploying[/bold cyan] '{name}' from {folder_path}..."
         )
-        from agentor.sdk.client import CelestoSDK
 
         client = CelestoSDK(final_api_key)
         result = client.deployment.deploy(
@@ -195,8 +196,6 @@ def list_deployments(
 
     # List deployments
     try:
-        from agentor.sdk.client import CelestoSDK
-
         client = CelestoSDK(final_api_key)
         deployments = client.deployment.list()
 
