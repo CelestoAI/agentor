@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+import litellm
 from agents import FunctionTool
 
 from agentor import Agentor, tool
@@ -42,8 +43,8 @@ def greet(name: str) -> str:
     return f"Hello {name}"
 
 
-@patch("agentor.core.llm.litellm.responses")
-def test_llm_uses_llm_function_format(mock_responses):
+@patch("agentor.core.llm.litellm")
+def test_llm_uses_llm_function_format(mock_litellm):
     tool_definition: ToolType = {
         "type": "function",
         "function": {
@@ -62,5 +63,10 @@ def test_llm_uses_llm_function_format(mock_responses):
         },
     }
 
+    mock_litellm.responses.return_value = litellm.responses(
+        model="", input="", mock_response="This is a test."
+    )
+
     llm = LLM(model="gpt-5-mini", api_key="test")
-    llm.chat("", tools=[tool_definition])
+    resp = llm.chat("", tools=[tool_definition])
+    assert resp.output[-1].content[0].text == "This is a test."
