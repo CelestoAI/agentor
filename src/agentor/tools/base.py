@@ -67,3 +67,24 @@ class BaseTool(ABC):
 
         # LiteMCP run method handles starting the server
         self._mcp_server.run(port=port)
+
+    def run(self):
+        raise NotImplementedError(
+            "This method is dynamically registered using the BaseTool.from_function method."
+        )
+
+    @staticmethod
+    def from_function(func: Callable):
+        """Register a function as a tool capability and access using the run method.
+
+        Args:
+            func: The function to be registered.
+
+        Example:
+            >>> from agentor.tools.base import BaseTool
+            >>> def weather_tool(city: str):
+            >>>    "This function returns the weather of the city."
+            >>>    return f"Weather in {city} is warm and sunny."
+            >>> tool = BaseTool.from_function(weather_tool)
+            >>> tool.run("London")  # Output: Weather in London is warm and sunny.
+        """
