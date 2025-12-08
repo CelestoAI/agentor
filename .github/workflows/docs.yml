@@ -1,0 +1,31 @@
+name: docs
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv venv
+          uv sync --group docs
+          uv pip install -e .
+      
+      - name: Build and deploy documentation
+        run: |
+          uv run mkdocs gh-deploy --force

@@ -1,0 +1,82 @@
+site_name: Agentor
+site_description: Fastest way to build, prototype and deploy AI Agents
+site_url: https://celestoai.github.io/agentor
+repo_url: https://github.com/CelestoAI/agentor
+repo_name: CelestoAI/agentor
+
+exclude_docs: |
+  README.md
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep orange
+      accent: orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep orange
+      accent: orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            group_by_category: true
+            show_category_heading: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Guides:
+      - MCP Context: mcp_context.md
+  - API Reference:
+      - Overview: api/index.md
+      - Core:
+          - Agent: api/core/agent.md
+          - LLM: api/core/llm.md
+          - Schema: api/core/schema.md
+          - Tool Convertor: api/core/tool_convertor.md
+      - MCP:
+          - API Router: api/mcp/api_router.md
+          - Server: api/mcp/server.md
+          - Proxy: api/mcp/proxy.md
+      - Tools:
+          - Registry: api/tools/registry.md
+          - Base: api/tools/base.md
+      - Utilities:
+          - Type Helper: api/utils/type_helper.md
+          - Output Text Formatter: api/utils/output_text_formatter.md
+          - Utils: api/utils/utils.md
