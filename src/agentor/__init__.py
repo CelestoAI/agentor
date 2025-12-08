@@ -4,7 +4,7 @@ from agents import function_tool
 
 from agentor.core.agent import Agentor, CelestoMCPHub, LitellmModel, ModelSettings
 from agentor.core.llm import LLM
-from agentor.core.tool_convertor import tool
+from agentor.core.tool import tool
 from agentor.tool_search import ToolSearch
 from celesto_sdk.sdk.client import CelestoSDK
 

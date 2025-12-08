@@ -311,7 +311,7 @@ class DurableAgent:
         # The design says: tools: dict[str, callable].
         # We need to convert these callables to OpenAI tool schemas.
         # For this v1, let's assume we can use a helper or just bare basics.
-        # Since I see 'src/agentor/core/tool_convertor.py' in the file list earlier,
+        # Since I see 'src/agentor/core/tool.py' in the file list earlier,
         # I might use that if available, but for now I'll use litellm's auto-generation or expect the user to have simpler tools.
         # Actually, `litellm` can't automatically convert raw callables to schemas unless we use a helper.
         # BUT the design code commented: # tools=..., # define schema for your scrape_wiki, etc.
@@ -324,7 +324,7 @@ class DurableAgent:
         # The `DurableAgent` receives `Dict[str, Callable]`.
         # I need to generate schemas.
         # For now, I will add a basic schema generator or check if I can reuse `agentor.utils` or similar.
-        # I saw `src/agentor/tool_search.py` and `src/agentor/core/tool_convertor.py`.
+        # I saw `src/agentor/tool_search.py` and `src/agentor/core/tool.py`.
         # I'll optimistically skip complex schema generation for this specific file write
         # and assume the user takes care of it OR I'll add a minimal introspection.
 
@@ -389,7 +389,7 @@ class DurableAgent:
                 for fn in fns:
                     # Extract the actual callable method from the BaseTool instance
                     try:
-                        callable_method = t._get_capability(fn.name)
+                        callable_method = t._get_tool(fn.name)
                         self.tools[fn.name] = callable_method
                         self.tool_schemas.append(
                             {
@@ -408,7 +408,7 @@ class DurableAgent:
                         pass
             elif hasattr(t, "to_llm_function"):  # ToolConvertor
                 self.tools[t.name] = t
-                self.tool_schemas.append(t.to_llm_function())
+                self.tool_schemas.append(t.json_schema())
             # Removed direct FunctionTool handling and generic callable fallback as per instructions.
 
     def _get_tool_schemas(self):

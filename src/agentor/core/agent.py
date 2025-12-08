@@ -39,7 +39,6 @@ from pydantic import BaseModel
 
 from agentor.a2a import A2AController, AgentSkill
 from agentor.config import celesto_config
-from agentor.core.tool_convertor import ToolConvertor
 from agentor.output_text_formatter import AgentOutput, format_stream_events
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.tools.base import BaseTool
@@ -135,7 +134,6 @@ class Agentor(AgentorBase):
                     str,
                     MCPServerStreamableHttp,
                     BaseTool,
-                    ToolConvertor,
                 ]
             ]
         ] = None,
@@ -155,8 +153,6 @@ class Agentor(AgentorBase):
                 resolved_tools.append(ToolRegistry.get(tool)["tool"])
             elif isinstance(tool, FunctionTool):
                 resolved_tools.append(tool)
-            elif isinstance(tool, ToolConvertor):
-                resolved_tools.append(tool.to_function_tool())
             elif isinstance(tool, BaseTool):
                 # Convert all capabilities to individual OpenAI functions
                 resolved_tools.extend(tool.to_openai_function())
@@ -200,7 +196,6 @@ class Agentor(AgentorBase):
                     str,
                     MCPServerStreamableHttp,
                     BaseTool,
-                    ToolConvertor,
                 ]
             ]
         ] = None,
@@ -260,7 +255,6 @@ class Agentor(AgentorBase):
                     str,
                     MCPServerStreamableHttp,
                     BaseTool,
-                    ToolConvertor,
                 ]
             ]
         ]
