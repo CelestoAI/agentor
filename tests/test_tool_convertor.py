@@ -43,7 +43,7 @@ def greet(name: str) -> str:
 
 
 @patch("agentor.core.llm.litellm.responses")
-def test_llm_uses_llm_function_format():
+def test_llm_uses_llm_function_format(mock_responses):
     tool_definition: ToolType = {
         "type": "function",
         "function": {
