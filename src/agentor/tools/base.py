@@ -1,9 +1,11 @@
 from abc import ABC
-from typing import Callable, List, Optional
+from types import FunctionType
+from typing import Callable, List, Optional, Tuple
 
 from agents import FunctionTool, function_tool
 
 from agentor.mcp.server import LiteMCP
+from agentor.types import ToolType
 
 
 def capability(func: Callable):
@@ -18,17 +20,17 @@ class BaseTool(ABC):
     Supports both local execution and MCP serving.
     """
 
-    name: str
-    description: str
+    name: str = "un-named-tool"
+    description: str | None = None
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key
         self._mcp_server: Optional[LiteMCP] = None
 
-    def list_capabilities(self) -> List[str]:
+    def list_capabilities(self) -> List[Tuple[str, FunctionType]]:
         """List all capabilities of the tool."""
         return [
-            attr
+            (attr, getattr(self, attr))
             for attr in dir(self)
             if getattr(getattr(self, attr), "_is_capability", False) is True
         ]
@@ -52,6 +54,20 @@ class BaseTool(ABC):
 
         return tools
 
+    def json_schema(self) -> List[ToolType]:
+        """Convert all capabilities to JSON Schema."""
+        function_tools = self.to_openai_function()
+        result: list[ToolType] = []
+        for func_tool in function_tools:
+            item = {
+                "type": "function",
+                "name": self.name,
+                "description": self.description,
+                "parameters": func_tool.params_json_schema,
+            }
+            result.append(item)
+        return result
+
     def serve(self, name: Optional[str] = None, port: int = 8000):
         """Serve the tool as an MCP server using LiteMCP."""
         server_name = name or self.name
@@ -74,7 +90,9 @@ class BaseTool(ABC):
         )
 
     @staticmethod
-    def from_function(func: Callable) -> "BaseTool":
+    def from_function(
+        func: Callable, name: str | None = None, description: str | None = None
+    ) -> "BaseTool":
         """Register a function as a tool capability and access using the run method.
 
         Args:
@@ -89,10 +107,14 @@ class BaseTool(ABC):
             >>> tool.run("London")  # Output: Weather in London is warm and sunny.
         """
 
-        class NewDynamicTool(BaseTool):
-            name = func.__name__
-            description = func.__doc__
+        tool_name = name or func.__name__
+        tool_description = description or func.__doc__
 
+        class NewDynamicTool(BaseTool):
+            name = tool_name
+            description = tool_description
+
+            @capability
             def run(self, *args, **kwargs) -> Optional[str]:
                 return func(*args, **kwargs)
 

@@ -5,7 +5,7 @@ from agents import FunctionTool
 
 from agentor import Agentor, tool
 from agentor.core.llm import LLM, ToolType
-from agentor.core.tool import AgentTool
+from agentor.core.tool import BaseTool
 
 
 @tool
@@ -15,12 +15,12 @@ def add(a: int, b: int) -> int:
 
 
 def test_tool_decorator_creates_dual_mode_wrapper():
-    assert isinstance(add, AgentTool)
+    assert isinstance(add, BaseTool)
 
-    fn_tool = add.to_function_tool()
+    fn_tool = add.to_openai_function()[0]
     assert isinstance(fn_tool, FunctionTool)
 
-    llm_fn = add.json_schema()
+    llm_fn = add.json_schema()[0]
     assert llm_fn["name"] == "add"
     assert llm_fn["description"]
     assert "properties" in llm_fn["parameters"]

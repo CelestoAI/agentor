@@ -1,44 +1,11 @@
 import os
-from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, TypedDict
+from typing import List, Literal
 
 import litellm
 
+from agentor.types import ToolType
+
 _LLM_API_KEY_ENV_VAR = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY")
-
-
-@dataclass
-class FunctionOutput:
-    type: Literal["function_output"]
-    tool_output: Any
-
-
-@dataclass
-class LLMResponse:
-    outputs: List[FunctionOutput]
-
-
-class ToolParameterProperty(TypedDict, total=False):
-    type: str
-    description: str
-    enum: List[str]
-
-
-class ToolParameters(TypedDict):
-    type: Literal["object"]
-    properties: Dict[str, ToolParameterProperty]
-    required: List[str]
-
-
-class ToolFunction(TypedDict):
-    name: str
-    description: str
-    parameters: ToolParameters
-
-
-class ToolType(TypedDict):
-    type: Literal["function"]
-    function: ToolFunction
 
 
 class LLM:

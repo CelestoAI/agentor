@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 import bm25s
 import Stemmer
 
-from agentor.core.tool import AgentTool
+from agentor.core.tool import BaseTool
 
 
 class ToolSearch:
@@ -23,10 +23,10 @@ class ToolSearch:
     """
 
     def __init__(self) -> None:
-        self._tools: List[AgentTool] = []
+        self._tools: List[BaseTool] = []
         self._stemmer = Stemmer.Stemmer("english")
         self._retriever = None
-        self._tool_wrapper: Optional[AgentTool] = None
+        self._tool_wrapper: Optional[BaseTool] = None
 
     def _build_retriever(self) -> None:
         """Build a BM25 retriever over the added tools."""
@@ -36,7 +36,7 @@ class ToolSearch:
         retriever.index(corpus_tokens)
         self._retriever = retriever
 
-    def add(self, tool: AgentTool) -> None:
+    def add(self, tool: BaseTool) -> None:
         """Add a tool to the search index."""
         self._tools.append(tool)
         self._retriever = None  # rebuild on next search
@@ -67,7 +67,7 @@ class ToolSearch:
                 }
         return None
 
-    def to_function_tool(self) -> AgentTool:
+    def to_function_tool(self) -> BaseTool:
         """Expose the search capability as a tool callable by the LLM or Agentor."""
         if self._retriever is None:
             self._build_retriever()
@@ -84,9 +84,9 @@ class ToolSearch:
                 """
                 return self.search(query, score_threshold)
 
-            self._tool_wrapper = AgentTool(
+            self._tool_wrapper = BaseTool.from_function(
                 _search,
-                name_override="tool_search",
-                description_override="Search for a tool based on a query.",
+                name="tool_search",
+                description="Search for a tool based on a query.",
             )
         return self._tool_wrapper
