@@ -58,7 +58,7 @@ class AgentTool:
         return self._function_tool
 
     def json_schema(self) -> Dict[str, Any]:
-        """Return the LiteLLM-style function definition."""
+        """Return the functional calling JSON schema supported by OpenAI and LiteLLM"""
         return self._tool_json_schema
 
 
