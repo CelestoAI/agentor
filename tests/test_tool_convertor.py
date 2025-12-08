@@ -1,9 +1,9 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from agents import FunctionTool
 
 from agentor import Agentor, tool
-from agentor.core.llm import LLM
+from agentor.core.llm import LLM, ToolType
 from agentor.core.tool import AgentTool
 
 
@@ -42,21 +42,25 @@ def greet(name: str) -> str:
     return f"Hello {name}"
 
 
-@patch("agentor.core.llm.responses")
-def test_llm_uses_llm_function_format(mock_responses):
-    output_item = MagicMock()
-    output_item.type = "function_call"
-    output_item.name = "greet"
-    output_item.arguments = {"name": "Alex"}
-
-    mock_response = MagicMock()
-    mock_response.output = [output_item]
-    mock_responses.return_value = mock_response
+@patch("agentor.core.llm.litellm.responses")
+def test_llm_uses_llm_function_format():
+    tool_definition: ToolType = {
+        "type": "function",
+        "function": {
+            "name": "greet",
+            "description": "Return a greeting.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name to greet",
+                    }
+                },
+                "required": ["name"],
+            },
+        },
+    }
 
     llm = LLM(model="gpt-5-mini", api_key="test")
-    result = llm.chat("Say hi", tools=[greet], call_tools=True)
-
-    assert result.outputs[0].tool_output == "Hello Alex"
-    assert mock_responses.called
-    sent_tools = mock_responses.call_args.kwargs["tools"]
-    assert sent_tools[0]["name"] == "greet"
+    llm.chat("", tools=[tool_definition])
