@@ -4,7 +4,7 @@ from agents import FunctionTool
 
 from agentor import Agentor, tool
 from agentor.core.llm import LLM
-from agentor.core.tool_convertor import ToolConvertor
+from agentor.core.tool import ToolConvertor
 
 
 @tool
