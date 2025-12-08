@@ -5,6 +5,9 @@ from typing import Any, Callable, Optional
 from agentor.tools import BaseTool
 
 
+class AgentTool: ...
+
+
 def tool(
     func: Optional[Callable[..., Any]] = None,
     *,

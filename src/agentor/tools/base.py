@@ -74,7 +74,7 @@ class BaseTool(ABC):
         )
 
     @staticmethod
-    def from_function(func: Callable):
+    def from_function(func: Callable) -> "BaseTool":
         """Register a function as a tool capability and access using the run method.
 
         Args:
@@ -88,3 +88,12 @@ class BaseTool(ABC):
             >>> tool = BaseTool.from_function(weather_tool)
             >>> tool.run("London")  # Output: Weather in London is warm and sunny.
         """
+
+        class NewDynamicTool(BaseTool):
+            name = func.__name__
+            description = func.__doc__
+
+            def run(self, *args, **kwargs) -> Optional[str]:
+                return func(*args, **kwargs)
+
+        return NewDynamicTool()

@@ -39,7 +39,6 @@ from pydantic import BaseModel
 
 from agentor.a2a import A2AController, AgentSkill
 from agentor.config import celesto_config
-from agentor.core.tool import AgentTool
 from agentor.output_text_formatter import AgentOutput, format_stream_events
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.tools.base import BaseTool
@@ -135,7 +134,6 @@ class Agentor(AgentorBase):
                     str,
                     MCPServerStreamableHttp,
                     BaseTool,
-                    AgentTool,
                 ]
             ]
         ] = None,
