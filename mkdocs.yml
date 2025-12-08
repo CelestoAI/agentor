@@ -4,6 +4,9 @@ site_url: https://celestoai.github.io/agentor
 repo_url: https://github.com/CelestoAI/agentor
 repo_name: CelestoAI/agentor
 
+exclude_docs: |
+  README.md
+
 theme:
   name: material
   palette:
