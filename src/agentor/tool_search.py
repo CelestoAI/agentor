@@ -18,7 +18,7 @@ class ToolSearch:
     >>> tool_search = ToolSearch()
     >>> tool_search.add(get_weather)
     >>> llm = LLM(model="gpt-5-mini", api_key="test")
-    >>> llm.chat("What is the weather in London?", tools=[tool_search.to_function_tool()])
+    >>> llm.chat("What is the weather in London?")
     >>> # output: {"name": "get_weather", "description": "The weather in London is sunny"}
     """
 
