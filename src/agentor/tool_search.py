@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 import bm25s
 import Stemmer
 
-from agentor.core.tool import ToolConvertor
+from agentor.core.tool import AgentTool
 
 
 class ToolSearch:
@@ -23,10 +23,10 @@ class ToolSearch:
     """
 
     def __init__(self) -> None:
-        self._tools: List[ToolConvertor] = []
+        self._tools: List[AgentTool] = []
         self._stemmer = Stemmer.Stemmer("english")
         self._retriever = None
-        self._tool_wrapper: Optional[ToolConvertor] = None
+        self._tool_wrapper: Optional[AgentTool] = None
 
     def _build_retriever(self) -> None:
         """Build a BM25 retriever over the added tools."""
@@ -36,7 +36,7 @@ class ToolSearch:
         retriever.index(corpus_tokens)
         self._retriever = retriever
 
-    def add(self, tool: ToolConvertor) -> None:
+    def add(self, tool: AgentTool) -> None:
         """Add a tool to the search index."""
         self._tools.append(tool)
         self._retriever = None  # rebuild on next search
@@ -67,7 +67,7 @@ class ToolSearch:
                 }
         return None
 
-    def to_function_tool(self) -> ToolConvertor:
+    def to_function_tool(self) -> AgentTool:
         """Expose the search capability as a tool callable by the LLM or Agentor."""
         if self._retriever is None:
             self._build_retriever()
@@ -84,7 +84,7 @@ class ToolSearch:
                 """
                 return self.search(query, score_threshold)
 
-            self._tool_wrapper = ToolConvertor(
+            self._tool_wrapper = AgentTool(
                 _search,
                 name_override="tool_search",
                 description_override="Search for a tool based on a query.",

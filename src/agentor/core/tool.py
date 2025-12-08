@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, Optional
 from agents import FunctionTool, function_tool
 
 
-class ToolConvertor:
+class AgentTool:
     """
     Wrapper returned by the @tool decorator.
 
@@ -67,7 +67,7 @@ def tool(
     *,
     name: Optional[str] = None,
     description: Optional[str] = None,
-) -> ToolConvertor | Callable[[Callable[..., Any]], ToolConvertor]:
+) -> AgentTool | Callable[[Callable[..., Any]], AgentTool]:
     """
     Decorator to create a dual-mode tool usable by both Agentor and the simple LLM client.
 
@@ -77,8 +77,8 @@ def tool(
         ...     return "The weather in London is sunny"
     """
 
-    def decorator(fn: Callable[..., Any]) -> ToolConvertor:
-        return ToolConvertor(
+    def decorator(fn: Callable[..., Any]) -> AgentTool:
+        return AgentTool(
             fn,
             name_override=name,
             description_override=description,

@@ -4,7 +4,7 @@ from agents import FunctionTool
 
 from agentor import Agentor, tool
 from agentor.core.llm import LLM
-from agentor.core.tool import ToolConvertor
+from agentor.core.tool import AgentTool
 
 
 @tool
@@ -14,7 +14,7 @@ def add(a: int, b: int) -> int:
 
 
 def test_tool_decorator_creates_dual_mode_wrapper():
-    assert isinstance(add, ToolConvertor)
+    assert isinstance(add, AgentTool)
 
     fn_tool = add.to_function_tool()
     assert isinstance(fn_tool, FunctionTool)
