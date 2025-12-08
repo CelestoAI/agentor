@@ -20,7 +20,7 @@ def test_tool_decorator_creates_dual_mode_wrapper():
     fn_tool = add.to_function_tool()
     assert isinstance(fn_tool, FunctionTool)
 
-    llm_fn = add.to_llm_function()
+    llm_fn = add.json_schema()
     assert llm_fn["name"] == "add"
     assert llm_fn["description"]
     assert "properties" in llm_fn["parameters"]

@@ -28,7 +28,7 @@ class AgentTool:
             name_override=name_override,
             description_override=description_override,
         )
-        self._llm_function: Dict[str, Any] = {
+        self._tool_json_schema: Dict[str, Any] = {
             "name": self._function_tool.name,
             "description": self._function_tool.description,
             "type": "function",
@@ -57,9 +57,9 @@ class AgentTool:
         """Return the wrapped `FunctionTool` for Agentor."""
         return self._function_tool
 
-    def to_llm_function(self) -> Dict[str, Any]:
+    def json_schema(self) -> Dict[str, Any]:
         """Return the LiteLLM-style function definition."""
-        return self._llm_function
+        return self._tool_json_schema
 
 
 def tool(

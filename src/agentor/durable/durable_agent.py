@@ -408,7 +408,7 @@ class DurableAgent:
                         pass
             elif hasattr(t, "to_llm_function"):  # ToolConvertor
                 self.tools[t.name] = t
-                self.tool_schemas.append(t.to_llm_function())
+                self.tool_schemas.append(t.json_schema())
             # Removed direct FunctionTool handling and generic callable fallback as per instructions.
 
     def _get_tool_schemas(self):
