@@ -1,4 +1,5 @@
 from abc import ABC
+from functools import cache
 from types import FunctionType
 from typing import Callable, List, Optional, Tuple
 
@@ -54,6 +55,7 @@ class BaseTool(ABC):
 
         return tools
 
+    @cache
     def json_schema(self) -> List[ToolType]:
         """Convert all capabilities to JSON Schema."""
         function_tools = self.to_openai_function()
