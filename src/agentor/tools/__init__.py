@@ -5,6 +5,7 @@ from .fetch import FetchTool
 from .git import GitTool
 from .github import GitHubTool
 from .gmail import GmailTool
+from .linkedin import LinkedInScraperTool
 from .postgres import PostgreSQLTool
 from .slack import SlackTool
 from .timezone import TimezoneTool
@@ -19,6 +20,7 @@ __all__ = [
     "GitTool",
     "GitHubTool",
     "GmailTool",
+    "LinkedInScraperTool",
     "PostgreSQLTool",
     "SlackTool",
     "TimezoneTool",
