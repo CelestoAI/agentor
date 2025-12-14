@@ -20,7 +20,7 @@
 
 Agentor is an open-source framework that makes it easy to build Agentic systems with secure integrations across email, calendars, CRMs, and more.
 
-It lets you connect LLMs to tools — like email, calendar, CRMs, or any data stack.
+Agentor is how you write agents. [Celesto AI](https://celesto.ai/) is how you run them safely in production.
 
 ## Features
 
