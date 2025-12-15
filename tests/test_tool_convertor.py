@@ -30,7 +30,7 @@ def test_agentor_accepts_tool_convertor():
     agent = Agentor(
         name="Agentor",
         model="gpt-5-mini",
-        llm_api_key="test",
+        api_key="test",
         tools=[add],
     )
     assert agent.tools
