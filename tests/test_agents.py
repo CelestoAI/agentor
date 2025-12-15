@@ -64,17 +64,6 @@ def test_agentor_create_app():
     assert len(app.router.routes) == 8
 
 
-def test_agentor_without_llm_api_key():
-    with patch.dict("os.environ", {}, clear=True):
-        with pytest.raises(
-            ValueError, match="An LLM API key is required to use the Agentor."
-        ):
-            Agentor(
-                name="Agentor",
-                model="gpt-5-mini",
-            )
-
-
 @patch("agentor.core.agent.Runner.run")
 @pytest.mark.asyncio
 async def test_agentor_batch_prompts(mock_run):
@@ -110,7 +99,7 @@ You are a concise weather assistant."""
     md_file.write_text(md_content)
 
     with caplog.at_level(logging.WARNING):
-        agent = Agentor.from_md(md_file, llm_api_key="test-key")
+        agent = Agentor.from_md(md_file, api_key="test-key")
 
     assert agent.name == "WeatherBot"
     assert agent.instructions == "You are a concise weather assistant."
@@ -132,7 +121,7 @@ def test_agentor_from_md_missing_frontmatter(tmp_path):
     md_file.write_text(md_content)
 
     with pytest.raises(ValueError, match="Agent name"):
-        Agentor.from_md(md_file, llm_api_key="test-key")
+        Agentor.from_md(md_file, api_key="test-key")
 
 
 def test_agentor_from_md_invalid_temperature(tmp_path):
@@ -145,13 +134,13 @@ Be helpful."""
     md_file.write_text(md_content)
 
     with pytest.raises(ValueError, match="Temperature"):
-        Agentor.from_md(md_file, llm_api_key="test-key")
+        Agentor.from_md(md_file, api_key="test-key")
 
 
 def test_agentor_from_md_file_not_found(tmp_path):
     non_existent = tmp_path / "missing.md"
     with pytest.raises(FileNotFoundError, match="Markdown file not found"):
-        Agentor.from_md(non_existent, llm_api_key="test-key")
+        Agentor.from_md(non_existent, api_key="test-key")
 
 
 def test_agentor_from_md_empty_instructions(tmp_path):
@@ -162,7 +151,7 @@ name: WeatherBot
     md_file = tmp_path / "agent.md"
     md_file.write_text(md_content)
     with pytest.raises(ValueError, match="instructions are required"):
-        Agentor.from_md(md_file, llm_api_key="test-key")
+        Agentor.from_md(md_file, api_key="test-key")
 
 
 def test_agentor_from_md_tools_as_string(tmp_path, caplog):
@@ -175,7 +164,7 @@ You are a helpful assistant."""
     md_file.write_text(md_content)
 
     with caplog.at_level(logging.WARNING):
-        agent = Agentor.from_md(md_file, llm_api_key="test-key")
+        agent = Agentor.from_md(md_file, api_key="test-key")
 
     assert agent.name == "WeatherBot"
     assert len(agent.tools) == 1
@@ -194,9 +183,7 @@ You are a helpful assistant."""
 
     # Provide model_settings without temperature - should merge markdown temperature
     model_settings = ModelSettings(top_p=0.9)
-    agent = Agentor.from_md(
-        md_file, llm_api_key="test-key", model_settings=model_settings
-    )
+    agent = Agentor.from_md(md_file, api_key="test-key", model_settings=model_settings)
 
     assert agent.agent.model_settings.temperature == 0.5
     assert agent.agent.model_settings.top_p == 0.9
@@ -213,8 +200,6 @@ You are a helpful assistant."""
 
     # Provide model_settings with temperature - should NOT override with markdown temperature
     model_settings = ModelSettings(temperature=0.8)
-    agent = Agentor.from_md(
-        md_file, llm_api_key="test-key", model_settings=model_settings
-    )
+    agent = Agentor.from_md(md_file, api_key="test-key", model_settings=model_settings)
 
     assert agent.agent.model_settings.temperature == 0.8

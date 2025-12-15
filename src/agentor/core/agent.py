@@ -106,12 +106,12 @@ class Agentor(AgentorBase):
         >>> agent.serve(port=8000)
 
     Use any model supported by LiteLLM, e.g. "gemini/gemini-pro" or "anthropic/claude-4".
-        >>> agent = Agentor(name="Assistant", model="gemini/gemini-pro", llm_api_key=os.environ.get("GEMINI_API_KEY"))
+        >>> agent = Agentor(name="Assistant", model="gemini/gemini-pro", api_key=os.environ.get("GEMINI_API_KEY"))
 
     Set model settings to configure the model behavior, e.g. temperature, top_p, etc.
         >>> from agentor import ModelSettings
         >>> model_settings = ModelSettings(temperature=0.5)
-        >>> agent = Agentor(name="Assistant", model="gemini/gemini-pro", llm_api_key=os.environ.get("GEMINI_API_KEY"), model_settings=model_settings)
+        >>> agent = Agentor(name="Assistant", model="gemini/gemini-pro", api_key=os.environ.get("GEMINI_API_KEY"), model_settings=model_settings)
     """
 
     def __init__(
@@ -193,7 +193,7 @@ class Agentor(AgentorBase):
         ] = None,
         output_type: type[Any] | AgentOutputSchemaBase | None = None,
         debug: bool = False,
-        llm_api_key: Optional[str] = None,
+        api_key: Optional[str] = None,
         model_settings: Optional[ModelSettings] = None,
     ) -> "Agentor":
         """
@@ -303,7 +303,7 @@ class Agentor(AgentorBase):
             tools=resolved_tools,
             output_type=output_type,
             debug=debug,
-            llm_api_key=llm_api_key,
+            api_key=api_key,
             model_settings=resolved_model_settings,
         )
 
