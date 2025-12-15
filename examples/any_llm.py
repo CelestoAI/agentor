@@ -1,6 +1,7 @@
 # This example uses any LLM supported by LiteLLM, e.g. "gemini/gemini-3-pro-preview" or "anthropic/claude-4".
 
 import os
+
 from agentor import Agentor, function_tool
 
 
@@ -14,7 +15,7 @@ agent = Agentor(
     name="Weather Agent",
     model="gemini/gemini-3-pro-preview",
     tools=[get_weather],
-    llm_api_key=os.environ.get("GEMINI_API_KEY"),
+    api_key=os.environ.get("GEMINI_API_KEY"),
 )
 result = agent.run("What is the weather in London?")
 print(result)

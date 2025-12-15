@@ -24,7 +24,7 @@ def test_agentor(mock_run_sync):
     agent = Agentor(
         name="Agentor",
         model="gpt-5-mini",
-        llm_api_key="test",
+        api_key="test",
     )
     result = agent.run("What is the weather in London?")
     assert result is not None
@@ -36,7 +36,7 @@ def test_agentor_serve(mock_uvicorn_run):
     agent = Agentor(
         name="Agentor",
         model="gpt-5-mini",
-        llm_api_key="test",
+        api_key="test",
     )
     agent._create_app = MagicMock()
     agent.serve()
@@ -55,7 +55,7 @@ def test_agentor_create_app():
     agent = Agentor(
         name="Agentor",
         model="gpt-5-mini",
-        llm_api_key="test",
+        api_key="test",
     )
     app = agent._create_app("0.0.0.0", 8000)
     assert app is not None
@@ -85,7 +85,7 @@ async def test_agentor_batch_prompts(mock_run):
     agent = Agentor(
         name="Agentor",
         model="gpt-5-mini",
-        llm_api_key="test",
+        api_key="test",
     )
     results = await agent.arun(
         ["What is the weather in London?", "What is the weather in Paris?"]

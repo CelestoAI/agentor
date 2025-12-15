@@ -2,7 +2,6 @@ import asyncio
 import dataclasses
 import json
 import logging
-import os
 import uuid
 from pathlib import Path
 from typing import (
@@ -81,23 +80,16 @@ class AgentorBase:
         name: str,
         instructions: Optional[str],
         model: Optional[str],
-        llm_api_key: Optional[str],
+        api_key: Optional[str],
     ):
         self.agent = None
         self.name = name
         self.instructions = instructions
         self.model = model
 
-        if llm_api_key is None:
-            llm_api_key = os.environ.get("LLM_API_KEY") or os.environ.get(
-                "OPENAI_API_KEY"
-            )
-        if llm_api_key is None:
-            raise ValueError("""An LLM API key is required to use the Agentor.
-                Please set either LLM_API_KEY/OPENAI_API_KEY environment variable or pass it as an argument.""")
-        self.llm_api_key = llm_api_key
+        self.api_key = api_key
         if isinstance(model, str) and "/" in model:
-            self.model = LitellmModel(model, api_key=llm_api_key)
+            self.model = LitellmModel(model, api_key=api_key)
 
 
 class Agentor(AgentorBase):
@@ -139,10 +131,10 @@ class Agentor(AgentorBase):
         ] = None,
         output_type: type[Any] | AgentOutputSchemaBase | None = None,
         debug: bool = False,
-        llm_api_key: Optional[str] = None,
+        api_key: Optional[str] = None,
         model_settings: Optional[ModelSettings] = None,
     ):
-        super().__init__(name, instructions, model, llm_api_key)
+        super().__init__(name, instructions, model, api_key)
         tools = tools or []
 
         resolved_tools: List[FunctionTool] = []
@@ -170,8 +162,8 @@ class Agentor(AgentorBase):
         if model_settings is None:
             model_settings = get_default_model_settings()
 
-        if self.llm_api_key:
-            set_default_openai_key(self.llm_api_key)
+        if self.api_key:
+            set_default_openai_key(self.api_key)
 
         self.agent: Agent = Agent(
             name=name,
