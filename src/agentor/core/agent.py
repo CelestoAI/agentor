@@ -74,6 +74,11 @@ class APIInputRequest(BaseModel):
     stream: bool = False
 
 
+class AgentInputType(TypedDict):
+    role: Literal["user", "assistant", "system"]
+    content: str
+
+
 class AgentorBase:
     def __init__(
         self,
@@ -312,7 +317,7 @@ class Agentor(AgentorBase):
 
     async def arun(
         self,
-        input: list[str] | str,
+        input: list[str] | str | list[AgentInputType],
         limit_concurrency: int = 10,
         max_turns: int = 10,
     ) -> List[str] | str:
@@ -326,6 +331,9 @@ class Agentor(AgentorBase):
             max_turns: The maximum number of turns to run the agent.
         """
         if isinstance(input, list):
+            if isinstance(input[0], dict):
+                return await Runner.run(self.agent, input, context=CelestoConfig())
+
             futures = []
             if limit_concurrency > 0:
                 semaphore = asyncio.Semaphore(limit_concurrency)
