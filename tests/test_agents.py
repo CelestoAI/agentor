@@ -203,3 +203,22 @@ You are a helpful assistant."""
     agent = Agentor.from_md(md_file, api_key="test-key", model_settings=model_settings)
 
     assert agent.agent.model_settings.temperature == 0.8
+
+
+@pytest.mark.asyncio
+@patch("agentor.core.agent.Runner.run")
+async def test_arun_with_agent_input_type(mock_run):
+    mock_run.return_value = MagicMock(final_output="The weather in London is sunny")
+    agent = Agentor(
+        name="Test agent",
+        api_key="test-key",
+    )
+    result = await agent.arun(
+        [{"role": "user", "content": "What is the weather in London?"}]
+    )
+    mock_run.assert_called_once()
+    args, kwargs = mock_run.call_args
+    assert args[0] is agent.agent
+    assert args[1] == [{"role": "user", "content": "What is the weather in London?"}]
+    assert result is not None
+    assert result.final_output == "The weather in London is sunny"
