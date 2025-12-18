@@ -20,7 +20,10 @@
 
 Agentor is an open-source framework that makes it easy to build Agentic systems with secure integrations across email, calendars, CRMs, and more.
 
-Agentor is how you write agents. [Celesto AI](https://celesto.ai/) is how you run them safely in production.
+
+## Celesto AI
+
+[Celesto](https://celesto.ai/) is a production control plane for AI agents and MCP tools—combining runtime, security, and observability so teams can deploy always-on agent systems with one workflow.
 
 ## Features
 
