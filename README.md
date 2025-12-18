@@ -16,14 +16,15 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-yellow?style=flat)](https://opensource.org/licenses/Apache-2.0)
 [![Discord](https://img.shields.io/badge/Join%20Us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/KNb5UkrAmm)
 
-## Agentor
-
-Agentor is an open-source framework that makes it easy to build Agentic systems with secure integrations across email, calendars, CRMs, and more.
-
 
 ## Celesto AI
 
 [Celesto](https://celesto.ai/) is a production control plane for AI agents and MCP tools—combining runtime, security, and observability so teams can deploy always-on agent systems with one workflow.
+
+
+## Agentor
+
+Agentor is an open-source framework that makes it easy to build Agentic systems with secure integrations across email, calendars, CRMs, and more.
 
 ## Features
 
