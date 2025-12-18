@@ -138,6 +138,7 @@ class Agentor(AgentorBase):
         debug: bool = False,
         api_key: Optional[str] = None,
         model_settings: Optional[ModelSettings] = None,
+        skills: Optional[List[str]] = None,
     ):
         super().__init__(name, instructions, model, api_key)
         tools = tools or []
