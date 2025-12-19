@@ -104,6 +104,42 @@ Once deployed, your agent will be accessible via a REST endpoint, for example:
 https://api.celesto.ai/deploy/apps/<app-name>
 ```
 
+## Agent Skills
+
+Agent Skills help agents pull just the right context from simple Markdown files (`SKILL.md`). The agent first sees only a skill’s name and short description. When the task matches, it loads the rest of `SKILL.md`, follows the steps, and can call a shell environment to run the commands the skill points to.
+
+- Starts light: discover skills by name/description only
+- Loads on demand: pull full instructions from `SKILL.md` when relevant
+- Executes safely: run skill-driven commands in an isolated shell
+
+Skill layout example:
+
+```
+example-skill/
+├── SKILL.md        # required instructions + metadata
+├── scripts/        # optional helpers the agent can call
+├── assets/         # optional templates/resources
+└── references/     # optional docs or checklists
+```
+
+Using a skill to create a GIF:
+
+```python
+from agentor.tools import ShellTool
+from agentor import Agentor
+
+agent = Agentor(
+    name="Assistant",
+    model="gemini/gemini-3-flash-preview",
+    instructions="Your job is to create GIFs. Lean on the shell tool and any available skills.",
+    skills=[".skills/slack-gif-creator"],
+    tools=[ShellTool()],
+)
+
+async for chunk in await agent.chat("produce a cat gif", stream=True):
+    print(chunk)
+```
+
 ## Create an Agent from Markdown
 
 Bootstrap an Agent directly from a markdown file with metadata for name, tools, model, and temperature:
