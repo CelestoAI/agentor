@@ -1,6 +1,7 @@
 import os
 import shlex
 import subprocess
+from typing import Callable
 
 from pydantic import BaseModel
 
@@ -18,9 +19,18 @@ class LocalShellTool(BaseTool):
     name = "local_shell"
     description = "Execute shell commands"
 
+    def __init__(
+        self,
+        executor: Callable[[LocalShellCommandRequest], str] = None,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.executor = executor or _shell_executor
+
     @capability
     def run(self, request: LocalShellCommandRequest):
-        return _shell_executor(request)
+        return self.executor(request)
 
 
 def _shell_executor(request: LocalShellCommandRequest) -> str:
