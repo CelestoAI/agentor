@@ -23,9 +23,13 @@ from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
 from agents import (
     Agent,
     AgentOutputSchemaBase,
+    CodeInterpreterTool,
+    ComputerTool,
     FunctionTool,
+    LocalShellTool,
     ModelSettings,
     Runner,
+    WebSearchTool,
     function_tool,
     set_default_openai_key,
 )
@@ -142,7 +146,6 @@ class Agentor(AgentorBase):
     ):
         super().__init__(name, instructions, model, api_key)
         tools = tools or []
-
         resolved_tools: List[FunctionTool] = []
         mcp_servers: List[MCPServerStreamableHttp] = []
 
@@ -156,6 +159,10 @@ class Agentor(AgentorBase):
                 resolved_tools.extend(tool.to_openai_function())
             elif isinstance(tool, MCPServerStreamableHttp):
                 mcp_servers.append(tool)
+            elif isinstance(
+                tool, (WebSearchTool, ComputerTool, LocalShellTool, CodeInterpreterTool)
+            ):
+                resolved_tools.append(tool)
             else:
                 raise TypeError(
                     f"Unsupported tool type '{type(tool).__name__}'. "
