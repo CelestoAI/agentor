@@ -198,3 +198,4 @@ token*.json
 credentials*.json
 .zendata/
 .idea/
+*.skills/

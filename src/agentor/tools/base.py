@@ -1,7 +1,7 @@
 from abc import ABC
 from functools import cache
 from types import FunctionType
-from typing import Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple, overload
 
 from agents import FunctionTool, function_tool
 
@@ -86,7 +86,13 @@ class BaseTool(ABC):
         # LiteMCP run method handles starting the server
         self._mcp_server.run(port=port)
 
-    def run(self):
+    @overload
+    def run(self, *args, **kwargs) -> Optional[str]: ...
+
+    @overload
+    def run(self, request: Any) -> Optional[str]: ...
+
+    def run(self, *args, **kwargs) -> Optional[str]:
         raise NotImplementedError(
             "This method is dynamically registered using the BaseTool.from_function method."
         )
