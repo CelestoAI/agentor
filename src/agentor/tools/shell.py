@@ -22,15 +22,24 @@ class LocalShellTool(BaseTool):
     def __init__(
         self,
         executor: Callable[[LocalShellCommandRequest], str] = None,
+        verbose: bool = False,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.executor = executor or _shell_executor
+        self.verbose = verbose
 
     @capability
     def run(self, request: LocalShellCommandRequest):
-        return self.executor(request)
+        if self.verbose:
+            print(
+                f"Running command: {request.command} in working directory: {request.working_directory or os.getcwd()}"
+            )
+        result = self.executor(request)
+        if self.verbose:
+            print(f"Command result: {result}")
+        return result
 
 
 def _shell_executor(request: LocalShellCommandRequest) -> str:

@@ -44,6 +44,7 @@ from agentor.a2a import A2AController, AgentSkill
 from agentor.config import celesto_config
 from agentor.output_text_formatter import AgentOutput, format_stream_events
 from agentor.prompts import THINKING_PROMPT, render_prompt
+from agentor.skills import Skills
 from agentor.tools.base import BaseTool
 from agentor.tools.registry import CelestoConfig, ToolRegistry
 
@@ -144,6 +145,9 @@ class Agentor(AgentorBase):
         model_settings: Optional[ModelSettings] = None,
         skills: Optional[List[str]] = None,
     ):
+        if skills is not None:
+            available_skills = self._inject_skills(skills)
+            instructions = f"{instructions or ''}\n\n{available_skills}"
         super().__init__(name, instructions, model, api_key)
         tools = tools or []
         resolved_tools: List[FunctionTool] = []
@@ -187,6 +191,14 @@ class Agentor(AgentorBase):
             output_type=output_type,
             model_settings=model_settings,
         )
+
+    def _inject_skills(self, skills: List[str]) -> str:
+        """Inject skills into the agent system prompt."""
+        instructions = []
+        for skill in skills:
+            skill = Skills.load_from_path(skill)
+            instructions.append(f"{skill.to_xml()}")
+        return "<available_skills>" + "".join(instructions) + "</available_skills>"
 
     @classmethod
     def from_md(
@@ -327,7 +339,7 @@ class Agentor(AgentorBase):
         self,
         input: list[str] | str | list[AgentInputType],
         limit_concurrency: int = 10,
-        max_turns: int = 10,
+        max_turns: int = 20,
     ) -> List[str] | str:
         """
         Run the agent with an input prompt or a batch of prompts.
@@ -385,10 +397,10 @@ class Agentor(AgentorBase):
         self,
         input: str,
         stream: bool = False,
-        output_format: Literal["json", "python"] = "python",
+        serialize: bool = True,
     ):
         if stream:
-            return await self.stream_chat(input, output_format=output_format)
+            return self.stream_chat(input, serialize=serialize)
         else:
             return await Runner.run(self.agent, input=input, context=CelestoConfig())
 

@@ -1,10 +1,10 @@
 from agentor.durable import DurableAgent
-from agentor.tools import WeatherAPI
+from agentor.tools import GetWeatherTool
 
 
 def main():
     # Initialize the tool
-    weather_tool = WeatherAPI()
+    weather_tool = GetWeatherTool()
 
     # Initialize the agent
     agent = DurableAgent(

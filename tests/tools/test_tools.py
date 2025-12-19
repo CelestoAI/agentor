@@ -5,7 +5,7 @@ from agentor.mcp.server import LiteMCP
 from agentor.tools.base import BaseTool, capability
 from agentor.tools.calculator import CalculatorTool
 from agentor.tools.timezone import TimezoneTool
-from agentor.tools.weather import WeatherAPI
+from agentor.tools.weather import GetWeatherTool
 
 
 def test_base_tool_conversion():
@@ -64,7 +64,7 @@ def test_timezone_tool():
 def test_weather_tool_api_key():
     """Test WeatherAPI tool requires API key."""
     with patch.dict(os.environ, {"WEATHER_API_KEY": ""}):
-        weather = WeatherAPI()  # No key available
+        weather = GetWeatherTool()  # No key available
         result = weather.get_current_weather("London")
 
     assert "Error: API key is required" in result
@@ -90,7 +90,7 @@ def test_weather_tool_mock_api():
         }
         mock_client.get.return_value = mock_response
 
-        weather = WeatherAPI(api_key="test-key")
+        weather = GetWeatherTool(api_key="test-key")
         result = weather.get_current_weather("London")
 
         assert "London" in result
