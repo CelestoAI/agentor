@@ -110,3 +110,6 @@ docs = [
     "mkdocs-material>=9.5.0",
     "mkdocstrings[python]>=0.26.0",
 ]
+tools = [
+    "e2b-code-interpreter>=2.4.1",
+]
