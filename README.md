@@ -108,9 +108,9 @@ https://api.celesto.ai/deploy/apps/<app-name>
 
 Agent Skills help agents pull just the right context from simple Markdown files (`SKILL.md`). The agent first sees only a skill’s name and short description. When the task matches, it loads the rest of `SKILL.md`, follows the steps, and can call a shell environment to run the commands the skill points to.
 
-- Starts light: discover skills by name/description only
-- Loads on demand: pull full instructions from `SKILL.md` when relevant
-- Executes safely: run skill-driven commands in an isolated shell
+- **Starts light**: discover skills by name/description only
+- **Loads on demand**: pull full instructions from `SKILL.md` when relevant
+- **Executes safely**: run skill-driven commands in an isolated shell
 
 Skill layout example:
 
