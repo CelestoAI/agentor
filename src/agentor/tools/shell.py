@@ -8,20 +8,20 @@ from pydantic import BaseModel
 from agentor.tools import BaseTool, capability
 
 
-class LocalShellCommandRequest(BaseModel):
+class ShellCommandRequest(BaseModel):
     command: str
     working_directory: str | None = None
     env: dict | None = None
     timeout_ms: int | None = None
 
 
-class LocalShellTool(BaseTool):
-    name = "local_shell"
+class ShellTool(BaseTool):
+    name = "shell_tool"
     description = "Execute shell commands"
 
     def __init__(
         self,
-        executor: Callable[[LocalShellCommandRequest], str] = None,
+        executor: Callable[[ShellCommandRequest], str] = None,
         verbose: bool = False,
         *args,
         **kwargs,
@@ -31,7 +31,7 @@ class LocalShellTool(BaseTool):
         self.verbose = verbose
 
     @capability
-    def run(self, request: LocalShellCommandRequest):
+    def run(self, request: ShellCommandRequest):
         if self.verbose:
             print(
                 f"Running command: {request.command} in working directory: {request.working_directory or os.getcwd()}"
@@ -42,7 +42,7 @@ class LocalShellTool(BaseTool):
         return result
 
 
-def _shell_executor(request: LocalShellCommandRequest) -> str:
+def _shell_executor(request: ShellCommandRequest) -> str:
     args = request
 
     try:

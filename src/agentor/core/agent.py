@@ -23,10 +23,7 @@ from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
 from agents import (
     Agent,
     AgentOutputSchemaBase,
-    CodeInterpreterTool,
-    ComputerTool,
     FunctionTool,
-    LocalShellTool,
     ModelSettings,
     Runner,
     WebSearchTool,
@@ -163,9 +160,7 @@ class Agentor(AgentorBase):
                 resolved_tools.extend(tool.to_openai_function())
             elif isinstance(tool, MCPServerStreamableHttp):
                 mcp_servers.append(tool)
-            elif isinstance(
-                tool, (WebSearchTool, ComputerTool, LocalShellTool, CodeInterpreterTool)
-            ):
+            elif isinstance(tool, WebSearchTool):
                 resolved_tools.append(tool)
             else:
                 raise TypeError(

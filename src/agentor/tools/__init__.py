@@ -1,4 +1,4 @@
-from agents import CodeInterpreterTool, WebSearchTool
+from agents import WebSearchTool
 
 from .base import BaseTool, capability
 from .calculator import CalculatorTool
@@ -9,7 +9,7 @@ from .github import GitHubTool
 from .gmail import GmailTool
 from .linkedin import LinkedInScraperTool
 from .postgres import PostgreSQLTool
-from .shell import LocalShellTool
+from .shell import ShellTool
 from .slack import SlackTool
 from .timezone import TimezoneTool
 from .weather import GetWeatherTool
@@ -29,6 +29,5 @@ __all__ = [
     "TimezoneTool",
     "GetWeatherTool",
     "WebSearchTool",
-    "LocalShellTool",
-    "CodeInterpreterTool",
+    "ShellTool",
 ]
