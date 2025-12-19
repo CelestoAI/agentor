@@ -12,7 +12,7 @@ from .postgres import PostgreSQLTool
 from .shell import LocalShellTool
 from .slack import SlackTool
 from .timezone import TimezoneTool
-from .weather import WeatherAPI
+from .weather import GetWeatherTool
 
 __all__ = [
     "BaseTool",
@@ -27,7 +27,7 @@ __all__ = [
     "PostgreSQLTool",
     "SlackTool",
     "TimezoneTool",
-    "WeatherAPI",
+    "GetWeatherTool",
     "WebSearchTool",
     "LocalShellTool",
     "CodeInterpreterTool",

@@ -6,13 +6,17 @@ import httpx
 from agentor.tools.base import BaseTool, capability
 
 
-class WeatherAPI(BaseTool):
+class GetWeatherTool(BaseTool):
     name = "weather"
     description = "Get current weather information for a location"
 
     def __init__(self, api_key: Optional[str] = None):
         if api_key is None:
             api_key = os.environ.get("WEATHER_API_KEY")
+        if api_key is None:
+            raise ValueError(
+                "An API key is required to use this tool. Create an account at https://www.weatherapi.com/ and get your API key."
+            )
         super().__init__(api_key)
 
     @capability
