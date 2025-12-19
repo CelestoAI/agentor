@@ -1,4 +1,4 @@
-from agentor.tools.shell import LocalShellCommandRequest
+from agentor.tools.shell import ShellCommandRequest
 
 
 class SandboxRuntime:
@@ -12,6 +12,6 @@ class E2BCodeInterpreterRuntime(SandboxRuntime):
 
         self.sbx = Sandbox.create(timeout=timeout)
 
-    def __call__(self, request: LocalShellCommandRequest) -> str:
+    def __call__(self, request: ShellCommandRequest) -> str:
         execution = self.sbx.run_code(request.command)
         return execution.logs
