@@ -19,9 +19,7 @@ class LocalShellTool(BaseTool):
     name = "local_shell"
     description = "Execute shell commands"
 
-    def run(self, request: LocalShellCommandRequest | None = None):
-        if request is None:
-            raise ValueError("LocalShellTool.run() requires a LocalShellCommandRequest argument")
+    def __init__(
         self,
         executor: Callable[[LocalShellCommandRequest], str] = None,
         *args,
