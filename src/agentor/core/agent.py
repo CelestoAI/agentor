@@ -17,6 +17,8 @@ from typing import (
 )
 
 import frontmatter
+import litellm
+import openai
 import uvicorn
 from a2a import types as a2a_types
 from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
@@ -384,9 +386,6 @@ class Agentor(AgentorBase):
         """
         Run a task with optional fallback to alternative models on rate limit errors.
         """
-        import litellm
-        import openai
-
         try:
             return await Runner.run(
                 self.agent,
