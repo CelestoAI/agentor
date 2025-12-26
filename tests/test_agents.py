@@ -1,6 +1,7 @@
 import logging
 from unittest.mock import MagicMock, patch
 
+import openai
 import pytest
 from agents import ModelSettings
 
@@ -222,3 +223,141 @@ async def test_arun_with_agent_input_type(mock_run):
     assert args[1] == [{"role": "user", "content": "What is the weather in London?"}]
     assert result is not None
     assert result.final_output == "The weather in London is sunny"
+
+
+@pytest.mark.asyncio
+@patch("agentor.core.agent.Runner.run")
+async def test_arun_with_fallback_on_rate_limit(mock_run):
+    """Test that fallback models are used when rate limit error occurs."""
+    # First call raises RateLimitError, second call succeeds
+    rate_limit_error = openai.RateLimitError(
+        message="Rate limit exceeded",
+        response=MagicMock(status_code=429),
+        body={"error": {"message": "Rate limit exceeded"}},
+    )
+    mock_run.side_effect = [
+        rate_limit_error,  # Primary model fails
+        MagicMock(final_output="Success with fallback model"),  # Fallback succeeds
+    ]
+
+    agent = Agentor(
+        name="Test agent",
+        model="gpt-5-mini",
+        api_key="test-key",
+    )
+    result = await agent.arun(
+        "What is the weather?",
+        fallback_models=["gpt-4o-mini"],
+    )
+
+    assert mock_run.call_count == 2
+    assert result.final_output == "Success with fallback model"
+
+
+@pytest.mark.asyncio
+@patch("agentor.core.agent.Runner.run")
+async def test_arun_with_fallback_tries_multiple_models(mock_run):
+    """Test that multiple fallback models are tried in order."""
+    rate_limit_error = openai.RateLimitError(
+        message="Rate limit exceeded",
+        response=MagicMock(status_code=429),
+        body={"error": {"message": "Rate limit exceeded"}},
+    )
+    mock_run.side_effect = [
+        rate_limit_error,  # Primary model fails
+        rate_limit_error,  # First fallback fails
+        MagicMock(final_output="Success with second fallback"),  # Second fallback succeeds
+    ]
+
+    agent = Agentor(
+        name="Test agent",
+        model="gpt-5-mini",
+        api_key="test-key",
+    )
+    result = await agent.arun(
+        "What is the weather?",
+        fallback_models=["gpt-4o-mini", "gpt-4o"],
+    )
+
+    assert mock_run.call_count == 3
+    assert result.final_output == "Success with second fallback"
+
+
+@pytest.mark.asyncio
+@patch("agentor.core.agent.Runner.run")
+async def test_arun_raises_when_all_fallbacks_fail(mock_run):
+    """Test that original error is raised when all fallback models fail."""
+    rate_limit_error = openai.RateLimitError(
+        message="Rate limit exceeded",
+        response=MagicMock(status_code=429),
+        body={"error": {"message": "Rate limit exceeded"}},
+    )
+    mock_run.side_effect = [
+        rate_limit_error,  # Primary model fails
+        rate_limit_error,  # Fallback also fails
+    ]
+
+    agent = Agentor(
+        name="Test agent",
+        model="gpt-5-mini",
+        api_key="test-key",
+    )
+
+    with pytest.raises(openai.RateLimitError):
+        await agent.arun(
+            "What is the weather?",
+            fallback_models=["gpt-4o-mini"],
+        )
+
+
+@pytest.mark.asyncio
+@patch("agentor.core.agent.Runner.run")
+async def test_arun_without_fallback_raises_immediately(mock_run):
+    """Test that rate limit error is raised immediately when no fallback models provided."""
+    rate_limit_error = openai.RateLimitError(
+        message="Rate limit exceeded",
+        response=MagicMock(status_code=429),
+        body={"error": {"message": "Rate limit exceeded"}},
+    )
+    mock_run.side_effect = rate_limit_error
+
+    agent = Agentor(
+        name="Test agent",
+        model="gpt-5-mini",
+        api_key="test-key",
+    )
+
+    with pytest.raises(openai.RateLimitError):
+        await agent.arun("What is the weather?")
+
+    assert mock_run.call_count == 1
+
+
+@pytest.mark.asyncio
+@patch("agentor.core.agent.Runner.run")
+async def test_arun_batch_with_fallback_on_rate_limit(mock_run):
+    """Test that fallback models work with batch processing."""
+    rate_limit_error = openai.RateLimitError(
+        message="Rate limit exceeded",
+        response=MagicMock(status_code=429),
+        body={"error": {"message": "Rate limit exceeded"}},
+    )
+    mock_run.side_effect = [
+        MagicMock(final_output="Weather in London"),  # First task succeeds
+        rate_limit_error,  # Second task fails
+        MagicMock(final_output="Weather in Paris with fallback"),  # Fallback succeeds
+    ]
+
+    agent = Agentor(
+        name="Test agent",
+        model="gpt-5-mini",
+        api_key="test-key",
+    )
+    results = await agent.arun(
+        ["What is the weather in London?", "What is the weather in Paris?"],
+        fallback_models=["gpt-4o-mini"],
+    )
+
+    assert len(results) == 2
+    assert results[0].final_output == "Weather in London"
+    assert results[1].final_output == "Weather in Paris with fallback"
