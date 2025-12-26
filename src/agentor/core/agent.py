@@ -335,6 +335,7 @@ class Agentor(AgentorBase):
         input: list[str] | str | list[AgentInputType],
         limit_concurrency: int = 10,
         max_turns: int = 20,
+        fallback_models: Optional[List[str]] = None,
     ) -> List[str] | str:
         """
         Run the agent with an input prompt or a batch of prompts.
@@ -344,6 +345,8 @@ class Agentor(AgentorBase):
             input: A string prompt or a list of string prompts.
             limit_concurrency: The maximum number of concurrent tasks to run in case of a batch of prompts.
             max_turns: The maximum number of turns to run the agent.
+            fallback_models: Optional list of fallback model names to try if the primary model
+                fails due to rate limits or API errors. Models are tried in order.
         """
         if isinstance(input, list):
             if isinstance(input[0], dict):
@@ -355,11 +358,8 @@ class Agentor(AgentorBase):
 
                 async def _run_task(task: str) -> str:
                     async with semaphore:
-                        return await Runner.run(
-                            self.agent,
-                            task,
-                            context=CelestoConfig(),
-                            max_turns=max_turns,
+                        return await self._run_with_fallback(
+                            task, max_turns, fallback_models
                         )
 
                 futures = [_run_task(task) for task in input]
@@ -367,18 +367,80 @@ class Agentor(AgentorBase):
             else:
                 return await asyncio.gather(
                     *[
-                        Runner.run(
-                            self.agent,
-                            task,
-                            context=CelestoConfig(),
-                            max_turns=max_turns,
-                        )
+                        self._run_with_fallback(task, max_turns, fallback_models)
                         for task in input
                     ],
                     return_exceptions=True,
                 )
         else:
-            return await Runner.run(self.agent, input, context=CelestoConfig())
+            return await self._run_with_fallback(input, max_turns, fallback_models)
+
+    async def _run_with_fallback(
+        self,
+        task: str,
+        max_turns: int,
+        fallback_models: Optional[List[str]] = None,
+    ):
+        """
+        Run a task with optional fallback to alternative models on rate limit errors.
+        """
+        import litellm
+        import openai
+
+        try:
+            return await Runner.run(
+                self.agent,
+                task,
+                context=CelestoConfig(),
+                max_turns=max_turns,
+            )
+        except (
+            openai.RateLimitError,
+            litellm.RateLimitError,
+            openai.APIError,
+            litellm.APIError,
+        ) as e:
+            if not fallback_models:
+                raise
+
+            logger.warning(
+                f"Primary model failed with {type(e).__name__}: {e}. "
+                f"Trying fallback models: {fallback_models}"
+            )
+
+            for fallback_model in fallback_models:
+                try:
+                    # Create a temporary agent with the fallback model
+                    fallback_agent = Agent(
+                        name=self.agent.name,
+                        instructions=self.agent.instructions,
+                        model=LitellmModel(fallback_model)
+                        if "/" in fallback_model
+                        else fallback_model,
+                        tools=self.tools,
+                        mcp_servers=self.mcp_servers or [],
+                        output_type=self.agent.output_type,
+                        model_settings=self.agent.model_settings,
+                    )
+                    return await Runner.run(
+                        fallback_agent,
+                        task,
+                        context=CelestoConfig(),
+                        max_turns=max_turns,
+                    )
+                except (
+                    openai.RateLimitError,
+                    litellm.RateLimitError,
+                    openai.APIError,
+                    litellm.APIError,
+                ) as fallback_error:
+                    logger.warning(
+                        f"Fallback model '{fallback_model}' also failed: {fallback_error}"
+                    )
+                    continue
+
+            # All fallback models failed, raise the original error
+            raise
 
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(
