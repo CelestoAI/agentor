@@ -106,7 +106,9 @@ https://api.celesto.ai/deploy/apps/<app-name>
 
 ## Agent Skills
 
-Agent Skills help agents pull just the right context from simple Markdown files (`SKILL.md`). The agent first sees only a skill’s name and short description. When the task matches, it loads the rest of `SKILL.md`, follows the steps, and can call a shell environment to run the commands the skill points to.
+Skills are folders of instructions, scripts, and resources that Claude loads dynamically to improve performance on specialized tasks.
+
+Agent Skills help agents pull just the right context from simple Markdown files. The agent first sees only a skill’s name and short description. When the task matches, it loads the rest of `SKILL.md`, follows the steps, and can call a shell environment to run the commands the skill points to.
 
 - **Starts light**: discover skills by name/description only
 - **Loads on demand**: pull full instructions from `SKILL.md` when relevant

@@ -66,3 +66,5 @@ def _shell_executor(request: ShellCommandRequest) -> str:
         return "Command execution timed out"
     except Exception as e:
         return f"Error executing command: {str(e)}"
+
+LocalShellTool = ShellTool
