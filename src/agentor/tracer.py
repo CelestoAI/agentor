@@ -23,6 +23,7 @@ from typing import Any
 
 import httpx
 from agents import RunConfig, add_trace_processor, set_trace_processors
+import logging
 from agents.tracing import Span, Trace
 from agents.tracing.processors import BatchTraceProcessor, TracingExporter
 
@@ -289,7 +290,12 @@ def _shutdown_handler():
             _processor.force_flush()
             _processor.shutdown()
         except Exception:
-            pass
+            # Intentionally suppress shutdown errors to avoid interfering with process exit,
+            # but log them for observability.
+            logging.getLogger(__name__).warning(
+                "Error while flushing/shutting down Celesto trace processor during atexit",
+                exc_info=True,
+            )
 
 
 # Convenience re-exports
