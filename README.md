@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/CelestoAI.png" alt="banner" width="500px"/>
 </p>
 <p align="center">
-  Fastest way to build, prototype and deploy AI Agents with tools <mark><i>securely</i></mark>
+  Fastest way to build and deploy long-running AI agents—with durability, observability, and security.
 </p>
 <p align="center">
   <a href="https://docs.celesto.ai">Docs</a> |
@@ -19,7 +19,7 @@
 
 ## Celesto AI
 
-[Celesto](https://celesto.ai/) is a production control plane for AI agents and MCP tools—combining runtime, security, and observability so teams can deploy always-on agent systems with one workflow.
+[Celesto](https://celesto.ai/) lets developers build long-running AI agents without worrying about runtime infrastructure, security, durability, or observability.
 
 
 ## Agentor
