@@ -46,6 +46,7 @@ from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.skills import Skills
 from agentor.tools.base import BaseTool
 from agentor.tools.registry import CelestoConfig, ToolRegistry
+from agentor.tracer import setup_celesto_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,7 @@ class AgentorBase:
         instructions: Optional[str],
         model: Optional[str],
         api_key: Optional[str],
+        enable_tracing: bool = False,
     ):
         self.agent = None
         self.name = name
@@ -99,6 +101,38 @@ class AgentorBase:
         self.api_key = api_key
         if isinstance(model, str) and "/" in model:
             self.model = LitellmModel(model, api_key=api_key)
+
+        self.enable_tracing = enable_tracing
+        if self.enable_tracing:
+            if not celesto_config.api_key:
+                raise ValueError(
+                    (
+                        "Celesto API key is required to enable tracing.\n",
+                        "Find the API key in the dashboard: https://celesto.ai/dashboard \n",
+                        "and set it in the environment variable CELESTO_API_KEY.",
+                    )
+                )
+            setup_celesto_tracing(
+                endpoint=f"{celesto_config.base_url}/traces/ingest",
+                token=celesto_config.api_key.get_secret_value(),
+            )
+        elif (
+            celesto_config.api_key is not None
+            and not celesto_config.disable_auto_tracing
+        ):
+            try:
+                print(
+                    (
+                        "auto enabled LLM monitoring and tracing. View traces: https://celesto.ai/observe"
+                        "\nTo disable, set CELESTO_DISABLE_AUTO_TRACING=True."
+                    )
+                )
+                setup_celesto_tracing(
+                    endpoint=f"{celesto_config.base_url}/traces/ingest",
+                    token=celesto_config.api_key.get_secret_value(),
+                )
+            except Exception as e:
+                logger.warning(f"Failed to setup Celesto tracing: {e}")
 
 
 class Agentor(AgentorBase):
