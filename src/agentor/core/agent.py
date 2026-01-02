@@ -177,11 +177,12 @@ class Agentor(AgentorBase):
         api_key: Optional[str] = None,
         model_settings: Optional[ModelSettings] = None,
         skills: Optional[List[str]] = None,
+        enable_tracing: bool = False,
     ):
         if skills is not None:
             available_skills = self._inject_skills(skills)
             instructions = f"{instructions or ''}\n\n{available_skills}"
-        super().__init__(name, instructions, model, api_key)
+        super().__init__(name, instructions, model, api_key, enable_tracing)
         tools = tools or []
         resolved_tools: List[FunctionTool] = []
         mcp_servers: List[MCPServerStreamableHttp] = []
