@@ -361,3 +361,152 @@ async def test_arun_batch_with_fallback_on_rate_limit(mock_run):
     assert len(results) == 2
     assert results[0].final_output == "Weather in London"
     assert results[1].final_output == "Weather in Paris with fallback"
+
+
+# Tracing integration tests
+@patch("agentor.core.agent.setup_celesto_tracing")
+def test_agentor_with_enable_tracing_true(mock_setup_tracing):
+    """Test that tracing is enabled when enable_tracing=True and API key is present."""
+    with patch.dict(
+        "os.environ", {"CELESTO_API_KEY": "test-api-key-123"}, clear=False
+    ):
+        from agentor.config import CelestoConfig
+
+        # Create new config instance with the env var
+        config = CelestoConfig()
+
+        with patch("agentor.core.agent.celesto_config", config):
+            agent = Agentor(
+                name="TracingAgent",
+                model="gpt-5-mini",
+                api_key="test",
+                enable_tracing=True,
+            )
+
+            # Verify setup_celesto_tracing was called
+            mock_setup_tracing.assert_called_once()
+            call_kwargs = mock_setup_tracing.call_args
+            assert "https://api.celesto.ai/v1/traces/ingest" in call_kwargs[1]["endpoint"]
+            assert call_kwargs[1]["token"] == "test-api-key-123"
+
+
+@patch("agentor.core.agent.setup_celesto_tracing")
+def test_agentor_with_enable_tracing_missing_api_key(mock_setup_tracing):
+    """Test that ValueError is raised when enable_tracing=True but API key is missing."""
+    with patch.dict("os.environ", clear=True):
+        from agentor.config import CelestoConfig
+
+        config = CelestoConfig()
+
+        with patch("agentor.core.agent.celesto_config", config):
+            with pytest.raises(ValueError, match="Celesto API key is required"):
+                agent = Agentor(
+                    name="TracingAgent",
+                    model="gpt-5-mini",
+                    api_key="test",
+                    enable_tracing=True,
+                )
+
+            # Tracing setup should not be called
+            mock_setup_tracing.assert_not_called()
+
+
+@patch("agentor.core.agent.setup_celesto_tracing")
+def test_agentor_auto_tracing_enabled(mock_setup_tracing, capsys):
+    """Test that auto-tracing is enabled when API key is present and not disabled."""
+    with patch.dict(
+        "os.environ",
+        {"CELESTO_API_KEY": "test-api-key-456", "CELESTO_DISABLE_AUTO_TRACING": "false"},
+        clear=False,
+    ):
+        from agentor.config import CelestoConfig
+
+        config = CelestoConfig()
+
+        with patch("agentor.core.agent.celesto_config", config):
+            agent = Agentor(
+                name="AutoTracingAgent",
+                model="gpt-5-mini",
+                api_key="test",
+                enable_tracing=False,  # Explicit False, but auto-tracing should still work
+            )
+
+            # Verify setup_celesto_tracing was called
+            mock_setup_tracing.assert_called_once()
+
+            # Verify the message was printed
+            captured = capsys.readouterr()
+            assert "auto enabled LLM monitoring and tracing" in captured.out
+            assert "https://celesto.ai/observe" in captured.out
+
+
+@patch("agentor.core.agent.setup_celesto_tracing")
+def test_agentor_auto_tracing_disabled(mock_setup_tracing):
+    """Test that auto-tracing is disabled when CELESTO_DISABLE_AUTO_TRACING=True."""
+    with patch.dict(
+        "os.environ",
+        {"CELESTO_API_KEY": "test-api-key-789", "CELESTO_DISABLE_AUTO_TRACING": "true"},
+        clear=False,
+    ):
+        from agentor.config import CelestoConfig
+
+        config = CelestoConfig()
+
+        with patch("agentor.core.agent.celesto_config", config):
+            agent = Agentor(
+                name="NoAutoTracingAgent",
+                model="gpt-5-mini",
+                api_key="test",
+                enable_tracing=False,
+            )
+
+            # Tracing should not be set up
+            mock_setup_tracing.assert_not_called()
+
+
+@patch("agentor.core.agent.setup_celesto_tracing")
+def test_agentor_auto_tracing_no_api_key(mock_setup_tracing):
+    """Test that auto-tracing is not enabled when API key is not present."""
+    with patch.dict("os.environ", clear=True):
+        from agentor.config import CelestoConfig
+
+        config = CelestoConfig()
+
+        with patch("agentor.core.agent.celesto_config", config):
+            agent = Agentor(
+                name="NoApiKeyAgent",
+                model="gpt-5-mini",
+                api_key="test",
+                enable_tracing=False,
+            )
+
+            # Tracing should not be set up
+            mock_setup_tracing.assert_not_called()
+
+
+@patch("agentor.core.agent.setup_celesto_tracing")
+def test_agentor_auto_tracing_error_handling(mock_setup_tracing, caplog):
+    """Test that auto-tracing errors are handled gracefully."""
+    mock_setup_tracing.side_effect = Exception("Tracing setup failed")
+
+    with patch.dict(
+        "os.environ",
+        {"CELESTO_API_KEY": "test-api-key-error"},
+        clear=False,
+    ):
+        from agentor.config import CelestoConfig
+
+        config = CelestoConfig()
+
+        with patch("agentor.core.agent.celesto_config", config):
+            with caplog.at_level(logging.WARNING):
+                # Should not raise exception
+                agent = Agentor(
+                    name="ErrorHandlingAgent",
+                    model="gpt-5-mini",
+                    api_key="test",
+                    enable_tracing=False,
+                )
+
+                # Should log warning
+                assert any("Failed to setup Celesto tracing" in message for message in caplog.messages)

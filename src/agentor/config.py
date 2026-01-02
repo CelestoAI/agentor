@@ -11,6 +11,9 @@ class CelestoConfig(BaseSettings):
     api_key: Optional[SecretStr] = Field(
         alias="CELESTO_API_KEY", default=None
     )  # default to Celesto's API key
+    disable_auto_tracing: bool = Field(
+        alias="CELESTO_DISABLE_AUTO_TRACING", default=False
+    )
 
 
 celesto_config = CelestoConfig()
