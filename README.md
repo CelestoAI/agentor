@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/CelestoAI.png" alt="banner" width="500px"/>
+  <picture>
+    <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/CelestoAI.png" alt="project logo" width="500px"/>
+  </picture>
 </p>
 
 <div align="center">
@@ -27,10 +29,10 @@
 
 |        Feature            |            Description                   |         Docs
 |---------------------------|------------------------------------------|-----------------------|
-|     🚀 LiteMCP            | The only **full FastAPI compatible** MCP Server with decorator API | [Link](https://docs.celesto.ai/agentor/tools/LiteMCP)
-|   🦾 A2A Protocol         | Multi-agent communication                | [Link](https://docs.celesto.ai/agentor/agent-to-agent)
-|   ☁️ Fast Agent deployment| One click (serverless) deployment        | [Link](https://celesto.ai)
-|   🔐 Secure integrations  | Multi-tenancy and fine-grained authorization | [Link](https://docs.celesto.ai/agentor/tools/auth)
+|   🚀 MCP & tool security  | The only **full FastAPI compatible** MCP Server with decorator API | [Link](https://docs.celesto.ai/agentor/tools/LiteMCP)
+|   🦾 Agent-to-agent       | Multi-agent communication                | [Link](https://docs.celesto.ai/agentor/agent-to-agent)
+|   ☁️ Deployment           | Fast serverless deployment               | [Link](https://celesto.ai)
+|   📊 Observability        | Agent tracing and monitoring             | [Link](https://celesto.ai)
 |   🔍 Tool Search API      | Reduced tool context bloat               | [Link](https://docs.celesto.ai/agentor/tools/tool-search)
 
 
