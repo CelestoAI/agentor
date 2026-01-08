@@ -1,6 +1,19 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/CelestoAI/agentor/main/assets/CelestoAI.png" alt="banner" width="500px"/>
 </p>
+
+<div align="center">
+  
+[![PyPI version](https://img.shields.io/pypi/v/agentor.svg?color=brightgreen&label=PyPI&style=flat)](https://pypi.org/project/agentor/)
+[![Tests](https://github.com/CelestoAI/agentor/actions/workflows/test.yml/badge.svg)](https://github.com/CelestoAI/agentor/actions/workflows/test.yml)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/agentor)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-yellow?style=flat)](https://opensource.org/licenses/Apache-2.0)
+<a href="https://discord.gg/KNb5UkrAmm">
+    <img src="https://img.shields.io/static/v1?label=Chat%20on&message=Discord&color=blue&logo=Discord&style=flat-square" alt="Discord">
+</a>
+
+</div>
+
 <p align="center">
   Fastest way to build and deploy long-running AI agents—with durability, observability, and security.
 </p>
@@ -9,22 +22,6 @@
   <a href="https://github.com/celestoai/agentor/tree/main/docs/examples">Examples</a>
 </p>
 
-[![💻 Try Celesto AI](https://img.shields.io/badge/%F0%9F%92%BB_Try_CelestoAI-Click_Here-ff6b2c?style=flat)](https://celesto.ai)
-[![PyPI version](https://img.shields.io/pypi/v/agentor.svg?color=brightgreen&label=PyPI&style=flat)](https://pypi.org/project/agentor/)
-[![Tests](https://github.com/CelestoAI/agentor/actions/workflows/test.yml/badge.svg)](https://github.com/CelestoAI/agentor/actions/workflows/test.yml)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/agentor)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-yellow?style=flat)](https://opensource.org/licenses/Apache-2.0)
-[![Discord](https://img.shields.io/badge/Join%20Us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/KNb5UkrAmm)
-
-
-## Celesto AI
-
-[Celesto](https://celesto.ai/) lets developers build long-running AI agents without worrying about runtime infrastructure, security, durability, or observability.
-
-
-## Agentor
-
-Agentor is an open-source framework that makes it easy to build Agentic systems with secure integrations across email, calendars, CRMs, and more.
 
 ## Features
 
