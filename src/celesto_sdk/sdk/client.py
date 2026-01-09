@@ -138,14 +138,14 @@ class DelegatedAccess(_BaseClient):
         self,
         *,
         subject: str,
-        project_id: str,
+        project_name: str,
         provider: str = "google_drive",
         redirect_uri: str | None = None,
     ) -> dict:
         payload: dict[str, str] = {
             "subject": subject,
             "provider": provider,
-            "project_id": project_id,
+            "project_name": project_name,
         }
         if redirect_uri:
             payload["redirect_uri"] = redirect_uri
@@ -158,10 +158,10 @@ class DelegatedAccess(_BaseClient):
     def list_connections(
         self,
         *,
-        project_id: str,
+        project_name: str,
         status_filter: str | None = None,
     ) -> dict:
-        params: dict[str, str] = {"project_id": project_id}
+        params: dict[str, str] = {"project_name": project_name}
         if status_filter:
             params["status_filter"] = status_filter
 
@@ -183,7 +183,7 @@ class DelegatedAccess(_BaseClient):
     def list_drive_files(
         self,
         *,
-        project_id: str,
+        project_name: str,
         subject: str,
         page_size: int = 20,
         page_token: str | None = None,
@@ -193,7 +193,7 @@ class DelegatedAccess(_BaseClient):
         order_by: str | None = None,
     ) -> dict:
         params: dict[str, object] = {
-            "project_id": project_id,
+            "project_name": project_name,
             "subject": subject,
             "page_size": page_size,
             "include_folders": include_folders,
@@ -221,7 +221,7 @@ class CelestoSDK(_BaseConnection):
         >> client.toolhub.list_tools()
         >> client.toolhub.run_current_weather_tool("London")
         >> client.deployment.deploy(folder=Path("./my-app"), name="My App", description="Description", envs={})
-        >> client.delegated_access.list_connections(project_id="proj_123")
+        >> client.delegated_access.list_connections(project_name="My Project")
     """
 
     def __init__(self, api_key: str, base_url: str = None):

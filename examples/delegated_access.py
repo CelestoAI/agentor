@@ -2,21 +2,21 @@
 
 Prereqs:
 - CELESTO_API_KEY set in env
-- CELESTO_PROJECT_ID set in env
+- CELESTO_PROJECT_NAME set in env
 - Backend running (or set CELESTO_BASE_URL to a reachable API)
 """
 
 import os
 
-from agentor import CelestoSDK
+from celesto_sdk.sdk import CelestoSDK
 
 
 def main() -> None:
     api_key = os.environ.get("CELESTO_API_KEY")
-    project_id = os.environ.get("CELESTO_PROJECT_ID")
+    project_name = os.environ.get("CELESTO_PROJECT_NAME")
 
-    if not api_key or not project_id:
-        raise SystemExit("CELESTO_API_KEY and CELESTO_PROJECT_ID are required")
+    if not api_key or not project_name:
+        raise SystemExit("CELESTO_API_KEY and CELESTO_PROJECT_NAME are required")
 
     client = CelestoSDK(api_key)
 
@@ -24,17 +24,17 @@ def main() -> None:
     response = client.delegated_access.connect(
         subject="user:demo",
         provider="google_drive",
-        project_id=project_id,
+        project_name=project_name,
     )
     print("connect:", response)
 
     # List current connections
-    connections = client.delegated_access.list_connections(project_id=project_id)
+    connections = client.delegated_access.list_connections(project_name=project_name)
     print("connections:", connections)
 
     # List Drive files for the subject (may require completed OAuth flow)
     files = client.delegated_access.list_drive_files(
-        project_id=project_id,
+        project_name=project_name,
         subject="user:demo",
         page_size=10,
         include_folders=True,
