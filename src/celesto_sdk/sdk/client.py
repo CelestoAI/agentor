@@ -197,6 +197,8 @@ class DelegatedAccess(_BaseClient):
 
         If access rules are configured and no folder_id is specified,
         files from all allowed folders will be returned automatically.
+        When access rules are active, a page may contain fewer than page_size
+        results after filtering. Use next_page_token to continue.
 
         Args:
             project_name: Project name to scope the access
@@ -259,7 +261,8 @@ class DelegatedAccess(_BaseClient):
 
         Files in allowed_folders (and their subfolders) will be accessible.
         Individual files can be added via allowed_files.
-        Setting both to empty lists removes all restrictions.
+        Setting both to empty lists blocks all access. Use clear_access_rules()
+        to remove restrictions.
 
         Args:
             connection_id: The connection ID

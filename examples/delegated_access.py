@@ -34,11 +34,14 @@ def main() -> None:
         project_name=project_name,
     )
     print(f"Status: {response.get('status')}")
-    if response.get("oauth_url"):
-        print(f"OAuth URL: {response['oauth_url']}")
+    oauth_url = response.get("oauth_url")
+    if oauth_url:
+        print(f"OAuth URL: {oauth_url}")
         print("Complete OAuth flow before continuing...")
         return
     connection_id = response.get("connection_id")
+    if not connection_id:
+        raise SystemExit("No connection_id returned - check OAuth flow")
     print(f"Connection ID: {connection_id}")
 
     # 2. List current connections
