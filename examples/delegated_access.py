@@ -3,7 +3,6 @@
 Prereqs:
 - CELESTO_API_KEY set in env
 - CELESTO_PROJECT_NAME set in env
-- Backend running (or set CELESTO_BASE_URL to a reachable API)
 """
 
 import os
