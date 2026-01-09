@@ -1,4 +1,4 @@
-"""Example for Delegated Access via CelestoSDK.
+"""Example for Delegated Access via CelestoSDK GateKeeper API.
 
 Demonstrates:
 - Connecting a subject to Google Drive
@@ -28,7 +28,7 @@ def main() -> None:
 
     # 1. Initiate connection (returns oauth_url if authorization is required)
     print("=== Initiating Connection ===")
-    response = client.delegated_access.connect(
+    response = client.gatekeeper.connect(
         subject=subject,
         provider="google_drive",
         project_name=project_name,
@@ -46,7 +46,7 @@ def main() -> None:
 
     # 2. List current connections
     print("\n=== Listing Connections ===")
-    connections = client.delegated_access.list_connections(project_name=project_name)
+    connections = client.gatekeeper.list_connections(project_name=project_name)
     print(f"Total: {connections.get('total', 0)}")
     for conn in connections.get("data", []):
         print(f"  - {conn['id']}: {conn['subject']} ({conn['status']})")
@@ -62,7 +62,7 @@ def main() -> None:
 
     # 3. Get access rules for the connection
     print("\n=== Current Access Rules ===")
-    rules = client.delegated_access.get_access_rules(connection_id)
+    rules = client.gatekeeper.get_access_rules(connection_id)
     print(f"Unrestricted: {rules.get('unrestricted')}")
     print(f"Allowed folders: {rules.get('allowed_folders', [])}")
     print(f"Allowed files: {rules.get('allowed_files', [])}")
@@ -72,7 +72,7 @@ def main() -> None:
     print("\n=== Updating Access Rules ===")
     folder_id = os.environ.get("DEMO_FOLDER_ID")  # Optional: set to test restrictions
     if folder_id:
-        updated_rules = client.delegated_access.update_access_rules(
+        updated_rules = client.gatekeeper.update_access_rules(
             connection_id,
             allowed_folders=[folder_id],
             allowed_files=[],
@@ -84,7 +84,7 @@ def main() -> None:
 
     # 5. List Drive files (respects access rules)
     print("\n=== Listing Drive Files ===")
-    files = client.delegated_access.list_drive_files(
+    files = client.gatekeeper.list_drive_files(
         project_name=project_name,
         subject=subject,
         page_size=10,
@@ -98,7 +98,7 @@ def main() -> None:
 
     # 6. Clear access rules (optional - restore unrestricted access)
     # print("\n=== Clearing Access Rules ===")
-    # cleared = client.delegated_access.clear_access_rules(connection_id)
+    # cleared = client.gatekeeper.clear_access_rules(connection_id)
     # print(f"Unrestricted: {cleared.get('unrestricted')}")
 
 

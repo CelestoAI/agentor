@@ -133,7 +133,7 @@ class Deployment(_BaseClient):
         return response.json()
 
 
-class DelegatedAccess(_BaseClient):
+class GateKeeper(_BaseClient):
     def connect(
         self,
         *,
@@ -307,11 +307,11 @@ class CelestoSDK(_BaseConnection):
         >> client.toolhub.list_tools()
         >> client.toolhub.run_current_weather_tool("London")
         >> client.deployment.deploy(folder=Path("./my-app"), name="My App", description="Description", envs={})
-        >> client.delegated_access.list_connections(project_name="My Project")
+        >> client.gatekeeper.list_connections(project_name="My Project")
     """
 
     def __init__(self, api_key: str, base_url: str = None):
         super().__init__(api_key, base_url)
         self.toolhub = ToolHub(self)
         self.deployment = Deployment(self)
-        self.delegated_access = DelegatedAccess(self)
+        self.gatekeeper = GateKeeper(self)
