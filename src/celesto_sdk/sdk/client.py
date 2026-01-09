@@ -192,6 +192,25 @@ class DelegatedAccess(_BaseClient):
         include_folders: bool = True,
         order_by: str | None = None,
     ) -> dict:
+        """
+        List Google Drive files for a delegated subject.
+
+        If access rules are configured and no folder_id is specified,
+        files from all allowed folders will be returned automatically.
+
+        Args:
+            project_name: Project name to scope the access
+            subject: Subject identifier (end-user)
+            page_size: Number of files per page (1-1000, default 20)
+            page_token: Page token from previous response for pagination
+            folder_id: Specific folder ID to list (optional)
+            query: Google Drive search query (optional)
+            include_folders: Whether to include folders in results
+            order_by: Google Drive orderBy parameter (optional)
+
+        Returns:
+            Dict with 'files' list and optional 'next_page_token'
+        """
         params: dict[str, object] = {
             "project_name": project_name,
             "subject": subject,
@@ -210,6 +229,70 @@ class DelegatedAccess(_BaseClient):
         return self.session.get(
             f"{self.base_url}/delegated-access/drive/files",
             params=params,
+        ).json()
+
+    # Access Rules Management
+
+    def get_access_rules(self, connection_id: str) -> dict:
+        """
+        Get access rules for a delegated access connection.
+
+        Args:
+            connection_id: The connection ID
+
+        Returns:
+            Dict with 'version', 'allowed_folders', 'allowed_files', and 'unrestricted' flag
+        """
+        return self.session.get(
+            f"{self.base_url}/delegated-access/connections/{connection_id}/access-rules",
+        ).json()
+
+    def update_access_rules(
+        self,
+        connection_id: str,
+        *,
+        allowed_folders: List[str] | None = None,
+        allowed_files: List[str] | None = None,
+    ) -> dict:
+        """
+        Update access rules for a delegated access connection.
+
+        Files in allowed_folders (and their subfolders) will be accessible.
+        Individual files can be added via allowed_files.
+        Setting both to empty lists removes all restrictions.
+
+        Args:
+            connection_id: The connection ID
+            allowed_folders: List of Google Drive folder IDs with recursive access
+            allowed_files: List of individual Google Drive file IDs
+
+        Returns:
+            Updated access rules dict
+        """
+        payload = {
+            "allowed_folders": allowed_folders or [],
+            "allowed_files": allowed_files or [],
+        }
+        return self.session.put(
+            f"{self.base_url}/delegated-access/connections/{connection_id}/access-rules",
+            json=payload,
+        ).json()
+
+    def clear_access_rules(self, connection_id: str) -> dict:
+        """
+        Clear access rules for a connection (set to unrestricted).
+
+        This removes all file/folder restrictions, giving the subject
+        full access to all files in their Google Drive.
+
+        Args:
+            connection_id: The connection ID
+
+        Returns:
+            Access rules dict with 'unrestricted': True
+        """
+        return self.session.delete(
+            f"{self.base_url}/delegated-access/connections/{connection_id}/access-rules",
         ).json()
 
 
