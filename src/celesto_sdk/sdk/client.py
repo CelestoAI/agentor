@@ -151,7 +151,7 @@ class DelegatedAccess(_BaseClient):
             payload["redirect_uri"] = redirect_uri
 
         return self.session.post(
-            f"{self.base_url}/delegated-access/connect",
+            f"{self.base_url}/gatekeeper/connect",
             json=payload,
         ).json()
 
@@ -166,18 +166,18 @@ class DelegatedAccess(_BaseClient):
             params["status_filter"] = status_filter
 
         return self.session.get(
-            f"{self.base_url}/delegated-access/connections",
+            f"{self.base_url}/gatekeeper/connections",
             params=params,
         ).json()
 
     def get_connection(self, connection_id: str) -> dict:
         return self.session.get(
-            f"{self.base_url}/delegated-access/connections/{connection_id}",
+            f"{self.base_url}/gatekeeper/connections/{connection_id}",
         ).json()
 
     def revoke_connection(self, connection_id: str) -> dict:
         return self.session.delete(
-            f"{self.base_url}/delegated-access/connections/{connection_id}",
+            f"{self.base_url}/gatekeeper/connections/{connection_id}",
         ).json()
 
     def list_drive_files(
@@ -229,7 +229,7 @@ class DelegatedAccess(_BaseClient):
             params["order_by"] = order_by
 
         return self.session.get(
-            f"{self.base_url}/delegated-access/drive/files",
+            f"{self.base_url}/gatekeeper/connectors/drive/files",
             params=params,
         ).json()
 
@@ -246,7 +246,7 @@ class DelegatedAccess(_BaseClient):
             Dict with 'version', 'allowed_folders', 'allowed_files', and 'unrestricted' flag
         """
         return self.session.get(
-            f"{self.base_url}/delegated-access/connections/{connection_id}/access-rules",
+            f"{self.base_url}/gatekeeper/connections/{connection_id}/access-rules",
         ).json()
 
     def update_access_rules(
@@ -277,7 +277,7 @@ class DelegatedAccess(_BaseClient):
             "allowed_files": allowed_files or [],
         }
         return self.session.put(
-            f"{self.base_url}/delegated-access/connections/{connection_id}/access-rules",
+            f"{self.base_url}/gatekeeper/connections/{connection_id}/access-rules",
             json=payload,
         ).json()
 
@@ -295,7 +295,7 @@ class DelegatedAccess(_BaseClient):
             Access rules dict with 'unrestricted': True
         """
         return self.session.delete(
-            f"{self.base_url}/delegated-access/connections/{connection_id}/access-rules",
+            f"{self.base_url}/gatekeeper/connections/{connection_id}/access-rules",
         ).json()
 
 
