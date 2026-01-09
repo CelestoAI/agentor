@@ -133,6 +133,86 @@ class Deployment(_BaseClient):
         return response.json()
 
 
+class DelegatedAccess(_BaseClient):
+    def connect(
+        self,
+        *,
+        subject: str,
+        project_id: str,
+        provider: str = "google_drive",
+        redirect_uri: str | None = None,
+    ) -> dict:
+        payload: dict[str, str] = {
+            "subject": subject,
+            "provider": provider,
+            "project_id": project_id,
+        }
+        if redirect_uri:
+            payload["redirect_uri"] = redirect_uri
+
+        return self.session.post(
+            f"{self.base_url}/delegated-access/connect",
+            json=payload,
+        ).json()
+
+    def list_connections(
+        self,
+        *,
+        project_id: str,
+        status_filter: str | None = None,
+    ) -> dict:
+        params: dict[str, str] = {"project_id": project_id}
+        if status_filter:
+            params["status_filter"] = status_filter
+
+        return self.session.get(
+            f"{self.base_url}/delegated-access/connections",
+            params=params,
+        ).json()
+
+    def get_connection(self, connection_id: str) -> dict:
+        return self.session.get(
+            f"{self.base_url}/delegated-access/connections/{connection_id}",
+        ).json()
+
+    def revoke_connection(self, connection_id: str) -> dict:
+        return self.session.delete(
+            f"{self.base_url}/delegated-access/connections/{connection_id}",
+        ).json()
+
+    def list_drive_files(
+        self,
+        *,
+        project_id: str,
+        subject: str,
+        page_size: int = 20,
+        page_token: str | None = None,
+        folder_id: str | None = None,
+        query: str | None = None,
+        include_folders: bool = True,
+        order_by: str | None = None,
+    ) -> dict:
+        params: dict[str, object] = {
+            "project_id": project_id,
+            "subject": subject,
+            "page_size": page_size,
+            "include_folders": include_folders,
+        }
+        if page_token:
+            params["page_token"] = page_token
+        if folder_id:
+            params["folder_id"] = folder_id
+        if query:
+            params["query"] = query
+        if order_by:
+            params["order_by"] = order_by
+
+        return self.session.get(
+            f"{self.base_url}/delegated-access/drive/files",
+            params=params,
+        ).json()
+
+
 class CelestoSDK(_BaseConnection):
     """
     Example:
@@ -141,9 +221,11 @@ class CelestoSDK(_BaseConnection):
         >> client.toolhub.list_tools()
         >> client.toolhub.run_current_weather_tool("London")
         >> client.deployment.deploy(folder=Path("./my-app"), name="My App", description="Description", envs={})
+        >> client.delegated_access.list_connections(project_id="proj_123")
     """
 
     def __init__(self, api_key: str, base_url: str = None):
         super().__init__(api_key, base_url)
         self.toolhub = ToolHub(self)
         self.deployment = Deployment(self)
+        self.delegated_access = DelegatedAccess(self)
