@@ -14,7 +14,7 @@ load_dotenv()
 
 @dataclass
 class CelestoConfig:
-    api_token: str = os.environ.get("CELESTO_API_TOKEN")
+    api_token: str = os.environ.get("CELESTO_API_KEY")
     base_url: str = "https://api.celesto.ai/v1"
 
 

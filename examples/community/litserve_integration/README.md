@@ -12,14 +12,14 @@ import litserve as ls
 from agentor import Agentor, CelestoSDK, function_tool
 
 # Load API token
-CELESTO_API_TOKEN = os.environ.get("CELESTO_API_TOKEN")
+CELESTO_API_KEY = os.environ.get("CELESTO_API_KEY")
 
 
 @function_tool
 def get_weather(city: str) -> str:
     """Returns the weather in the given city."""
     try:
-        client = CelestoSDK(CELESTO_API_TOKEN)
+        client = CelestoSDK(CELESTO_API_KEY)
         return client.toolhub.run_weather_tool(city)
     except Exception as e:
         print(f"Error: {e}")
