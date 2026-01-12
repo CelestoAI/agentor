@@ -693,13 +693,15 @@ class GateKeeper(_BaseClient):
 
     def update_access_rules(
         self,
-        connection_id: str,
         *,
+        subject: str,
+        project_name: str,
         allowed_folders: List[str] | None = None,
         allowed_files: List[str] | None = None,
+        provider: str | None = None,
     ) -> dict:
         """
-        Update access rules for a delegated access connection.
+        Update access rules for a delegated access connection by subject.
 
         Files in allowed_folders (and their subfolders) will be accessible.
         Individual files can be added via allowed_files.
@@ -707,20 +709,37 @@ class GateKeeper(_BaseClient):
         to remove restrictions.
 
         Args:
-            connection_id: The connection ID
+            subject: Subject identifier (e.g., "user:email@example.com")
+            project_name: Project name to scope the update
             allowed_folders: List of Google Drive folder IDs with recursive access
             allowed_files: List of individual Google Drive file IDs
+            provider: Optional provider filter (e.g., "google_drive")
 
         Returns:
             Updated access rules dict
+
+        Example:
+            result = client.gatekeeper.update_access_rules(
+                subject="user:john@example.com",
+                project_name="my-project",
+                allowed_folders=["folder_id_1", "folder_id_2"],
+            )
         """
+        params: dict[str, str] = {
+            "subject": subject,
+            "project_name": project_name,
+        }
+        if provider:
+            params["provider"] = provider
+
         payload = {
             "allowed_folders": allowed_folders or [],
             "allowed_files": allowed_files or [],
         }
         return self._request(
             "PUT",
-            f"/gatekeeper/connections/{connection_id}/access-rules",
+            "/gatekeeper/connections/access-rules",
+            params=params,
             json_body=payload,
         )
 

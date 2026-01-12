@@ -73,7 +73,8 @@ def main() -> None:
     folder_id = os.environ.get("DEMO_FOLDER_ID")  # Optional: set to test restrictions
     if folder_id:
         updated_rules = client.gatekeeper.update_access_rules(
-            connection_id,
+            subject=subject,
+            project_name=project_name,
             allowed_folders=[folder_id],
             allowed_files=[],
         )
