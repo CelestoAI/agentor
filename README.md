@@ -57,49 +57,68 @@ pip install git+https://github.com/celestoai/agentor@main
 
 </details>
 
-## Build and Deploy an Agent
+### Verify Installation
 
-Build an Agent, connect external tools or MCP Server and serve as an API in just a few lines of code:
+Check that everything is working (no API keys needed):
+
+```python
+from agentor import Agentor
+
+# Create a simple agent with no external dependencies
+agent = Agentor(
+    name="Echo Agent",
+    model="echo",  # Built-in test model, no API key required
+    instructions="You are a helpful assistant."
+)
+
+print(agent)  # Prints agent configuration
+```
+
+## Run an Agent Locally
+
+Build an agent with tools and run it directly:
 
 ```python
 from agentor.tools import GetWeatherTool
 from agentor import Agentor
 
+# Requires OPENAI_API_KEY env var (or GEMINI_API_KEY, ANTHROPIC_API_KEY)
 agent = Agentor(
     name="Weather Agent",
-    model="gpt-5-mini",  # Use any LLM provider - gemini/gemini-2.5-pro or anthropic/claude-3.5
+    model="gpt-4o-mini",  # or gemini/gemini-2.0-flash, anthropic/claude-sonnet-4-20250514
     tools=[GetWeatherTool()]
 )
-result = agent.run("What is the weather in London?")  # Run the Agent
-print(result)
 
-# Serve Agent with a single line of code
-agent.serve()
+result = agent.run("What is the weather in London?")
+print(result)
 ```
 
-Run the following command to query the Agent server:
+## Serve as an API
+
+Expose your agent as a REST endpoint with a single line:
+
+```python
+agent.serve()  # Starts server on http://localhost:8000
+```
+
+Query it with curl:
 
 ```bash
-curl -X 'POST' \
-  'http://localhost:8000/chat' \
-  -H 'accept: application/json' \
+curl -X POST 'http://localhost:8000/chat' \
   -H 'Content-Type: application/json' \
-  -d '{
-  "input": "What is the weather in London?"
-}'
+  -d '{"input": "What is the weather in London?"}'
 ```
 
-Celesto AI provides a developer-first platform for deployment of Agents, MCP Servers, any LLM application.
+## Deploy to Production
 
-To deploy using Celesto, run:
+Celesto provides serverless deployment for agents and MCP servers:
 
 ```bash
 celesto deploy
 ```
 
-Once deployed, your agent will be accessible via a REST endpoint, for example:
-
-```bash
+Your agent will be accessible at:
+```
 https://api.celesto.ai/deploy/apps/<app-name>
 ```
 
@@ -131,15 +150,27 @@ from agentor import Agentor
 
 agent = Agentor(
     name="Assistant",
-    model="gemini/gemini-3-flash-preview",
-    instructions="Your job is to create GIFs. Lean on the shell tool and any available skills.",
+    model="gemini/gemini-2.0-flash",
+    instructions="Your job is to create GIFs. Use available skills.",
     skills=[".skills/slack-gif-creator"],
     tools=[ShellTool()],
 )
 
+result = agent.run("produce a cat gif")
+print(result)
+```
+
+<details>
+<summary>Streaming responses</summary>
+
+For real-time output, use async streaming:
+
+```python
 async for chunk in await agent.chat("produce a cat gif", stream=True):
     print(chunk)
 ```
+
+</details>
 
 ## Create an Agent from Markdown
 
