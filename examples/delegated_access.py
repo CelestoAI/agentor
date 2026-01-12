@@ -101,6 +101,14 @@ def main() -> None:
     # cleared = client.gatekeeper.clear_access_rules(connection_id)
     # print(f"Unrestricted: {cleared.get('unrestricted')}")
 
+    # 7. Revoke connection (optional - removes access entirely)
+    # print("\n=== Revoking Connection ===")
+    # revoked = client.gatekeeper.revoke_connection(
+    #     subject=subject,
+    #     project_name=project_name,
+    # )
+    # print(f"Revoked connection: {revoked.get('id')}")
+
 
 if __name__ == "__main__":
     main()

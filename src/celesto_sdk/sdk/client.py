@@ -137,13 +137,9 @@ class _BaseClient:
                 files=files,
             )
         except httpx.ConnectError as e:
-            raise CelestoNetworkError(
-                f"Failed to connect to Celesto API: {e}"
-            ) from e
+            raise CelestoNetworkError(f"Failed to connect to Celesto API: {e}") from e
         except httpx.TimeoutException as e:
-            raise CelestoNetworkError(
-                f"Request to Celesto API timed out: {e}"
-            ) from e
+            raise CelestoNetworkError(f"Request to Celesto API timed out: {e}") from e
         except httpx.HTTPError as e:
             raise CelestoNetworkError(
                 f"Network error while contacting Celesto API: {e}"
@@ -191,7 +187,9 @@ class _BaseClient:
         # Rate limiting
         if status == 429:
             retry_after = response.headers.get("Retry-After")
-            retry_seconds = int(retry_after) if retry_after and retry_after.isdigit() else None
+            retry_seconds = (
+                int(retry_after) if retry_after and retry_after.isdigit() else None
+            )
             raise CelestoRateLimitError(
                 f"Rate limit exceeded: {error_message}",
                 response=response,
@@ -322,7 +320,9 @@ class ToolHub(_BaseClient):
             for email in emails:
                 print(f"From: {email['from']} - {email['subject']}")
         """
-        return self._request("GET", "/toolhub/list_google_emails", params={"limit": limit})
+        return self._request(
+            "GET", "/toolhub/list_google_emails", params={"limit": limit}
+        )
 
     def run_send_google_email(
         self, to: str, subject: str, body: str, content_type: str = "text/plain"
@@ -586,22 +586,44 @@ class GateKeeper(_BaseClient):
         """
         return self._request("GET", f"/gatekeeper/connections/{connection_id}")
 
-    def revoke_connection(self, connection_id: str) -> dict:
-        """Revoke a delegated access connection.
+    def revoke_connection(
+        self,
+        *,
+        subject: str,
+        project_name: str,
+        provider: str | None = None,
+    ) -> dict:
+        """Revoke a delegated access connection by subject.
 
-        Removes the connection and invalidates any stored credentials.
-        The user will need to re-authorize to regain access.
+        Finds and revokes the connection for the given subject within the
+        specified project. The user will need to re-authorize to regain access.
 
         Args:
-            connection_id: The connection ID to revoke
+            subject: Subject identifier (e.g., "user:email@example.com")
+            project_name: Project name to scope the revocation
+            provider: Optional provider filter (e.g., "google_drive")
 
         Returns:
-            Confirmation of revocation
+            Confirmation of revocation with connection ID
 
         Raises:
-            CelestoNotFoundError: If connection doesn't exist
+            CelestoNotFoundError: If no connection found for the subject
+
+        Example:
+            result = client.gatekeeper.revoke_connection(
+                subject="user:john@example.com",
+                project_name="my-project"
+            )
+            print(f"Revoked connection: {result['id']}")
         """
-        return self._request("DELETE", f"/gatekeeper/connections/{connection_id}")
+        params: dict[str, str] = {
+            "subject": subject,
+            "project_name": project_name,
+        }
+        if provider:
+            params["provider"] = provider
+
+        return self._request("DELETE", "/gatekeeper/connections", params=params)
 
     def list_drive_files(
         self,
@@ -665,7 +687,9 @@ class GateKeeper(_BaseClient):
         Returns:
             Dict with 'version', 'allowed_folders', 'allowed_files', and 'unrestricted' flag
         """
-        return self._request("GET", f"/gatekeeper/connections/{connection_id}/access-rules")
+        return self._request(
+            "GET", f"/gatekeeper/connections/{connection_id}/access-rules"
+        )
 
     def update_access_rules(
         self,
@@ -713,7 +737,9 @@ class GateKeeper(_BaseClient):
         Returns:
             Access rules dict with 'unrestricted': True
         """
-        return self._request("DELETE", f"/gatekeeper/connections/{connection_id}/access-rules")
+        return self._request(
+            "DELETE", f"/gatekeeper/connections/{connection_id}/access-rules"
+        )
 
 
 class CelestoSDK(_BaseConnection):
