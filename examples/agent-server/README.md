@@ -2,7 +2,7 @@
 
 This example shows how to deploy a **scalable, production-ready Agent server** using `Agentor` ✴️.
 
-We’ll integrate Agentor with [CelestoSDK tools](https://celesto.ai/toolhub) to create a weather-aware conversational agent.
+We’ll integrate Agentor with the built-in weather tool (set `WEATHER_API_KEY` for live data) to create a weather-aware conversational agent.
 
 ## 🔧 Key Features
 

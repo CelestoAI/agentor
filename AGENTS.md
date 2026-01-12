@@ -251,7 +251,6 @@ Hierarchical agent structure with specialized roles:
 
 - Extensible tool registration system
 - Function decorators for tool creation
-- Integration with Celesto AI Tool Hub
 
 ## Common Development Workflows
 
@@ -313,7 +312,6 @@ agent = Agentor(
 - **Documentation**: https://docs.celesto.ai
 - **Examples**: `examples/` directory and https://github.com/celestoai/agentor/tree/main/docs/examples
 - **Discord Community**: https://discord.gg/KNb5UkrAmm
-- **Tool Hub**: https://celesto.ai/toolhub
 
 ## Core Business Value
 

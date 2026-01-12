@@ -17,7 +17,7 @@ class CelestoError(Exception):
 
     Example:
         try:
-            client.toolhub.list_tools()
+            client.deployment.list()
         except CelestoError as e:
             print(f"SDK error: {e}")
     """
@@ -42,7 +42,7 @@ class CelestoAuthenticationError(CelestoError):
     Example:
         try:
             client = CelestoSDK("invalid-key")
-            client.toolhub.list_tools()
+            client.deployment.list()
         except CelestoAuthenticationError as e:
             print("Please check your API key")
     """
@@ -96,13 +96,15 @@ class CelestoRateLimitError(CelestoError):
 
     Example:
         try:
-            client.toolhub.list_tools()
+            client.deployment.list()
         except CelestoRateLimitError as e:
             if e.retry_after:
                 time.sleep(e.retry_after)
     """
 
-    def __init__(self, message: str, response: Any = None, retry_after: int | None = None):
+    def __init__(
+        self, message: str, response: Any = None, retry_after: int | None = None
+    ):
         super().__init__(message, response)
         self.retry_after = retry_after
 
@@ -115,7 +117,7 @@ class CelestoServerError(CelestoError):
 
     Example:
         try:
-            client.toolhub.list_tools()
+            client.deployment.list()
         except CelestoServerError as e:
             print("Server error, please try again later")
     """
@@ -133,7 +135,7 @@ class CelestoNetworkError(CelestoError):
 
     Example:
         try:
-            client.toolhub.list_tools()
+            client.deployment.list()
         except CelestoNetworkError as e:
             print("Network error, check your connection")
     """

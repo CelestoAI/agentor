@@ -7,46 +7,8 @@ the Celesto API.
 """
 
 from typing import List, Literal
+
 from typing_extensions import NotRequired, TypedDict
-
-
-# ============================================================================
-# ToolHub Types
-# ============================================================================
-
-
-class ToolParameter(TypedDict):
-    """A parameter for a tool."""
-
-    name: str
-    type: str
-    description: str
-    required: NotRequired[bool]
-
-
-class ToolInfo(TypedDict):
-    """Information about an available tool."""
-
-    name: str
-    description: str
-    parameters: NotRequired[List[ToolParameter]]
-
-
-class ToolListResponse(TypedDict):
-    """Response from list_tools()."""
-
-    tools: List[ToolInfo]
-
-
-class WeatherResponse(TypedDict):
-    """Response from run_weather_tool()."""
-
-    temperature: NotRequired[float]
-    conditions: NotRequired[str]
-    humidity: NotRequired[float]
-    wind_speed: NotRequired[float]
-    error: str | None
-
 
 # ============================================================================
 # Deployment Types
@@ -141,11 +103,6 @@ class AccessRules(TypedDict):
 # ============================================================================
 
 __all__ = [
-    # ToolHub
-    "ToolParameter",
-    "ToolInfo",
-    "ToolListResponse",
-    "WeatherResponse",
     # Deployment
     "DeploymentInfo",
     "DeploymentResponse",

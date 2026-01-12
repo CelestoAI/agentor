@@ -1,26 +1,15 @@
+import os
+
 import litserve as ls
 
 from agentor import Agentor
-
-# CELESTO_API_KEY = os.environ.get("CELESTO_API_KEY")
-
-
-# @function_tool
-# def get_weather(city: str) -> str:
-#     """Returns the weather in the given city."""
-#     try:
-#         client = CelestoSDK(CELESTO_API_KEY)
-#         return client.toolhub.run_weather_tool(city)
-#     except Exception as e:
-#         print(f"Error: {e}")
-#         return "Failed to get weather data."
+from agentor.tools import GetWeatherTool
 
 
 class AgentorServer(ls.LitAPI):
     def setup(self, device):
-        self.agentor = Agentor(
-            name="Agentor", model="gpt-5-mini", tools=["get_weather"]
-        )
+        weather_tool = GetWeatherTool(api_key=os.environ.get("WEATHER_API_KEY"))
+        self.agentor = Agentor(name="Agentor", model="gpt-5-mini", tools=[weather_tool])
 
     async def predict(self, request: dict):
         async for event in self.agentor.stream_chat(

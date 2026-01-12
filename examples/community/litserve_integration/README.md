@@ -2,33 +2,21 @@
 
 This example demonstrates how to deploy a scalable Agent server using [LitServe](https://github.com/Lightning-AI/LitServe) ⚡️ — an open-source Python library optimized for production-scale inference and async streaming.
 
-We’ll integrate Agentor with [CelestoSDK tools](https://celesto.ai/toolhub) to create a weather-aware conversational agent.
+We’ll integrate Agentor with the built-in weather tool (set `WEATHER_API_KEY` for live data) to create a weather-aware conversational agent.
 
 Below is an example of deploying an Agentor instance with a simple weather tool using LitServe.
 
 ```python
 import os
 import litserve as ls
-from agentor import Agentor, CelestoSDK, function_tool
-
-# Load API token
-CELESTO_API_KEY = os.environ.get("CELESTO_API_KEY")
-
-
-@function_tool
-def get_weather(city: str) -> str:
-    """Returns the weather in the given city."""
-    try:
-        client = CelestoSDK(CELESTO_API_KEY)
-        return client.toolhub.run_weather_tool(city)
-    except Exception as e:
-        print(f"Error: {e}")
-        return "Failed to get weather data."
+from agentor import Agentor
+from agentor.tools import GetWeatherTool
 
 
 class AgentorServer(ls.LitAPI):
     def setup(self, device):
-        self.agentor = Agentor(name="Agentor", model="gpt-5-mini", tools=[get_weather])
+        weather_tool = GetWeatherTool(api_key=os.environ.get("WEATHER_API_KEY"))
+        self.agentor = Agentor(name="Agentor", model="gpt-5-mini", tools=[weather_tool])
 
     async def predict(self, request: dict):
         async for event in self.agentor.stream_chat(

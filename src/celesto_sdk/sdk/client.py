@@ -42,7 +42,7 @@ class _BaseConnection:
 
         # With context manager for automatic cleanup
         with CelestoSDK() as client:
-            tools = client.toolhub.list_tools()
+            deployments = client.deployment.list()
     """
 
     def __init__(self, api_key: str | None = None, base_url: str | None = None):
@@ -224,138 +224,6 @@ class _BaseClient:
             return str(data)
         except (json.JSONDecodeError, ValueError):
             return response.text or f"HTTP {response.status_code}"
-
-
-class ToolHub(_BaseClient):
-    """Client for Celesto ToolHub - discover and execute tools.
-
-    ToolHub provides access to a variety of pre-built tools that can be
-    executed on demand. Use list_tools() to discover available tools,
-    then execute them using run() or the convenience methods.
-
-    Example:
-        client = CelestoSDK()
-
-        # Discover available tools
-        tools = client.toolhub.list_tools()
-
-        # Execute a tool generically
-        result = client.toolhub.run("weather", city="London")
-
-        # Or use convenience methods
-        weather = client.toolhub.run_weather_tool("London")
-    """
-
-    def list_tools(self) -> List[dict[str, str]]:
-        """List all available tools in ToolHub.
-
-        Returns:
-            List of tool definitions, each containing tool name, description,
-            and parameter schema.
-
-        Example:
-            tools = client.toolhub.list_tools()
-            for tool in tools["tools"]:
-                print(f"{tool['name']}: {tool['description']}")
-        """
-        return self._request("GET", "/toolhub/list")
-
-    def run(self, tool_name: str, **kwargs) -> dict:
-        """Execute any tool by name with the provided parameters.
-
-        This is a generic method that can execute any tool available in ToolHub.
-        Use list_tools() to discover available tools and their parameters.
-
-        Args:
-            tool_name: Name of the tool to execute (e.g., "weather", "send_google_email")
-            **kwargs: Tool-specific parameters
-
-        Returns:
-            Tool execution result (structure varies by tool)
-
-        Raises:
-            CelestoNotFoundError: If the tool doesn't exist
-            CelestoValidationError: If required parameters are missing
-
-        Example:
-            # Execute weather tool
-            result = client.toolhub.run("weather", city="London")
-
-            # Execute email tool
-            result = client.toolhub.run(
-                "send_google_email",
-                to="user@example.com",
-                subject="Hello",
-                body="World"
-            )
-        """
-        return self._request("POST", f"/toolhub/run/{tool_name}", json_body=kwargs)
-
-    def run_weather_tool(self, city: str) -> dict:
-        """Get current weather for a city.
-
-        Args:
-            city: City name (e.g., "London", "New York")
-
-        Returns:
-            Weather data including temperature, conditions, etc.
-
-        Example:
-            weather = client.toolhub.run_weather_tool("London")
-            print(f"Temperature: {weather['temperature']}")
-        """
-        return self._request("GET", "/toolhub/current-weather", params={"city": city})
-
-    def run_list_google_emails(self, limit: int = 10) -> List[dict[str, str]]:
-        """List emails from connected Google account.
-
-        Args:
-            limit: Maximum number of emails to return (default: 10)
-
-        Returns:
-            List of email summaries with subject, from, date, etc.
-
-        Example:
-            emails = client.toolhub.run_list_google_emails(limit=5)
-            for email in emails:
-                print(f"From: {email['from']} - {email['subject']}")
-        """
-        return self._request(
-            "GET", "/toolhub/list_google_emails", params={"limit": limit}
-        )
-
-    def run_send_google_email(
-        self, to: str, subject: str, body: str, content_type: str = "text/plain"
-    ) -> dict:
-        """Send an email via connected Google account.
-
-        Args:
-            to: Recipient email address
-            subject: Email subject line
-            body: Email body content
-            content_type: MIME type for body (default: "text/plain", or "text/html")
-
-        Returns:
-            Confirmation with message ID
-
-        Example:
-            result = client.toolhub.run_send_google_email(
-                to="recipient@example.com",
-                subject="Hello from Celesto",
-                body="<h1>Hello!</h1>",
-                content_type="text/html"
-            )
-        """
-        return self._request(
-            "POST",
-            "/toolhub/send_google_email",
-            json_body={
-                "to": to,
-                "subject": subject,
-                "body": body,
-                "content_type": content_type,
-            },
-        )
 
 
 class Deployment(_BaseClient):
@@ -765,7 +633,6 @@ class CelestoSDK(_BaseConnection):
     """Main client for the Celesto AI platform.
 
     CelestoSDK provides access to all Celesto services through a unified interface:
-    - toolhub: Discover and execute pre-built AI tools
     - deployment: Deploy and manage AI agents
     - gatekeeper: Manage delegated access to user resources
 
@@ -787,12 +654,6 @@ class CelestoSDK(_BaseConnection):
         os.environ["CELESTO_API_KEY"] = "your-api-key"
 
         with CelestoSDK() as client:
-            # Discover available tools
-            tools = client.toolhub.list_tools()
-
-            # Execute a tool
-            weather = client.toolhub.run_weather_tool("London")
-
             # Deploy an agent
             result = client.deployment.deploy(
                 folder=Path("./my-app"),
@@ -807,6 +668,5 @@ class CelestoSDK(_BaseConnection):
 
     def __init__(self, api_key: str | None = None, base_url: str | None = None):
         super().__init__(api_key, base_url)
-        self.toolhub = ToolHub(self)
         self.deployment = Deployment(self)
         self.gatekeeper = GateKeeper(self)
