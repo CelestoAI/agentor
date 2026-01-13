@@ -34,6 +34,7 @@ dependencies = [
     "pytz>=2024.1",
     "bm25s>=0.2.14",
     "pystemmer>=3.0.0",
+    "celesto>=0.0.1.dev0",
 ]
 license-files = ["LICENSE"]
 authors = [
@@ -51,9 +52,6 @@ documentation = "https://github.com/CelestoAI/agentor/blob/main/README.md"
 issues = "https://github.com/CelestoAI/agentor/issues"
 
 
-
-[project.scripts]
-celesto="celesto_sdk:app"
 
 [project.optional-dependencies]
 exa = ["exa-py>=1.0.0"]
@@ -79,7 +77,7 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentor", "src/celesto_sdk"]
+packages = ["src/agentor"]
 
 [tool.uv]
 package = true

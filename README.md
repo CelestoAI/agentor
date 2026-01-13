@@ -94,6 +94,7 @@ curl -X 'POST' \
 ```
 
 Celesto AI provides a developer-first platform for deployment of Agents, MCP Servers, any LLM application.
+The `celesto` CLI is installed automatically with `agentor`.
 
 To deploy using Celesto, run:
 
