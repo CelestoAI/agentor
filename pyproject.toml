@@ -34,7 +34,7 @@ dependencies = [
     "pytz>=2024.1",
     "bm25s>=0.2.14",
     "pystemmer>=3.0.0",
-    "celesto>=0.0.1.dev0",
+    "celesto>=0.0.1",
 ]
 license-files = ["LICENSE"]
 authors = [
