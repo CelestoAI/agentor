@@ -50,5 +50,6 @@ The Agent server will respond asynchronously — ideal for streaming, scalable, 
 agentor deploy --folder ./
 
 # List the deployed API
+pip install celesto
 celesto ls
 ```

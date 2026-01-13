@@ -95,7 +95,13 @@ curl -X 'POST' \
 
 Celesto AI provides a developer-first platform for deployment of Agents, MCP Servers, any LLM application.
 
-To deploy using Celesto, run:
+To deploy using Celesto, install the CLI first:
+
+```bash
+pip install celesto
+```
+
+Then run:
 
 ```bash
 celesto deploy

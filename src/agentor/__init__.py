@@ -6,7 +6,6 @@ from agentor.core.agent import Agentor, CelestoMCPHub, LitellmModel, ModelSettin
 from agentor.core.llm import LLM
 from agentor.core.tool import tool
 from agentor.tool_search import ToolSearch
-from celesto_sdk.sdk.client import CelestoSDK
 
 from .output_text_formatter import pydantic_to_xml
 from .utils import AppContext
@@ -33,6 +32,16 @@ __all__ = [
 
 # Lazy import core to avoid triggering Google agent initialization
 def __getattr__(name):
+    if name == "CelestoSDK":
+        try:
+            from celesto_sdk.sdk.client import CelestoSDK as _CelestoSDK
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "CelestoSDK is now provided by the separate 'celesto' package. "
+                "Install it with `pip install celesto`."
+            ) from exc
+        globals()["CelestoSDK"] = _CelestoSDK
+        return _CelestoSDK
     if name == "core":
         import importlib
 
