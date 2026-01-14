@@ -13,7 +13,7 @@ Prereqs:
 
 import os
 
-from celesto_sdk.sdk import CelestoSDK
+from celesto.sdk import CelestoSDK
 
 
 def main() -> None:

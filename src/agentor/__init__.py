@@ -34,7 +34,7 @@ __all__ = [
 def __getattr__(name):
     if name == "CelestoSDK":
         try:
-            from celesto_sdk.sdk.client import CelestoSDK as _CelestoSDK
+            from celesto.sdk.client import CelestoSDK as _CelestoSDK
         except ModuleNotFoundError as exc:
             raise ModuleNotFoundError(
                 "CelestoSDK is now provided by the separate 'celesto' package. "
