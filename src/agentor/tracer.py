@@ -4,7 +4,7 @@ This module provides a custom trace exporter that sends trace data
 to the Celesto backend for storage and visualization.
 
 Usage:
-    from celesto_tracer import setup_celesto_tracing
+    from agentor.tracer import setup_celesto_tracing
 
     # Call once at startup
     setup_celesto_tracing(
@@ -19,11 +19,11 @@ Usage:
 """
 
 import atexit
+import logging
 from typing import Any
 
 import httpx
 from agents import RunConfig, add_trace_processor, set_trace_processors
-import logging
 from agents.tracing import Span, Trace
 from agents.tracing.processors import BatchTraceProcessor, TracingExporter
 
@@ -167,6 +167,12 @@ class CelestoExporter(TracingExporter):
                 span_data["tools"] = self._serialize(live_data.tools)
             if hasattr(live_data, "handoffs"):
                 span_data["handoffs"] = self._serialize(live_data.handoffs)
+
+            # For MCP tool call spans
+            if hasattr(live_data, "result"):
+                span_data["result"] = self._serialize(live_data.result)
+            if hasattr(live_data, "server"):
+                span_data["server"] = live_data.server
 
         payload["span_data"] = span_data
 
