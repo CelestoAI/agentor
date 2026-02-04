@@ -59,12 +59,14 @@ git = ["gitpython>=3.1.0"]
 postgres = ["psycopg2-binary>=2.9.0"]
 github = ["PyGithub>=2.0.0"]
 slack = ["slack_sdk>=3.0.0"]
+scrape_graph_ai = ["scrapegraph-py>=1.46.0"]
 all = [
     "exa-py>=1.0.0",
     "gitpython>=3.1.0",
     "psycopg2-binary>=2.9.0",
     "PyGithub>=2.0.0",
     "slack_sdk>=3.0.0",
+    "scrapegraph-py>=1.46.0",
 ]
 
 [tool.hatch.version]
