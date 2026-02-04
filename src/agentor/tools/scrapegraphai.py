@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from agentor.tools.base import BaseTool, capability
 
@@ -34,7 +34,7 @@ class ScrapeGraphAI(BaseTool):
             )
             return str(response)
         except Exception as e:
-            logger.exception("ScrapeGraphAI SmartScraper Error", e)
+            logger.exception("ScrapeGraphAI SmartScraper Error")
             return f"Error in smartscraper: {str(e)}"
 
     @capability
@@ -48,7 +48,7 @@ class ScrapeGraphAI(BaseTool):
             )
             return str(response)
         except Exception as e:
-            logger.exception("ScrapeGraphAI SearchScraper Error", e)
+            logger.exception("ScrapeGraphAI SearchScraper Error")
             return f"Error in searchscraper: {str(e)}"
 
     @capability
@@ -60,7 +60,7 @@ class ScrapeGraphAI(BaseTool):
             )
             return str(response)
         except Exception as e:
-            logger.exception("ScrapeGraphAI Markdownify Error", e)
+            logger.exception("ScrapeGraphAI Markdownify Error")
             return f"Error in markdownify: {str(e)}"
 
     @capability
@@ -72,23 +72,52 @@ class ScrapeGraphAI(BaseTool):
             )
             return str(response)
         except Exception as e:
-            logger.exception("ScrapeGraphAI Scrape Error", e)
+            logger.exception("ScrapeGraphAI Scrape Error")
             return f"Error in scrape: {str(e)}"
 
     @capability
-    def smartcrawler(self, website_url: str, user_prompt: str, max_depth: int = 1, max_pages: int = 3, sitemap: bool = True) -> str:
-        """Crawl a website intelligently using AI to extract data across multiple pages."""
+    def smartcrawler(
+        self,
+        website_url: str,
+        user_prompt: str,
+        max_depth: int = 1,
+        max_pages: int = 3,
+        sitemap: bool = True,
+        extraction_mode: bool = False,
+        data_schema: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """Crawl a website intelligently using AI to extract data across multiple pages.
+        
+        Args:
+            website_url: The URL of the website to crawl
+            user_prompt: Prompt describing what to extract (used when extraction_mode=True)
+            max_depth: Maximum depth of crawling (default: 1)
+            max_pages: Maximum number of pages to crawl (default: 3)
+            sitemap: Whether to use sitemap for crawling (default: True)
+            extraction_mode: Whether to use extraction mode (requires data_schema if True, default: False)
+            data_schema: Data schema for extraction (required if extraction_mode=True)
+        """
         try:
-            response = self.client.smartcrawler(
-                website_url=website_url,
-                user_prompt=user_prompt,
-                max_depth=max_depth,
-                max_pages=max_pages,
-                sitemap=sitemap
-            )
+            crawl_params = {
+                "url": website_url,
+                "depth": max_depth,
+                "max_pages": max_pages,
+                "sitemap": sitemap,
+                "extraction_mode": extraction_mode
+            }
+            
+            # Include prompt and data_schema only when extraction_mode=True
+            if extraction_mode:
+                if data_schema is None:
+                    raise ValueError("data_schema is required when extraction_mode=True")
+                crawl_params["prompt"] = user_prompt
+                crawl_params["data_schema"] = data_schema
+            # When extraction_mode=False, prompt is not included
+            
+            response = self.client.crawl(**crawl_params)
             return str(response)
         except Exception as e:
-            logger.exception("ScrapeGraphAI SmartCrawler Error", e)
+            logger.exception("ScrapeGraphAI SmartCrawler Error")
             return f"Error in smartcrawler: {str(e)}"
 
     @capability
@@ -100,5 +129,5 @@ class ScrapeGraphAI(BaseTool):
             )
             return str(response)
         except Exception as e:
-            logger.exception("ScrapeGraphAI Sitemap Error", e)
+            logger.exception("ScrapeGraphAI Sitemap Error")
             return f"Error in sitemap: {str(e)}"
