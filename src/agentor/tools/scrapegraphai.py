@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 class ScrapeGraphAI(BaseTool):
-    name = "scrape_graphai"
-    description = "Scrape websites using ScrapeGraph AI."
+    name = "scrape_graph_ai"
+    description = "Scrape websites using ScrapeGraphAI."
 
     def __init__(self, api_key: Optional[str] = None):
         if Client is None:
             raise ImportError(
-                "ScrapeGraphAI dependency is missing. Please install it with `pip install agentor[scrape_graphai]`."
+                "ScrapeGraphAI dependency is missing. Please install it with `pip install agentor[scrape_graph_ai]`."
             )
         super().__init__(api_key)
         self.client = Client(api_key=api_key)
