@@ -95,7 +95,7 @@ class TestScrapeGraphAI(unittest.TestCase):
     def test_smartcrawler(self, MockClient):
         """Test smartcrawler capability."""
         mock_client = MockClient.return_value
-        mock_client.smartcrawler.return_value = "Crawled content"
+        mock_client.crawl.return_value = "Crawled content"
 
         tool = ScrapeGraphAI(api_key="test-key")
         result = tool.smartcrawler(
@@ -211,7 +211,7 @@ class TestScrapeGraphAI(unittest.TestCase):
     def test_error_handling_smartcrawler(self, MockClient):
         """Test error handling in smartcrawler."""
         mock_client = MockClient.return_value
-        mock_client.smartcrawler.side_effect = Exception("Crawler Error")
+        mock_client.crawl.side_effect = Exception("Crawler Error")
 
         tool = ScrapeGraphAI(api_key="test-key")
         result = tool.smartcrawler(
@@ -232,7 +232,7 @@ class TestScrapeGraphAI(unittest.TestCase):
         self.assertIn("Sitemap Error", result)
 
     @patch("agentor.tools.scrapegraphai.Client", None)
-    def test_missing_dependency(self, _):
+    def test_missing_dependency(self):
         """Test that ImportError is raised when dependency is missing."""
         with self.assertRaises(ImportError) as context:
             ScrapeGraphAI(api_key="test-key")
