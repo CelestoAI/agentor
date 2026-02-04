@@ -10,6 +10,7 @@ from .gmail import GmailTool
 from .linkedin import LinkedInScraperTool
 from .postgres import PostgreSQLTool
 from .shell import ShellTool
+from .scrapegraphai import ScrapeGraphAI
 from .slack import SlackTool
 from .timezone import TimezoneTool
 from .weather import GetWeatherTool
@@ -25,6 +26,7 @@ __all__ = [
     "GmailTool",
     "LinkedInScraperTool",
     "PostgreSQLTool",
+    "ScrapeGraphAI",
     "SlackTool",
     "TimezoneTool",
     "GetWeatherTool",
