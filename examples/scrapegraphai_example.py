@@ -21,13 +21,13 @@ from agentor.tools import ScrapeGraphAI
 dotenv.load_dotenv()
 
 # Initialize ScrapeGraphAI tool with API key from environment
-scrapegraph_tool = ScrapeGraphAI(api_key=os.environ.get("SCRAPEGRAPH_API_KEY"))
+scrapegraphai_tool = ScrapeGraphAI(api_key=os.environ.get("SCRAPEGRAPH_API_KEY"))
 
 # Create an agent with ScrapeGraphAI tool
 agent = Agentor(
     name="Web Scraping Agent",
     model="gpt-5-mini",
-    tools=[scrapegraph_tool],
+    tools=[scrapegraphai_tool],
 )
 
 

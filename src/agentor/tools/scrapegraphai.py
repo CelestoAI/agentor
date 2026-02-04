@@ -112,8 +112,6 @@ class ScrapeGraphAI(BaseTool):
                     raise ValueError("data_schema is required when extraction_mode=True")
                 crawl_params["prompt"] = user_prompt
                 crawl_params["data_schema"] = data_schema
-            # When extraction_mode=False, prompt is not included
-            
             response = self.client.crawl(**crawl_params)
             return str(response)
         except Exception as e:
