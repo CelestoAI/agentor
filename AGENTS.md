@@ -1,4 +1,4 @@
-# Agentor - GitHub Copilot Instructions
+# Agentor
 
 ## Project Overview
 
