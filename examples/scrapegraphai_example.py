@@ -5,7 +5,7 @@ This example demonstrates how to use the ScrapeGraphAI tool to scrape websites
 and extract information using AI-powered scraping capabilities.
 
 Make sure to install the required dependency:
-    pip install agentor[scrape_graph_ai]
+    pip install agentor[scrapegraph]
 
 Set your ScrapeGraphAI API key as an environment variable:
     export SCRAPEGRAPH_API_KEY=your_api_key_here
@@ -15,6 +15,7 @@ import asyncio
 import os
 
 import dotenv
+
 from agentor import Agentor
 from agentor.tools import ScrapeGraphAI
 
@@ -33,7 +34,7 @@ agent = Agentor(
 
 async def main():
     """Example usage of ScrapeGraphAI with Agentor."""
-    
+
     # Example 1: Smart scraper - extract specific information from a website
     print("=== Example 1: Smart Scraper ===")
     result = await agent.arun(
@@ -41,7 +42,7 @@ async def main():
     )
     print(result.final_output)
     print("\n")
-    
+
     # Example 2: Search scraper - search and extract information
     print("=== Example 2: Search Scraper ===")
     result = await agent.arun(
@@ -49,7 +50,7 @@ async def main():
     )
     print(result.final_output)
     print("\n")
-    
+
     # Example 3: Markdownify - convert website to markdown
     print("=== Example 3: Markdownify ===")
     result = await agent.arun(
@@ -57,7 +58,7 @@ async def main():
     )
     print(result.final_output)
     print("\n")
-    
+
     # Example 4: Smart Crawler - crawl multiple pages
     print("=== Example 4: Smart Crawler ===")
     result = await agent.arun(
