@@ -29,7 +29,7 @@ Each file in this folder shows an end-to-end flow:
 Install optional tool extras as needed:
 
 ```bash
-pip install "agentor[exa,git,postgres,github,slack,scrape_graph_ai]"
+pip install "agentor[exa,git,postgres,github,slack,scrapegraph]"
 ```
 
 For Gmail/Google tool examples:
