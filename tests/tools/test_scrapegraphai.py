@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from agentor.tools.scrapegraphai import ScrapeGraphAI
 
@@ -237,12 +237,8 @@ class TestScrapeGraphAI(unittest.TestCase):
         with self.assertRaises(ImportError) as context:
             ScrapeGraphAI(api_key="test-key")
 
-        self.assertIn(
-            "ScrapeGraphAI dependency is missing", str(context.exception)
-        )
-        self.assertIn(
-            "pip install agentor[scrape_graph_ai]", str(context.exception)
-        )
+        self.assertIn("ScrapeGraphAI dependency is missing", str(context.exception))
+        self.assertIn("pip install agentor[scrapegraph]", str(context.exception))
 
     @patch("agentor.tools.scrapegraphai.Client")
     def test_client_initialization(self, MockClient):

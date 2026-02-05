@@ -1,7 +1,7 @@
 """End-to-end Agentor example: ScrapeGraphAI.
 
 Requirements:
-    pip install "agentor[scrape_graph_ai]"
+    pip install "agentor[scrapegraph]"
 
 Environment:
     export SCRAPEGRAPH_API_KEY=your_scrapegraph_key
@@ -27,7 +27,7 @@ def main() -> None:
     )
 
     result = agent.run(
-        "Use smartscraper on https://example.com and extract the page title and a short summary."
+        "Extract https://celesto.ai/blog and write a short summary in markdown format."
     )
     print(result.final_output)
 

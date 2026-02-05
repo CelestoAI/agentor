@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from agentor.tools.base import BaseTool, capability
 
@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 class ScrapeGraphAI(BaseTool):
-    name = "scrape_graph_ai"
+    name = "scrapegraph"
     description = "Scrape websites using ScrapeGraphAI."
 
     def __init__(self, api_key: Optional[str] = None):
         if Client is None:
             raise ImportError(
-                "ScrapeGraphAI dependency is missing. Please install it with `pip install agentor[scrape_graph_ai]`."
+                "ScrapeGraphAI dependency is missing. Please install it with `pip install agentor[scrapegraph]`."
             )
         super().__init__(api_key)
         self.client = Client(api_key=api_key)
@@ -29,8 +29,7 @@ class ScrapeGraphAI(BaseTool):
         """Extract information from a website using AI-powered smart scraping."""
         try:
             response = self.client.smartscraper(
-                website_url=website_url,
-                user_prompt=user_prompt
+                website_url=website_url, user_prompt=user_prompt
             )
             return str(response)
         except Exception as e:
@@ -38,13 +37,15 @@ class ScrapeGraphAI(BaseTool):
             return f"Error in smartscraper: {str(e)}"
 
     @capability
-    def searchscraper(self, user_prompt: str, num_results: int = 3, extraction_mode: bool = True) -> str:
+    def searchscraper(
+        self, user_prompt: str, num_results: int = 3, extraction_mode: bool = True
+    ) -> str:
         """Search and extract information using AI-powered search scraping."""
         try:
             response = self.client.searchscraper(
                 user_prompt=user_prompt,
                 num_results=num_results,
-                extraction_mode=extraction_mode
+                extraction_mode=extraction_mode,
             )
             return str(response)
         except Exception as e:
@@ -55,9 +56,7 @@ class ScrapeGraphAI(BaseTool):
     def markdownify(self, website_url: str) -> str:
         """Convert a website to markdown format."""
         try:
-            response = self.client.markdownify(
-                website_url=website_url
-            )
+            response = self.client.markdownify(website_url=website_url)
             return str(response)
         except Exception as e:
             logger.exception("ScrapeGraphAI Markdownify Error")
@@ -67,9 +66,7 @@ class ScrapeGraphAI(BaseTool):
     def scrape(self, website_url: str) -> str:
         """Scrape a website and return its content."""
         try:
-            response = self.client.scrape(
-                website_url=website_url
-            )
+            response = self.client.scrape(website_url=website_url)
             return str(response)
         except Exception as e:
             logger.exception("ScrapeGraphAI Scrape Error")
@@ -84,10 +81,10 @@ class ScrapeGraphAI(BaseTool):
         max_pages: int = 3,
         sitemap: bool = True,
         extraction_mode: bool = False,
-        data_schema: Optional[Dict[str, Any]] = None
+        data_schema: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Crawl a website intelligently using AI to extract data across multiple pages.
-        
+
         Args:
             website_url: The URL of the website to crawl
             user_prompt: Prompt describing what to extract (used when extraction_mode=True)
@@ -103,13 +100,15 @@ class ScrapeGraphAI(BaseTool):
                 "depth": max_depth,
                 "max_pages": max_pages,
                 "sitemap": sitemap,
-                "extraction_mode": extraction_mode
+                "extraction_mode": extraction_mode,
             }
-            
+
             # Include prompt and data_schema only when extraction_mode=True
             if extraction_mode:
                 if data_schema is None:
-                    raise ValueError("data_schema is required when extraction_mode=True")
+                    raise ValueError(
+                        "data_schema is required when extraction_mode=True"
+                    )
                 crawl_params["prompt"] = user_prompt
                 crawl_params["data_schema"] = data_schema
             response = self.client.crawl(**crawl_params)
@@ -122,9 +121,7 @@ class ScrapeGraphAI(BaseTool):
     def sitemap(self, website_url: str) -> str:
         """Get the sitemap of a website."""
         try:
-            response = self.client.sitemap(
-                website_url=website_url
-            )
+            response = self.client.sitemap(website_url=website_url)
             return str(response)
         except Exception as e:
             logger.exception("ScrapeGraphAI Sitemap Error")
