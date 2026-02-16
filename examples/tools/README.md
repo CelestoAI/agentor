@@ -19,6 +19,7 @@ Each file in this folder shows an end-to-end flow:
 - `postgresql.py`
 - `scrapegraphai.py`
 - `shell.py`
+- `shell_smolvm.py`
 - `slack.py`
 - `timezone.py`
 - `weather.py`
@@ -36,6 +37,12 @@ For Gmail/Google tool examples:
 
 ```bash
 pip install "agentor[google]"
+```
+
+For secure shell runtime with SmolVM:
+
+```bash
+pip install smolvm
 ```
 
 ## Run
