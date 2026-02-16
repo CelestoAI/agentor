@@ -27,7 +27,7 @@ def main() -> None:
         result = agent.run(
             "Use the shell tool to run `pwd` and then `ls` in the sandbox. Return both outputs."
         )
-        print(result.final_output)
+        print(result)
     finally:
         runtime.close()
 
