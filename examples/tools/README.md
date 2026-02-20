@@ -16,6 +16,7 @@ Each file in this folder shows an end-to-end flow:
 - `github.py`
 - `gmail.py`
 - `linkedin_scraper.py`
+- `olostep.py`
 - `postgresql.py`
 - `scrapegraphai.py`
 - `shell.py`
@@ -30,7 +31,7 @@ Each file in this folder shows an end-to-end flow:
 Install optional tool extras as needed:
 
 ```bash
-pip install "agentor[exa,git,postgres,github,slack,scrapegraph]"
+pip install "agentor[exa,git,postgres,github,slack,scrapegraph,olostep]"
 ```
 
 For Gmail/Google tool examples:
