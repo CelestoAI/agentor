@@ -8,6 +8,7 @@ from .git import GitTool
 from .github import GitHubTool
 from .gmail import GmailTool
 from .linkedin import LinkedInScraperTool
+from .olostep import OlostepTool
 from .postgres import PostgreSQLTool
 from .shell import ShellTool
 from .scrapegraphai import ScrapeGraphAI
@@ -25,6 +26,7 @@ __all__ = [
     "GitHubTool",
     "GmailTool",
     "LinkedInScraperTool",
+    "OlostepTool",
     "PostgreSQLTool",
     "ScrapeGraphAI",
     "SlackTool",
