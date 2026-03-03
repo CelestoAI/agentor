@@ -242,3 +242,9 @@ We'd love your help making Agentor even better! Please read our [Contributing Gu
 ## 📄 License
 
 Apache 2.0 License - see [LICENSE](LICENSE) for details.
+
+
+---
+<div align="center">
+Built with 🧡 in London by <a href="https://celesto.ai">Celesto AI</a>
+</div>
