@@ -1,5 +1,6 @@
 import os
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -28,10 +29,14 @@ def get_calendar_credentials():
 
         if creds.expired and creds.refresh_token:
             print("Refreshing expired credentials...")
-            creds.refresh(Request())
-            with open(CREDS_FILE, "w") as f:
-                f.write(creds.to_json())
-            return creds
+            try:
+                creds.refresh(Request())
+                with open(CREDS_FILE, "w") as f:
+                    f.write(creds.to_json())
+                return creds
+            except RefreshError as exc:
+                print(f"Failed to refresh credentials: {exc}")
+                print("Re-running OAuth consent flow...")
 
         print("Saved credentials are invalid. Re-running OAuth consent flow...")
 
