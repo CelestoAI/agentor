@@ -1,5 +1,6 @@
 import os
 
+from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
@@ -22,7 +23,17 @@ def get_calendar_credentials():
     if os.path.exists(CREDS_FILE):
         print(f"Loading credentials from {CREDS_FILE}")
         creds = Credentials.from_authorized_user_file(CREDS_FILE)
-        return creds
+        if creds.valid:
+            return creds
+
+        if creds.expired and creds.refresh_token:
+            print("Refreshing expired credentials...")
+            creds.refresh(Request())
+            with open(CREDS_FILE, "w") as f:
+                f.write(creds.to_json())
+            return creds
+
+        print("Saved credentials are invalid. Re-running OAuth consent flow...")
 
     # First time: Need OAuth setup
     print("No credentials found. Opening browser for authentication...")

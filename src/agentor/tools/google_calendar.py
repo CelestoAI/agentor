@@ -64,6 +64,30 @@ class CalendarTool(BaseTool):
             return dt_string + "Z"
         return dt_string
 
+    @staticmethod
+    def _event_bounds(event: dict) -> tuple[datetime, datetime] | None:
+        """Extract normalized event time bounds from timed or all-day events."""
+        start_info = event.get("start", {})
+        end_info = event.get("end", {})
+
+        start_dt = start_info.get("dateTime")
+        end_dt = end_info.get("dateTime")
+        if start_dt and end_dt:
+            return (
+                datetime.fromisoformat(start_dt.replace("Z", "+00:00")),
+                datetime.fromisoformat(end_dt.replace("Z", "+00:00")),
+            )
+
+        start_date = start_info.get("date")
+        end_date = end_info.get("date")
+        if start_date and end_date:
+            return (
+                datetime.fromisoformat(f"{start_date}T00:00:00+00:00"),
+                datetime.fromisoformat(f"{end_date}T00:00:00+00:00"),
+            )
+
+        return None
+
     @capability
     def list_events(
         self,
@@ -83,14 +107,13 @@ class CalendarTool(BaseTool):
                     calendarId=calendar_id,
                     timeMin=start_time,
                     timeMax=end_time,
-                    maxResults=self._clamp_limit(limit),
+                    maxResults=self._clamp_limit(limit, max_limit=2500),
                     singleEvents=True,
                     orderBy="startTime",
                     q=query,
                 )
                 .execute()
             )
-            """Run a sample calendar query using authenticated credentials."""
             return json.dumps(events_result.get("items", []))
         except Exception as exc:
             logger.exception("Calendar list_events error")
@@ -157,15 +180,14 @@ class CalendarTool(BaseTool):
                 return raw
 
             events = json.loads(raw)
-            busy_ranges = []
+            busy_ranges: list[tuple[datetime, datetime]] = []
 
             for event in events:
-                start = event.get("start", {}).get("dateTime")
-                end = event.get("end", {}).get("dateTime")
-                if start and end:
-                    busy_ranges.append((start, end))
+                bounds = self._event_bounds(event)
+                if bounds:
+                    busy_ranges.append(bounds)
 
-            busy_ranges.sort()
+            busy_ranges.sort(key=lambda span: span[0])
 
             start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
             end_dt = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
@@ -173,17 +195,12 @@ class CalendarTool(BaseTool):
             cursor = start_dt
             needed = timedelta(minutes=meeting_minutes)
 
-            for busy_start_str, busy_end_str in busy_ranges:
-                busy_start = datetime.fromisoformat(
-                    busy_start_str.replace("Z", "+00:00")
-                )
+            for busy_start, busy_end in busy_ranges:
                 if (busy_start - cursor) >= needed:
                     free_slots.append(
                         {"start": cursor.isoformat(), "end": busy_start.isoformat()}
                     )
-                cursor = max(
-                    cursor, datetime.fromisoformat(busy_end_str.replace("Z", "+00:00"))
-                )
+                cursor = max(cursor, busy_end)
 
             if (end_dt - cursor) >= needed:
                 free_slots.append(
@@ -250,9 +267,11 @@ class CalendarTool(BaseTool):
             existing_emails = {att.get("email") for att in event.get("attendees", [])}
 
             attendees = event.get("attendees", [])
+            added_count = 0
             for email in guest_emails:
                 if email not in existing_emails:
                     attendees.append({"email": email})
+                    added_count += 1
 
             event["attendees"] = attendees
             updated = (
@@ -269,7 +288,7 @@ class CalendarTool(BaseTool):
             return json.dumps(
                 {
                     "status": "success",
-                    "message": f"Added {len(guest_emails)} guest(s) to event.",
+                    "message": f"Added {added_count} guest(s) to event.",
                     "event_id": updated.get("id"),
                     "attendees": updated.get("attendees", []),
                 }

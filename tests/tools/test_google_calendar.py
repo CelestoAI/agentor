@@ -70,6 +70,22 @@ class TestGoogleCalendarTool(unittest.TestCase):
         self.assertEqual(kwargs["timeMax"], "2026-03-27T23:59:59Z")
 
     @patch("agentor.tools.google_calendar.build")
+    def test_list_events_allows_higher_limit_for_internal_queries(self, mock_build):
+        """Verify list_events supports higher limits used by free-slot scans."""
+        service = _mock_calendar_service()
+        mock_build.return_value = service
+
+        tool = CalendarTool(credentials=object())
+        tool.list_events(
+            start_time="2026-03-27T00:00:00Z",
+            end_time="2026-03-27T23:59:59Z",
+            limit=250,
+        )
+
+        kwargs = service.events.return_value.list.call_args.kwargs
+        self.assertEqual(kwargs["maxResults"], 250)
+
+    @patch("agentor.tools.google_calendar.build")
     def test_list_events_error(self, mock_build):
         """Verify list_events returns an error string on API failures."""
         service = _mock_calendar_service()
@@ -145,6 +161,29 @@ class TestGoogleCalendarTool(unittest.TestCase):
         self.assertGreaterEqual(len(parsed["free_slots"]), 1)
 
     @patch("agentor.tools.google_calendar.build")
+    def test_find_free_slots_handles_all_day_events(self, mock_build):
+        """Verify all-day events are treated as busy in free-slot search."""
+        service = _mock_calendar_service()
+        service.events.return_value.list.return_value.execute.return_value = {
+            "items": [
+                {
+                    "start": {"date": "2026-03-27"},
+                    "end": {"date": "2026-03-28"},
+                }
+            ]
+        }
+        mock_build.return_value = service
+        tool = CalendarTool(credentials=object())
+
+        result = tool.find_free_slots(
+            start_time="2026-03-27T09:00:00Z",
+            end_time="2026-03-27T12:00:00Z",
+            meeting_minutes=30,
+        )
+        parsed = json.loads(result)
+        self.assertEqual(parsed["free_slots"], [])
+
+    @patch("agentor.tools.google_calendar.build")
     def test_delete_event_validation_and_success(self, mock_build):
         """Ensure delete_event validates input and deletes successfully."""
         service = _mock_calendar_service()
@@ -192,6 +231,7 @@ class TestGoogleCalendarTool(unittest.TestCase):
         parsed = json.loads(result)
         self.assertEqual(parsed["status"], "success")
         self.assertEqual(parsed["event_id"], "evt-1")
+        self.assertEqual(parsed["message"], "Added 1 guest(s) to event.")
 
         update_kwargs = service.events.return_value.update.call_args.kwargs
         attendees = update_kwargs["body"]["attendees"]
