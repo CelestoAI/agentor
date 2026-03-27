@@ -6,6 +6,7 @@ from agentor.tools.google_calendar import CalendarTool
 
 
 def _mock_calendar_service():
+    """Return a mocked Google Calendar service with default responses."""
     service = MagicMock()
     events = service.events.return_value
 
@@ -41,6 +42,7 @@ def _mock_calendar_service():
 class TestGoogleCalendarTool(unittest.TestCase):
     @patch("agentor.tools.google_calendar.build")
     def test_init_requires_credentials(self, mock_build):
+        """Ensure tool initialization fails when credentials are missing."""
         mock_build.return_value = _mock_calendar_service()
         with self.assertRaises(ValueError) as ctx:
             CalendarTool(credentials=None)
@@ -48,6 +50,7 @@ class TestGoogleCalendarTool(unittest.TestCase):
 
     @patch("agentor.tools.google_calendar.build")
     def test_list_events_success_and_datetime_normalization(self, mock_build):
+        """Verify list_events returns items and normalizes naive datetimes."""
         service = _mock_calendar_service()
         service.events.return_value.list.return_value.execute.return_value = {
             "items": [{"id": "1"}]
@@ -68,6 +71,7 @@ class TestGoogleCalendarTool(unittest.TestCase):
 
     @patch("agentor.tools.google_calendar.build")
     def test_list_events_error(self, mock_build):
+        """Verify list_events returns an error string on API failures."""
         service = _mock_calendar_service()
         service.events.return_value.list.return_value.execute.side_effect = Exception(
             "API error"
@@ -83,6 +87,7 @@ class TestGoogleCalendarTool(unittest.TestCase):
 
     @patch("agentor.tools.google_calendar.build")
     def test_create_event_requires_title(self, mock_build):
+        """Ensure create_event requires a non-empty title."""
         mock_build.return_value = _mock_calendar_service()
         tool = CalendarTool(credentials=object())
 
@@ -95,6 +100,7 @@ class TestGoogleCalendarTool(unittest.TestCase):
 
     @patch("agentor.tools.google_calendar.build")
     def test_create_event_success(self, mock_build):
+        """Verify create_event builds payload and returns created event."""
         service = _mock_calendar_service()
         mock_build.return_value = service
         tool = CalendarTool(credentials=object())
@@ -116,6 +122,7 @@ class TestGoogleCalendarTool(unittest.TestCase):
 
     @patch("agentor.tools.google_calendar.build")
     def test_find_free_slots_success(self, mock_build):
+        """Verify free slot calculation returns at least one slot."""
         service = _mock_calendar_service()
         service.events.return_value.list.return_value.execute.return_value = {
             "items": [
@@ -139,6 +146,7 @@ class TestGoogleCalendarTool(unittest.TestCase):
 
     @patch("agentor.tools.google_calendar.build")
     def test_delete_event_validation_and_success(self, mock_build):
+        """Ensure delete_event validates input and deletes successfully."""
         service = _mock_calendar_service()
         mock_build.return_value = service
         tool = CalendarTool(credentials=object())
@@ -156,6 +164,7 @@ class TestGoogleCalendarTool(unittest.TestCase):
 
     @patch("agentor.tools.google_calendar.build")
     def test_add_guests_validation(self, mock_build):
+        """Ensure add_guests validates required arguments."""
         mock_build.return_value = _mock_calendar_service()
         tool = CalendarTool(credentials=object())
 
@@ -170,6 +179,7 @@ class TestGoogleCalendarTool(unittest.TestCase):
 
     @patch("agentor.tools.google_calendar.build")
     def test_add_guests_success_and_dedup(self, mock_build):
+        """Verify add_guests appends only new attendee emails."""
         service = _mock_calendar_service()
         mock_build.return_value = service
         tool = CalendarTool(credentials=object())
@@ -195,6 +205,7 @@ class TestGoogleCalendarTool(unittest.TestCase):
 
     @patch("agentor.tools.google_calendar.build")
     def test_capabilities_registered(self, mock_build):
+        """Ensure all CalendarTool capabilities are exposed."""
         mock_build.return_value = _mock_calendar_service()
         tool = CalendarTool(credentials=object())
 

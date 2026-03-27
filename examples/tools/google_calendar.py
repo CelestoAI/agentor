@@ -68,6 +68,7 @@ def get_calendar_credentials():
 
 
 def main() -> None:
+    """Run a sample calendar query using authenticated credentials."""
     # Get credentials (auto-handles OAuth on first run)
     creds = get_calendar_credentials()
 

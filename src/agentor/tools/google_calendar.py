@@ -48,6 +48,7 @@ class CalendarTool(BaseTool):
 
     @staticmethod
     def _clamp_limit(limit: int, *, default: int = 20, max_limit: int = 100) -> int:
+        """Clamp list limits to a safe integer range."""
         try:
             value = int(limit)
         except (TypeError, ValueError):
@@ -89,6 +90,7 @@ class CalendarTool(BaseTool):
                 )
                 .execute()
             )
+            """Run a sample calendar query using authenticated credentials."""
             return json.dumps(events_result.get("items", []))
         except Exception as exc:
             logger.exception("Calendar list_events error")
