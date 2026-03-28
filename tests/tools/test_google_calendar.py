@@ -49,8 +49,8 @@ class TestGoogleCalendarTool(unittest.TestCase):
         self.assertIn("Credentials object is required", str(ctx.exception))
 
     @patch("agentor.tools.google_calendar.build")
-    def test_list_events_success_and_datetime_normalization(self, mock_build):
-        """Verify list_events returns items and normalizes naive datetimes."""
+    def test_list_events_success_with_timezone_aware_datetimes(self, mock_build):
+        """Verify list_events works with timezone-aware datetime values."""
         service = _mock_calendar_service()
         service.events.return_value.list.return_value.execute.return_value = {
             "items": [{"id": "1"}]
@@ -59,8 +59,8 @@ class TestGoogleCalendarTool(unittest.TestCase):
 
         tool = CalendarTool(credentials=object())
         result = tool.list_events(
-            start_time="2026-03-27T00:00:00",
-            end_time="2026-03-27T23:59:59",
+            start_time="2026-03-27T00:00:00Z",
+            end_time="2026-03-27T23:59:59Z",
         )
         parsed = json.loads(result)
         self.assertEqual(parsed, [{"id": "1"}])
@@ -68,6 +68,19 @@ class TestGoogleCalendarTool(unittest.TestCase):
         kwargs = service.events.return_value.list.call_args.kwargs
         self.assertEqual(kwargs["timeMin"], "2026-03-27T00:00:00Z")
         self.assertEqual(kwargs["timeMax"], "2026-03-27T23:59:59Z")
+
+    @patch("agentor.tools.google_calendar.build")
+    def test_list_events_rejects_naive_datetimes(self, mock_build):
+        """Verify list_events rejects datetime values without timezone."""
+        mock_build.return_value = _mock_calendar_service()
+
+        tool = CalendarTool(credentials=object())
+        result = tool.list_events(
+            start_time="2026-03-27T00:00:00",
+            end_time="2026-03-27T23:59:59",
+        )
+
+        self.assertIn("Datetime must include timezone", result)
 
     @patch("agentor.tools.google_calendar.build")
     def test_list_events_allows_higher_limit_for_internal_queries(self, mock_build):
@@ -123,8 +136,8 @@ class TestGoogleCalendarTool(unittest.TestCase):
 
         result = tool.create_event(
             title="Team Sync",
-            start_time="2026-03-27T10:00:00",
-            end_time="2026-03-27T11:00:00",
+            start_time="2026-03-27T10:00:00Z",
+            end_time="2026-03-27T11:00:00Z",
             location="Zoom",
         )
         parsed = json.loads(result)
@@ -135,6 +148,20 @@ class TestGoogleCalendarTool(unittest.TestCase):
         self.assertEqual(kwargs["body"]["summary"], "Team Sync")
         self.assertTrue(kwargs["body"]["start"]["dateTime"].endswith("Z"))
         self.assertTrue(kwargs["body"]["end"]["dateTime"].endswith("Z"))
+
+    @patch("agentor.tools.google_calendar.build")
+    def test_create_event_rejects_naive_datetimes(self, mock_build):
+        """Verify create_event rejects datetime values without timezone."""
+        mock_build.return_value = _mock_calendar_service()
+        tool = CalendarTool(credentials=object())
+
+        result = tool.create_event(
+            title="Team Sync",
+            start_time="2026-03-27T10:00:00",
+            end_time="2026-03-27T11:00:00",
+        )
+
+        self.assertIn("Datetime must include timezone", result)
 
     @patch("agentor.tools.google_calendar.build")
     def test_find_free_slots_success(self, mock_build):

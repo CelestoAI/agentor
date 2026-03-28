@@ -57,11 +57,20 @@ class CalendarTool(BaseTool):
 
     @staticmethod
     def _normalize_datetime(dt_string: str) -> str:
-        """Ensure datetime has timezone info (append 'Z' for UTC if missing)."""
-        if dt_string and not (
-            dt_string.endswith("Z") or "+" in dt_string or "-" in dt_string[-6:]
-        ):
-            return dt_string + "Z"
+        """Validate datetime includes an explicit timezone offset."""
+        if not dt_string:
+            raise ValueError("Datetime is required and must include timezone.")
+
+        try:
+            parsed = datetime.fromisoformat(dt_string.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError(
+                "Invalid datetime format. Use ISO 8601 with timezone (Z or ±HH:MM)."
+            ) from exc
+
+        if parsed.tzinfo is None:
+            raise ValueError("Datetime must include timezone (Z or ±HH:MM).")
+
         return dt_string
 
     @staticmethod
@@ -98,9 +107,9 @@ class CalendarTool(BaseTool):
         query: Optional[str] = None,
     ) -> str:
         """List events in a time window."""
-        start_time = self._normalize_datetime(start_time)
-        end_time = self._normalize_datetime(end_time)
         try:
+            start_time = self._normalize_datetime(start_time)
+            end_time = self._normalize_datetime(end_time)
             events_result = (
                 self.service.events()
                 .list(
@@ -115,6 +124,8 @@ class CalendarTool(BaseTool):
                 .execute()
             )
             return json.dumps(events_result.get("items", []))
+        except ValueError as exc:
+            return f"Error: {exc}"
         except Exception as exc:
             logger.exception("Calendar list_events error")
             return f"Error: {exc}"
@@ -133,10 +144,10 @@ class CalendarTool(BaseTool):
         if not title:
             return "Error: title is required."
 
-        start_time = self._normalize_datetime(start_time)
-        end_time = self._normalize_datetime(end_time)
-
         try:
+            start_time = self._normalize_datetime(start_time)
+            end_time = self._normalize_datetime(end_time)
+
             event = {
                 "summary": title,
                 "description": description or "",
@@ -151,6 +162,8 @@ class CalendarTool(BaseTool):
                 .execute()
             )
             return json.dumps(created)
+        except ValueError as exc:
+            return f"Error: {exc}"
         except Exception as exc:
             logger.exception("Calendar create_event error")
             return f"Error: {exc}"
@@ -165,10 +178,10 @@ class CalendarTool(BaseTool):
         limit: int = 10,
     ) -> str:
         """Find free time slots."""
-        start_time = self._normalize_datetime(start_time)
-        end_time = self._normalize_datetime(end_time)
-
         try:
+            start_time = self._normalize_datetime(start_time)
+            end_time = self._normalize_datetime(end_time)
+
             raw = self.list_events(
                 start_time=start_time,
                 end_time=end_time,
@@ -215,6 +228,8 @@ class CalendarTool(BaseTool):
                     "free_slots": free_slots[:limit],
                 }
             )
+        except ValueError as exc:
+            return f"Error: {exc}"
         except Exception as exc:
             logger.exception("Calendar find_free_slots error")
             return f"Error: {exc}"
