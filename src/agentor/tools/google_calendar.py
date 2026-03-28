@@ -182,6 +182,15 @@ class CalendarTool(BaseTool):
             start_time = self._normalize_datetime(start_time)
             end_time = self._normalize_datetime(end_time)
 
+            if meeting_minutes <= 0:
+                raise ValueError("meeting_minutes must be greater than 0.")
+
+            start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+            end_dt = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+
+            if end_dt <= start_dt:
+                raise ValueError("end_time must be after start_time.")
+
             raw = self.list_events(
                 start_time=start_time,
                 end_time=end_time,
@@ -202,8 +211,6 @@ class CalendarTool(BaseTool):
 
             busy_ranges.sort(key=lambda span: span[0])
 
-            start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-            end_dt = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
             free_slots = []
             cursor = start_dt
             needed = timedelta(minutes=meeting_minutes)
@@ -286,6 +293,7 @@ class CalendarTool(BaseTool):
             for email in guest_emails:
                 if email not in existing_emails:
                     attendees.append({"email": email})
+                    existing_emails.add(email)
                     added_count += 1
 
             event["attendees"] = attendees

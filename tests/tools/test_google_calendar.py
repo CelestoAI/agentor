@@ -271,6 +271,48 @@ class TestGoogleCalendarTool(unittest.TestCase):
         self.assertEqual(update_kwargs["sendUpdates"], "none")
 
     @patch("agentor.tools.google_calendar.build")
+    def test_add_guests_dedup_duplicate_in_request(self, mock_build):
+        """Verify duplicate emails in guest_emails list appear only once."""
+        service = _mock_calendar_service()
+        mock_build.return_value = service
+        tool = CalendarTool(credentials=object())
+
+        result = tool.add_guests(
+            event_id="evt-1",
+            guest_emails=["dup@example.com", "dup@example.com"],
+            send_notifications=False,
+        )
+        parsed = json.loads(result)
+        self.assertEqual(parsed["status"], "success")
+        self.assertEqual(parsed["message"], "Added 1 guest(s) to event.")
+
+    @patch("agentor.tools.google_calendar.build")
+    def test_find_free_slots_validates_meeting_minutes(self, mock_build):
+        """Verify find_free_slots rejects non-positive meeting_minutes."""
+        mock_build.return_value = _mock_calendar_service()
+        tool = CalendarTool(credentials=object())
+
+        result = tool.find_free_slots(
+            start_time="2026-03-27T09:00:00Z",
+            end_time="2026-03-27T12:00:00Z",
+            meeting_minutes=0,
+        )
+        self.assertIn("meeting_minutes must be greater than 0", result)
+
+    @patch("agentor.tools.google_calendar.build")
+    def test_find_free_slots_validates_time_order(self, mock_build):
+        """Verify find_free_slots rejects when end_time <= start_time."""
+        mock_build.return_value = _mock_calendar_service()
+        tool = CalendarTool(credentials=object())
+
+        result = tool.find_free_slots(
+            start_time="2026-03-27T12:00:00Z",
+            end_time="2026-03-27T09:00:00Z",
+            meeting_minutes=30,
+        )
+        self.assertIn("end_time must be after start_time", result)
+
+    @patch("agentor.tools.google_calendar.build")
     def test_capabilities_registered(self, mock_build):
         """Ensure all CalendarTool capabilities are exposed."""
         mock_build.return_value = _mock_calendar_service()
