@@ -14,6 +14,7 @@ from .scrapegraphai import ScrapeGraphAI
 from .slack import SlackTool
 from .timezone import TimezoneTool
 from .weather import GetWeatherTool
+from .google_calendar import CalendarTool
 
 __all__ = [
     "BaseTool",
@@ -32,4 +33,5 @@ __all__ = [
     "GetWeatherTool",
     "WebSearchTool",
     "ShellTool",
+    "CalendarTool",
 ]
