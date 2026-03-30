@@ -154,7 +154,7 @@ def main() -> None:
     # Create agent with calendar tool
     agent = Agentor(
         name="Calendar Agent",
-        model="gpt-4o-mini",
+        model="gpt-5.4-mini",
         tools=[CalendarTool(credentials=creds)],
         instructions="Use the calendar tool to help with scheduling and event management.",
     )
