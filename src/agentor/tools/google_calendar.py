@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from agentor.tools.base import BaseTool, capability
 
@@ -73,8 +74,26 @@ class CalendarTool(BaseTool):
 
         return dt_string
 
+    def _get_calendar_timezone(self, calendar_id: str = "primary") -> str:
+        """Get the timezone configured for a calendar.
+
+        Args:
+            calendar_id: Calendar ID (default "primary").
+
+        Returns:
+            IANA timezone string (e.g., "America/New_York").
+        """
+        try:
+            calendar = self.service.calendarList().get(calendarId=calendar_id).execute()
+            return calendar.get("timeZone", "UTC")
+        except Exception:
+            logger.debug(f"Failed to fetch timezone for {calendar_id}, defaulting to UTC")
+            return "UTC"
+
     @staticmethod
-    def _event_bounds(event: dict) -> tuple[datetime, datetime] | None:
+    def _event_bounds(
+        event: dict, calendar_timezone: str = "UTC"
+    ) -> tuple[datetime, datetime] | None:
         """Extract normalized event time bounds from timed or all-day events."""
         start_info = event.get("start", {})
         end_info = event.get("end", {})
@@ -90,9 +109,10 @@ class CalendarTool(BaseTool):
         start_date = start_info.get("date")
         end_date = end_info.get("date")
         if start_date and end_date:
+            tz = ZoneInfo(calendar_timezone)
             return (
-                datetime.fromisoformat(f"{start_date}T00:00:00+00:00"),
-                datetime.fromisoformat(f"{end_date}T00:00:00+00:00"),
+                datetime.fromisoformat(f"{start_date}T00:00:00").replace(tzinfo=tz),
+                datetime.fromisoformat(f"{end_date}T00:00:00").replace(tzinfo=tz),
             )
 
         return None
@@ -106,24 +126,43 @@ class CalendarTool(BaseTool):
         limit: int = 20,
         query: Optional[str] = None,
     ) -> str:
-        """List events in a time window."""
+        """List events in a time window.
+
+        Follows nextPageToken to fetch all events across pages.
+        """
         try:
             start_time = self._normalize_datetime(start_time)
             end_time = self._normalize_datetime(end_time)
-            events_result = (
-                self.service.events()
-                .list(
-                    calendarId=calendar_id,
-                    timeMin=start_time,
-                    timeMax=end_time,
-                    maxResults=self._clamp_limit(limit, max_limit=2500),
-                    singleEvents=True,
-                    orderBy="startTime",
-                    q=query,
+
+            all_items = []
+            page_token = None
+            max_results = self._clamp_limit(limit, max_limit=2500)
+
+            # Fetch pages until we have limit items or run out of pages
+            while len(all_items) < limit:
+                events_result = (
+                    self.service.events()
+                    .list(
+                        calendarId=calendar_id,
+                        timeMin=start_time,
+                        timeMax=end_time,
+                        maxResults=max_results,
+                        singleEvents=True,
+                        orderBy="startTime",
+                        q=query,
+                        pageToken=page_token,
+                    )
+                    .execute()
                 )
-                .execute()
-            )
-            return json.dumps(events_result.get("items", []))
+
+                all_items.extend(events_result.get("items", []))
+                page_token = events_result.get("nextPageToken")
+
+                if not page_token:
+                    # No more pages available
+                    break
+
+            return json.dumps(all_items[:limit])
         except ValueError as exc:
             return f"Error: {exc}"
         except Exception as exc:
@@ -202,10 +241,11 @@ class CalendarTool(BaseTool):
                 return raw
 
             events = json.loads(raw)
+            calendar_timezone = self._get_calendar_timezone(calendar_id)
             busy_ranges: list[tuple[datetime, datetime]] = []
 
             for event in events:
-                bounds = self._event_bounds(event)
+                bounds = self._event_bounds(event, calendar_timezone)
                 if bounds:
                     busy_ranges.append(bounds)
 

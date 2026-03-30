@@ -36,6 +36,13 @@ def _mock_calendar_service():
             {"email": "new@example.com"},
         ],
     }
+
+    # Mock calendarList for timezone retrieval
+    calendar_list = service.calendarList.return_value
+    calendar_list.get.return_value.execute.return_value = {
+        "timeZone": "UTC"
+    }
+
     return service
 
 
@@ -324,6 +331,79 @@ class TestGoogleCalendarTool(unittest.TestCase):
         self.assertIn("find_free_slots", fn_names)
         self.assertIn("delete_event", fn_names)
         self.assertIn("add_guests", fn_names)
+
+    @patch("agentor.tools.google_calendar.build")
+    def test_list_events_follows_pagination(self, mock_build):
+        """Verify list_events fetches multiple pages with nextPageToken."""
+        service = _mock_calendar_service()
+
+        # Mock two pages: first with nextPageToken, second without
+        service.events.return_value.list.return_value.execute.side_effect = [
+            {
+                "items": [{"id": "evt-1"}, {"id": "evt-2"}],
+                "nextPageToken": "page2token",
+            },
+            {
+                "items": [{"id": "evt-3"}],
+                # No nextPageToken means last page
+            },
+        ]
+        mock_build.return_value = service
+
+        tool = CalendarTool(credentials=object())
+        result = tool.list_events(
+            start_time="2026-03-27T00:00:00Z",
+            end_time="2026-03-27T23:59:59Z",
+            limit=5,
+        )
+
+        parsed = json.loads(result)
+        self.assertEqual(len(parsed), 3)
+        self.assertEqual(parsed[0]["id"], "evt-1")
+        self.assertEqual(parsed[2]["id"], "evt-3")
+
+        # Verify pageToken was passed correctly
+        calls = service.events.return_value.list.call_args_list
+        self.assertEqual(len(calls), 2)
+        # First call should have pageToken=None
+        self.assertIsNone(calls[0].kwargs.get("pageToken"))
+        # Second call should use the token from first response
+        self.assertEqual(calls[1].kwargs.get("pageToken"), "page2token")
+
+    @patch("agentor.tools.google_calendar.build")
+    def test_find_free_slots_with_timezone_aware_all_day_events(self, mock_build):
+        """Verify all-day events are converted using calendar's actual timezone."""
+        service = _mock_calendar_service()
+
+        # Mock calendarList to return non-UTC timezone
+        service.calendarList.return_value.get.return_value.execute.return_value = {
+            "timeZone": "America/New_York"
+        }
+
+        # All-day event in America/New_York
+        service.events.return_value.list.return_value.execute.return_value = {
+            "items": [
+                {
+                    "start": {"date": "2026-03-27"},
+                    "end": {"date": "2026-03-28"},
+                }
+            ]
+        }
+        mock_build.return_value = service
+        tool = CalendarTool(credentials=object())
+
+        result = tool.find_free_slots(
+            start_time="2026-03-27T09:00:00-04:00",  # EDT offset
+            end_time="2026-03-27T12:00:00-04:00",
+            meeting_minutes=30,
+        )
+
+        parsed = json.loads(result)
+        # All-day event should consume the entire window
+        self.assertEqual(parsed["free_slots"], [])
+
+        # Verify calendarList was called to get timezone
+        service.calendarList.return_value.get.assert_called_with(calendarId="primary")
 
 
 if __name__ == "__main__":
