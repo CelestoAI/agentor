@@ -1,14 +1,14 @@
 """
 Example: Using ScrapeGraphAI tool with Agentor/Celesto
 
-This example demonstrates how to use the ScrapeGraphAI tool to scrape websites
-and extract information using AI-powered scraping capabilities.
+This example demonstrates how to use the ScrapeGraphAI tool (scrapegraph-py
+SDK v2) to scrape, extract, search, crawl and monitor the web.
 
-Make sure to install the required dependency:
+Install the required dependency:
     pip install agentor[scrapegraph]
 
 Set your ScrapeGraphAI API key as an environment variable:
-    export SCRAPEGRAPH_API_KEY=your_api_key_here
+    export SGAI_API_KEY=your_api_key_here
 """
 
 import asyncio
@@ -21,49 +21,49 @@ from agentor.tools import ScrapeGraphAI
 
 dotenv.load_dotenv()
 
-# Initialize ScrapeGraphAI tool with API key from environment
-scrapegraphai_tool = ScrapeGraphAI(api_key=os.environ.get("SCRAPEGRAPH_API_KEY"))
+scrapegraph_tool = ScrapeGraphAI(api_key=os.environ.get("SGAI_API_KEY"))
 
-# Create an agent with ScrapeGraphAI tool
 agent = Agentor(
     name="Web Scraping Agent",
     model="gpt-5-mini",
-    tools=[scrapegraphai_tool],
+    tools=[scrapegraph_tool],
 )
 
 
 async def main():
     """Example usage of ScrapeGraphAI with Agentor."""
 
-    # Example 1: Smart scraper - extract specific information from a website
-    print("=== Example 1: Smart Scraper ===")
+    print("=== Example 1: Scrape (markdown) ===")
     result = await agent.arun(
-        "Use smartscraper to extract the main title and description from https://www.example.com"
+        "Use scrape to fetch https://www.example.com as markdown and show the first lines."
     )
     print(result.final_output)
     print("\n")
 
-    # Example 2: Search scraper - search and extract information
-    print("=== Example 2: Search Scraper ===")
+    print("=== Example 2: Extract ===")
     result = await agent.arun(
-        "Use searchscraper to find information about Python programming tutorials"
+        "Use extract to pull the page title and description from https://www.example.com."
     )
     print(result.final_output)
     print("\n")
 
-    # Example 3: Markdownify - convert website to markdown
-    print("=== Example 3: Markdownify ===")
+    print("=== Example 3: Search ===")
     result = await agent.arun(
-        "Use markdownify to convert https://www.example.com to markdown format"
+        "Use search to find 3 results about Python web scraping libraries."
     )
     print(result.final_output)
     print("\n")
 
-    # Example 4: Smart Crawler - crawl multiple pages
-    print("=== Example 4: Smart Crawler ===")
+    print("=== Example 4: Crawl ===")
     result = await agent.arun(
-        "Use smartcrawler to extract all product information from https://www.example.com with max_depth=2 and max_pages=5"
+        "Use crawl to start a crawl of https://www.example.com with max_pages=3 and max_depth=1, "
+        "then use get_crawl_result with the returned id to show its status."
     )
+    print(result.final_output)
+    print("\n")
+
+    print("=== Example 5: Credits ===")
+    result = await agent.arun("Use credits to show my remaining API credits.")
     print(result.final_output)
 
 
