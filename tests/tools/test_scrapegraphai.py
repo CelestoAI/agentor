@@ -21,7 +21,28 @@ def _build_mock_client():
     return client
 
 
+_FORMAT_CONFIG_NAMES = (
+    "MarkdownFormatConfig",
+    "HtmlFormatConfig",
+    "LinksFormatConfig",
+    "SummaryFormatConfig",
+)
+
+
 class TestScrapeGraphAI(unittest.TestCase):
+    def setUp(self):
+        self._format_patchers = [
+            patch(f"agentor.tools.scrapegraphai.{name}", MagicMock())
+            for name in _FORMAT_CONFIG_NAMES
+        ]
+        for p in self._format_patchers:
+            p.start()
+        self.addCleanup(self._stop_format_patchers)
+
+    def _stop_format_patchers(self):
+        for p in self._format_patchers:
+            p.stop()
+
     @patch("agentor.tools.scrapegraphai._SGAIClient")
     def test_scrape_markdown(self, MockClient):
         mock = _build_mock_client()
