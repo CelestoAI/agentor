@@ -29,7 +29,7 @@ dependencies = [
     "uvicorn>=0.37.0",
     "fastapi>=0.120.0",
     "mcp>=1.16.0",
-    "a2a-sdk>=0.3.10",
+    "a2a-sdk>=0.3.10,<1.0",
     "typer>=0.20.0",
     "pytz>=2024.1",
     "bm25s>=0.2.14",
@@ -59,14 +59,14 @@ git = ["gitpython>=3.1.0"]
 postgres = ["psycopg2-binary>=2.9.0"]
 github = ["PyGithub>=2.0.0"]
 slack = ["slack_sdk>=3.0.0"]
-scrapegraph = ["scrapegraph-py>=1.46.0"]
+scrapegraph = ["scrapegraph-py>=2.1.0; python_version >= '3.12'"]
 all = [
     "exa-py>=1.0.0",
     "gitpython>=3.1.0",
     "psycopg2-binary>=2.9.0",
     "PyGithub>=2.0.0",
     "slack_sdk>=3.0.0",
-    "scrapegraph-py>=1.46.0",
+    "scrapegraph-py>=2.1.0; python_version >= '3.12'",
 ]
 
 [tool.hatch.version]
