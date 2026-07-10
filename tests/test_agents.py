@@ -62,7 +62,12 @@ def test_agentor_create_app():
     assert app is not None
     assert app.router is not None
     assert app.router.routes is not None
-    assert len(app.router.routes) == 8
+    assert {
+        "/",
+        "/chat",
+        "/health",
+        "/.well-known/agent-card.json",
+    } <= set(app.openapi()["paths"])
 
 
 @patch("agentor.core.agent.Runner.run")

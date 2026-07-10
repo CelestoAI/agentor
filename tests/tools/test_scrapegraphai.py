@@ -244,6 +244,7 @@ class TestScrapeGraphAI(unittest.TestCase):
             self.assertIn(expected, names)
         self.assertEqual(len(names), 16)
 
+    @patch("agentor.tools.scrapegraphai.sys.version_info", (3, 12, 0))
     @patch("agentor.tools.scrapegraphai._SGAIClient", None)
     def test_missing_dependency(self):
         with self.assertRaises(ImportError) as ctx:
