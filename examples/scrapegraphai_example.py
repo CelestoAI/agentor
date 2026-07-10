@@ -4,7 +4,7 @@ Example: Using ScrapeGraphAI tool with Agentor/Celesto
 This example demonstrates how to use the ScrapeGraphAI tool (scrapegraph-py
 SDK v2) to scrape, extract, search, crawl and monitor the web.
 
-Install the required dependency:
+Python 3.12 or newer is required. Install the dependency with:
     pip install agentor[scrapegraph]
 
 Set your ScrapeGraphAI API key as an environment variable:
@@ -12,7 +12,6 @@ Set your ScrapeGraphAI API key as an environment variable:
 """
 
 import asyncio
-import os
 
 import dotenv
 
@@ -21,7 +20,7 @@ from agentor.tools import ScrapeGraphAI
 
 dotenv.load_dotenv()
 
-scrapegraph_tool = ScrapeGraphAI(api_key=os.environ.get("SGAI_API_KEY"))
+scrapegraph_tool = ScrapeGraphAI()
 
 agent = Agentor(
     name="Web Scraping Agent",
@@ -57,7 +56,8 @@ async def main():
     print("=== Example 4: Crawl ===")
     result = await agent.arun(
         "Use crawl to start a crawl of https://www.example.com with max_pages=3 and max_depth=1, "
-        "then use get_crawl_result with the returned id to show its status."
+        "then use get_crawl_result with the returned id to show its status, and finally "
+        "delete_crawl to clean it up."
     )
     print(result.final_output)
     print("\n")

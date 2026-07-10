@@ -1,10 +1,10 @@
 """End-to-end Agentor example: ScrapeGraphAI.
 
-Requirements:
+Requirements (Python 3.12 or newer):
     pip install "agentor[scrapegraph]"
 
 Environment:
-    export SCRAPEGRAPH_API_KEY=your_scrapegraph_key
+    export SGAI_API_KEY=your_scrapegraph_key
     export OPENAI_API_KEY=your_llm_key
 """
 
@@ -15,9 +15,9 @@ from agentor.tools import ScrapeGraphAI
 
 
 def main() -> None:
-    api_key = os.environ.get("SCRAPEGRAPH_API_KEY")
+    api_key = os.environ.get("SGAI_API_KEY")
     if not api_key:
-        raise ValueError("SCRAPEGRAPH_API_KEY is required")
+        raise ValueError("SGAI_API_KEY is required")
 
     agent = Agentor(
         name="ScrapeGraph Agent",

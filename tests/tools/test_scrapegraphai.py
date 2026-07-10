@@ -21,6 +21,16 @@ def _build_mock_client():
     return client
 
 
+class _SDKModel:
+    def __init__(self, data):
+        self.data = data
+
+    def model_dump(self, mode):
+        if mode != "json":
+            raise ValueError("expected JSON serialization mode")
+        return self.data
+
+
 _FORMAT_CONFIG_NAMES = (
     "MarkdownFormatConfig",
     "HtmlFormatConfig",
@@ -115,14 +125,56 @@ class TestScrapeGraphAI(unittest.TestCase):
         mock.crawl.get.assert_called_once_with("crawl-123")
 
     @patch("agentor.tools.scrapegraphai._SGAIClient")
+    def test_crawl_lifecycle(self, MockClient):
+        mock = _build_mock_client()
+        mock.crawl.stop.return_value = _ok({"id": "crawl-123", "status": "stopped"})
+        mock.crawl.resume.return_value = _ok({"id": "crawl-123", "status": "running"})
+        mock.crawl.delete.return_value = _ok({"id": "crawl-123", "deleted": True})
+        MockClient.return_value = mock
+
+        tool = ScrapeGraphAI(api_key="test-key")
+
+        self.assertIn("stopped", tool.stop_crawl("crawl-123"))
+        self.assertIn("running", tool.resume_crawl("crawl-123"))
+        self.assertIn("deleted", tool.delete_crawl("crawl-123"))
+        mock.crawl.stop.assert_called_once_with("crawl-123")
+        mock.crawl.resume.assert_called_once_with("crawl-123")
+        mock.crawl.delete.assert_called_once_with("crawl-123")
+
+    @patch("agentor.tools.scrapegraphai._SGAIClient")
     def test_monitor(self, MockClient):
         mock = _build_mock_client()
         mock.monitor.create.return_value = _ok({"id": "mon-1", "status": "active"})
         MockClient.return_value = mock
 
         tool = ScrapeGraphAI(api_key="test-key")
-        result = tool.monitor(url="https://example.com", interval="0 * * * *", name="hourly")
+        result = tool.monitor(
+            url="https://example.com", interval="0 * * * *", name="hourly"
+        )
         self.assertIn("mon-1", result)
+
+    @patch("agentor.tools.scrapegraphai._SGAIClient")
+    def test_monitor_lifecycle(self, MockClient):
+        mock = _build_mock_client()
+        mock.monitor.list.return_value = _ok([_SDKModel({"id": "mon-1"})])
+        mock.monitor.get.return_value = _ok({"id": "mon-1", "status": "active"})
+        mock.monitor.pause.return_value = _ok({"id": "mon-1", "status": "paused"})
+        mock.monitor.resume.return_value = _ok({"id": "mon-1", "status": "active"})
+        mock.monitor.delete.return_value = _ok({"id": "mon-1", "deleted": True})
+        MockClient.return_value = mock
+
+        tool = ScrapeGraphAI(api_key="test-key")
+
+        self.assertIn("mon-1", tool.list_monitors())
+        self.assertIn("active", tool.get_monitor("mon-1"))
+        self.assertIn("paused", tool.pause_monitor("mon-1"))
+        self.assertIn("active", tool.resume_monitor("mon-1"))
+        self.assertIn("deleted", tool.delete_monitor("mon-1"))
+        mock.monitor.list.assert_called_once_with()
+        mock.monitor.get.assert_called_once_with("mon-1")
+        mock.monitor.pause.assert_called_once_with("mon-1")
+        mock.monitor.resume.assert_called_once_with("mon-1")
+        mock.monitor.delete.assert_called_once_with("mon-1")
 
     @patch("agentor.tools.scrapegraphai._SGAIClient")
     def test_credits(self, MockClient):
@@ -177,12 +229,20 @@ class TestScrapeGraphAI(unittest.TestCase):
             "search",
             "crawl",
             "get_crawl_result",
+            "stop_crawl",
+            "resume_crawl",
+            "delete_crawl",
             "monitor",
+            "list_monitors",
+            "get_monitor",
+            "pause_monitor",
+            "resume_monitor",
+            "delete_monitor",
             "credits",
             "health",
         ]:
             self.assertIn(expected, names)
-        self.assertEqual(len(names), 8)
+        self.assertEqual(len(names), 16)
 
     @patch("agentor.tools.scrapegraphai._SGAIClient", None)
     def test_missing_dependency(self):
@@ -190,6 +250,14 @@ class TestScrapeGraphAI(unittest.TestCase):
             ScrapeGraphAI(api_key="test-key")
         self.assertIn("ScrapeGraphAI dependency is missing", str(ctx.exception))
         self.assertIn("pip install agentor[scrapegraph]", str(ctx.exception))
+
+    @patch("agentor.tools.scrapegraphai.sys.version_info", (3, 11, 0))
+    @patch("agentor.tools.scrapegraphai._SGAIClient", None)
+    def test_missing_dependency_on_unsupported_python(self):
+        with self.assertRaises(ImportError) as ctx:
+            ScrapeGraphAI(api_key="test-key")
+        self.assertIn("requires Python 3.12 or newer", str(ctx.exception))
+        self.assertNotIn("pip install", str(ctx.exception))
 
     @patch("agentor.tools.scrapegraphai._SGAIClient")
     def test_client_initialized_with_api_key(self, MockClient):
@@ -201,8 +269,9 @@ class TestScrapeGraphAI(unittest.TestCase):
     @patch("agentor.tools.scrapegraphai._SGAIClient")
     def test_client_initialized_from_env(self, MockClient):
         MockClient.return_value = _build_mock_client()
-        ScrapeGraphAI()
+        tool = ScrapeGraphAI()
         MockClient.assert_called_once_with(api_key="env-key")
+        self.assertEqual(tool.api_key, "env-key")
 
     @patch.dict(
         "os.environ",

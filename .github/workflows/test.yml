@@ -71,3 +71,23 @@ jobs:
           env_vars: OS,PYTHON
           name: codecov-umbrella
           fail_ci_if_error: false
+
+  scrapegraph-contract:
+    runs-on: ubuntu-latest
+    env:
+      AGENTOR_REQUIRE_SCRAPEGRAPH: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install ScrapeGraphAI extra
+        run: |
+          pip install uv
+          uv sync --extra scrapegraph
+
+      - name: Verify ScrapeGraphAI SDK contract
+        run: uv run pytest tests/tools/test_scrapegraphai_contract.py -q
