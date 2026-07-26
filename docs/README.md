@@ -6,7 +6,7 @@ This directory contains the documentation for Agentor, built using MKDocs with M
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - MKDocs dependencies (installed automatically)
 
 ### Installing Documentation Dependencies

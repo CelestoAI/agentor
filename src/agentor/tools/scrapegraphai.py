@@ -64,7 +64,7 @@ class ScrapeGraphAI(BaseTool):
             if sys.version_info < (3, 12):
                 raise ImportError(
                     "ScrapeGraphAI requires Python 3.12 or newer because "
-                    "scrapegraph-py 2.x does not support Python 3.10 or 3.11."
+                    "scrapegraph-py 2.x does not support Python 3.11."
                 )
             raise ImportError(
                 "ScrapeGraphAI dependency is missing. Install it with "

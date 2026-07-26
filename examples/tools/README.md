@@ -34,7 +34,7 @@ pip install "agentor[exa,git,postgres,github,slack,scrapegraph]"
 ```
 
 The `scrapegraph` extra uses scrapegraph-py 2.x and requires Python 3.12 or
-newer. Agentor itself continues to support Python 3.10 and newer.
+newer. Agentor itself continues to support Python 3.11 and newer.
 
 For Gmail/Google tool examples:
 
