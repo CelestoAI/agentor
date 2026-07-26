@@ -36,7 +36,7 @@ agentor/
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - pip or uv package manager
 
 ### Installation
@@ -72,7 +72,7 @@ pip install -e ".[dev]"
 
 ### Environment Setup
 
-- Python version is specified in `.python-version` (currently `>=3.10`)
+- Python version is specified in `.python-version` (currently `>=3.11`)
 - Use virtual environments for isolation
 
 ## Code Style and Linting
@@ -299,13 +299,13 @@ agent = Agentor(
 
 ### GitHub Actions Workflows
 
-- **test.yml**: Runs pytest across multiple OS and Python versions (3.10-3.13)
+- **test.yml**: Runs pytest across multiple OS and Python versions (3.11-3.13)
 - **release.yml**: Handles package releases to PyPI
 
 ### CI Test Matrix
 
 - Operating Systems: Ubuntu, macOS, Windows
-- Python Versions: 3.10, 3.11, 3.12, 3.13
+- Python Versions: 3.11, 3.12, 3.13
 
 ## Additional Resources
 
