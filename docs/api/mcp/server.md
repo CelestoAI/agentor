@@ -1,3 +1,0 @@
-# Server
-
-::: agentor.mcp.server

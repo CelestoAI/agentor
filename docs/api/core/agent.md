@@ -1,3 +1,0 @@
-# Agent
-
-::: agentor.core.agent

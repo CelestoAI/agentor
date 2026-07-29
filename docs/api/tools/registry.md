@@ -1,3 +1,0 @@
-# Registry
-
-::: agentor.tools.registry

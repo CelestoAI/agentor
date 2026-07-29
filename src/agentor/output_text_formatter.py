@@ -37,22 +37,17 @@ def pydantic_to_xml(obj: BaseModel) -> str:
 @dataclass
 class ToolAction:
     name: str
-    type: Literal[
-        "tool_called",
-        "tool_output",
-        "handoff_requested",
-        "handoff_occured",
-        "mcp_approval_requested",
-        "mcp_approval_response",
-        "mcp_list_tools",
-    ]
+    #: The engine reports a call and its result; the handoff and mcp-approval
+    #: variants this once carried came from the openai-agents item stream and
+    #: were never emitted again after the engine took over.
+    type: Literal["tool_called", "tool_output"]
 
 
 @dataclass
 class AgentOutput:
-    type: Literal[
-        "agent_updated_stream_event", "raw_response_event", "run_item_stream_event"
-    ]
+    #: `_native_stream` projects every engine event onto this one variant. The
+    #: other two openai-agents event names are gone with the SDK.
+    type: Literal["run_item_stream_event"]
     message: Optional[str] = None
     chunk: Optional[str] = None
     tool_action: Optional[ToolAction] = None
@@ -63,31 +58,3 @@ class AgentOutput:
         if dump_json:
             return json.dumps(serialize(self), indent=2) + "\n"
         return serialize(self)
-
-
-def _extract_tool_name(raw_item: Any) -> Optional[str]:
-    if raw_item is None:
-        return None
-
-    if isinstance(raw_item, BaseModel):
-        data = raw_item.model_dump()
-        for key in ("name", "tool_name", "call_id", "id", "type"):
-            value = data.get(key)
-            if value:
-                return str(value)
-        return raw_item.__class__.__name__
-
-    for attr in ("name", "tool_name", "call_id", "id", "type"):
-        value = getattr(raw_item, attr, None)
-        if value:
-            return str(value)
-
-    return raw_item.__class__.__name__
-
-
-def _stringify_output(value: Any) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, BaseModel):
-        return pydantic_to_xml(value)
-    return str(value)

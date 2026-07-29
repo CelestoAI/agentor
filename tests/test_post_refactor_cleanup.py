@@ -1,0 +1,112 @@
+"""Regression tests for two bugs found auditing what the refactor left behind.
+
+Both were invisible: one silenced the warning that announced it, the other
+lived in the half of a decorator's signature nothing exercised.
+"""
+
+import subprocess
+import sys
+
+import pytest
+
+from agentor import tool
+
+
+def test_importing_agentor_does_not_silence_the_host_applications_warnings():
+    """`import agentor` used to install a process-wide DeprecationWarning ignore.
+
+    A library has no business mutating global warning state, and this one
+    suppressed nothing from agentor's own dependency graph - it only hid the
+    warnings of whatever application imported it.
+
+    Run in a subprocess: the filter was installed at import time, and this
+    session has already imported agentor.
+
+    Nothing here resets `warnings.filters`. `simplefilter`/`catch_warnings`
+    would replace the list wholesale and take agentor's entry with it, so the
+    test would pass against the bug it exists to catch.
+    """
+    program = """
+import warnings
+before = list(warnings.filters)
+import agentor  # must not touch the global filter list
+added = [f for f in warnings.filters if f not in before]
+print("ADDED", added)
+
+shown = []
+warnings.showwarning = lambda *a, **k: shown.append(a[0])
+warnings.warn("host application deprecation", DeprecationWarning)
+print("SHOWN" if shown else "SWALLOWED")
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", program], capture_output=True, text=True, check=True
+    )
+    added, verdict = result.stdout.strip().splitlines()
+    assert added == "ADDED []", f"importing agentor installed a global filter: {added}"
+    assert verdict == "SHOWN", (
+        f"importing agentor suppressed a warning it did not raise: {verdict}"
+    )
+
+
+def test_agentor_own_deprecation_warnings_reach_the_user():
+    """The MCPServerStreamableHttp shim exists to warn; the warning must arrive.
+
+    Captured by swapping `showwarning` rather than through `catch_warnings`,
+    which resets the filters and would mask a global ignore.
+    """
+    program = """
+import warnings
+import agentor  # noqa: F401
+from agentor.engine.mcp import MCPServerStreamableHttp
+
+shown = []
+warnings.showwarning = lambda *a, **k: shown.append(str(a[0]))
+MCPServerStreamableHttp(params={"url": "http://example.invalid/mcp"})
+print(";".join(shown))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", program], capture_output=True, text=True, check=True
+    )
+    assert "deprecated" in result.stdout, (
+        f"the deprecation notice never reached the caller: {result.stdout!r}"
+    )
+
+
+def test_tool_accepts_a_description_without_a_name():
+    """`@tool(description=...)` raised AttributeError on the None func."""
+
+    @tool(description="Looks up the weather")
+    def get_weather(city: str) -> str:
+        return f"sunny in {city}"
+
+    assert get_weather.name == "get_weather", (
+        "the name should fall back to the function"
+    )
+    assert get_weather.description == "Looks up the weather"
+
+
+def test_tool_keeps_deriving_both_from_the_function():
+    @tool
+    def plain(x: str) -> str:
+        """Docstring description."""
+        return x
+
+    assert plain.name == "plain"
+    assert plain.description == "Docstring description."
+
+
+def test_tool_still_honours_an_explicit_name():
+    @tool(name="weather_lookup", description="Fetches weather data")
+    def get_weather(city: str) -> str:
+        return f"sunny in {city}"
+
+    assert get_weather.name == "weather_lookup"
+    assert get_weather.description == "Fetches weather data"
+
+
+@pytest.mark.parametrize("attribute", ["_extract_tool_name", "_stringify_output"])
+def test_the_openai_agents_item_probes_are_gone(attribute):
+    """Both existed only to guess at opaque openai-agents stream items."""
+    import agentor.output_text_formatter as formatter
+
+    assert not hasattr(formatter, attribute), f"{attribute} came back; nothing calls it"

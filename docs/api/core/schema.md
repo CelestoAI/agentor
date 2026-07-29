@@ -1,3 +1,0 @@
-# Schema
-
-::: agentor.core.schema

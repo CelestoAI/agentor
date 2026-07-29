@@ -21,7 +21,7 @@
 </p>
 <p align="center">
   <a href="https://docs.celesto.ai">Docs</a> |
-  <a href="https://github.com/celestoai/agentor/tree/main/docs/examples">Examples</a>
+  <a href="https://github.com/CelestoAI/agentor/tree/main/examples">Examples</a>
 </p>
 
 <p align="center">

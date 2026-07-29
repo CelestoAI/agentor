@@ -1,3 +1,0 @@
-# Proxy
-
-::: agentor.mcp.proxy
