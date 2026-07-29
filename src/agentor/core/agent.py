@@ -210,6 +210,7 @@ class Agentor(AgentorBase):
         enable_tracing: bool = False,
         engine: Literal["agents", "native"] = "agents",
         max_turns: int = 10,
+        store: Any = None,
     ):
         if skills is not None:
             available_skills = self._inject_skills(skills)
@@ -226,6 +227,7 @@ class Agentor(AgentorBase):
                 model_settings=model_settings,
                 max_turns=max_turns,
                 enable_tracing=enable_tracing,
+                store=store,
             )
             return
 
@@ -281,6 +283,7 @@ class Agentor(AgentorBase):
         model_settings: Optional[ModelSettings],
         max_turns: int,
         enable_tracing: bool,
+        store: Any = None,
     ) -> None:
         """Set up the native engine (see agentor.engine)."""
         from agentor.engine import AgentLoop
@@ -321,6 +324,7 @@ class Agentor(AgentorBase):
             max_turns=max_turns,
             api_key=api_key,
             tracer=tracer,
+            store=store,
             **params,
         )
 
@@ -632,6 +636,24 @@ class Agentor(AgentorBase):
                     )
                     continue
             raise
+
+    def resume(self, run_id: str):
+        """Continue a persisted run. Requires engine="native" and a store."""
+        if self.engine != "native":
+            raise NotImplementedError(
+                "resume() requires engine='native'; the openai-agents engine "
+                "does not persist runs through Agentor."
+            )
+        return self._loop.resume(run_id)
+
+    async def aresume(self, run_id: str):
+        """Async variant of resume()."""
+        if self.engine != "native":
+            raise NotImplementedError(
+                "aresume() requires engine='native'; the openai-agents engine "
+                "does not persist runs through Agentor."
+            )
+        return await self._loop.aresume(run_id)
 
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(
