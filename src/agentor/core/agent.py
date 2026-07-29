@@ -125,7 +125,7 @@ class Agentor:
         model_settings: Optional[ModelSettings] = None,
         skills: Optional[List[str]] = None,
         enable_tracing: bool = False,
-        max_turns: int = 10,
+        max_turns: int = 20,
         store: Any = None,
         base_url: Optional[str] = None,
         tracer: Any = None,
@@ -371,7 +371,7 @@ class Agentor:
         self,
         input: list[str] | str | list[AgentInputType],
         limit_concurrency: int = 10,
-        max_turns: int = 20,
+        max_turns: Optional[int] = None,
         fallback_models: Optional[List[str]] = None,
     ) -> List[str] | str:
         """
@@ -381,7 +381,8 @@ class Agentor:
         Args:
             input: A string prompt or a list of string prompts.
             limit_concurrency: The maximum number of concurrent tasks to run in case of a batch of prompts.
-            max_turns: The maximum number of turns to run the agent.
+            max_turns: Maximum turns for this call. Defaults to the value the
+                agent was constructed with.
             fallback_models: Optional list of fallback model names to try if the primary model
                 fails due to rate limits or API errors. Models are tried in order.
         """

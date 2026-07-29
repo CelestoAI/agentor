@@ -1,4 +1,4 @@
-from agentor.engine.mcp import MCPServer
+from agentor.engine.mcp import MCPServer, MCPServerStreamableHttp
 
 from .api_router import (
     Context,
@@ -19,4 +19,5 @@ __all__ = [
     "get_headers",
     "get_token",
     "MCPServer",
+    "MCPServerStreamableHttp",
 ]
