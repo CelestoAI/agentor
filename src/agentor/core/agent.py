@@ -210,27 +210,44 @@ class Agentor:
             **params,
         )
 
+    def _resolve_tracing(self, tracing: Any) -> Any:
+        """Turn a per-run tracing flag into something the loop can act on.
+
+        `tracing=True` on an agent with no tracer is a reasonable request, not
+        an error: one is built from CELESTO_API_KEY so a single run can be
+        traced without turning tracing on for the whole agent.
+
+        The tracer is returned for the loop to use for that run, never stored
+        on the agent. Storing it would mean opting one run in quietly enrolled
+        every later run too, which is the exact failure this API exists to
+        prevent.
+        """
+        if tracing is not True or self._loop.tracer is not None:
+            return tracing
+        if not celesto_config.api_key:
+            raise ValueError(
+                "tracing=True requires a Celesto API key. Set CELESTO_API_KEY, "
+                "or pass tracer= when building the agent."
+            )
+        return setup_celesto_tracing(
+            endpoint=f"{celesto_config.base_url}/traces/ingest",
+            token=celesto_config.api_key.get_secret_value(),
+        )
+
     def _native_tracer(self, enable_tracing: bool):
-        """Build a tracer from CELESTO_API_KEY, if tracing is on."""
-        if not enable_tracing and (
-            celesto_config.api_key is None or celesto_config.disable_auto_tracing
-        ):
+        """Build a tracer, but only when tracing was asked for.
+
+        Tracing is opt-in. A trace carries prompts, tool arguments and tool
+        results, so merely having a Celesto API key configured - which the SDK
+        and the MCP hub also use - is not consent to ship run contents to a
+        remote endpoint.
+        """
+        if not enable_tracing:
             return None
         if not celesto_config.api_key:
-            if enable_tracing:
-                raise ValueError(
-                    "Celesto API key is required to enable tracing. "
-                    "Find it at https://celesto.ai/dashboard and set CELESTO_API_KEY."
-                )
-            return None
-
-        if not enable_tracing:
-            # Auto-enabled from CELESTO_API_KEY. Say so: quietly shipping run
-            # contents to a remote endpoint should never be a surprise.
-            print(
-                "auto enabled LLM monitoring and tracing. "
-                "View traces: https://celesto.ai/observe"
-                "\nTo disable, set CELESTO_DISABLE_AUTO_TRACING=True."
+            raise ValueError(
+                "Celesto API key is required to enable tracing. "
+                "Find it at https://celesto.ai/dashboard and set CELESTO_API_KEY."
             )
 
         try:
@@ -364,8 +381,16 @@ class Agentor:
             model_settings=resolved_model_settings,
         )
 
-    def run(self, input: str) -> Any:
-        return self._loop.run(input)
+    def run(self, input: str, tracing: Any = None) -> Any:
+        """Run the agent.
+
+        Args:
+            input: The prompt.
+            tracing: Override tracing for this run alone. None keeps whatever
+                the agent was configured with, False sends nothing for this
+                run, True traces it even when the agent has tracing off.
+        """
+        return self._loop.run(input, tracing=self._resolve_tracing(tracing))
 
     async def arun(
         self,
@@ -373,6 +398,7 @@ class Agentor:
         limit_concurrency: int = 10,
         max_turns: Optional[int] = None,
         fallback_models: Optional[List[str]] = None,
+        tracing: Any = None,
     ) -> List[str] | str:
         """
         Run the agent with an input prompt or a batch of prompts.
@@ -385,10 +411,16 @@ class Agentor:
                 agent was constructed with.
             fallback_models: Optional list of fallback model names to try if the primary model
                 fails due to rate limits or API errors. Models are tried in order.
+            tracing: Override tracing for this call alone. None keeps the
+                agent's configuration, False sends nothing, True traces
+                even when the agent has tracing off.
         """
+        tracing = self._resolve_tracing(tracing)
         if isinstance(input, list):
             if isinstance(input[0], dict):
-                return await self._loop.arun(input, max_turns=max_turns)
+                return await self._loop.arun(
+                    input, max_turns=max_turns, tracing=tracing
+                )
 
             futures = []
             if limit_concurrency > 0:
@@ -397,7 +429,7 @@ class Agentor:
                 async def _run_task(task: str) -> str:
                     async with semaphore:
                         return await self._run_with_fallback(
-                            task, max_turns, fallback_models
+                            task, max_turns, fallback_models, tracing
                         )
 
                 futures = [_run_task(task) for task in input]
@@ -405,19 +437,24 @@ class Agentor:
             else:
                 return await asyncio.gather(
                     *[
-                        self._run_with_fallback(task, max_turns, fallback_models)
+                        self._run_with_fallback(
+                            task, max_turns, fallback_models, tracing
+                        )
                         for task in input
                     ],
                     return_exceptions=True,
                 )
         else:
-            return await self._run_with_fallback(input, max_turns, fallback_models)
+            return await self._run_with_fallback(
+                input, max_turns, fallback_models, tracing
+            )
 
     async def _run_with_fallback(
         self,
         task: str,
         max_turns: Optional[int] = None,
         fallback_models: Optional[List[str]] = None,
+        tracing: Optional[bool] = None,
     ):
         """Run a task, falling back to other models on rate limits.
 
@@ -425,7 +462,7 @@ class Agentor:
         because the model is not baked into the agent here.
         """
         try:
-            return await self._loop.arun(task, max_turns=max_turns)
+            return await self._loop.arun(task, max_turns=max_turns, tracing=tracing)
         except Exception as e:
             if not _is_retryable(e) or not fallback_models:
                 raise
@@ -441,7 +478,7 @@ class Agentor:
                         fallback_model,
                         api_key=self.api_key,
                         **getattr(self._loop.model, "params", {}),
-                    ).arun(task, max_turns=max_turns)
+                    ).arun(task, max_turns=max_turns, tracing=tracing)
                 except Exception as fallback_error:
                     if not _is_retryable(fallback_error):
                         raise
@@ -471,23 +508,25 @@ class Agentor:
         input: str,
         stream: bool = False,
         serialize: bool = True,
+        tracing: Optional[bool] = None,
     ):
         if stream:
-            return self.stream_chat(input, serialize=serialize)
-        return await self._loop.arun(input)
+            return self.stream_chat(input, serialize=serialize, tracing=tracing)
+        return await self._loop.arun(input, tracing=self._resolve_tracing(tracing))
 
     async def stream_chat(
         self,
         input: str,
         serialize: bool = True,
+        tracing: Optional[bool] = None,
     ) -> AsyncIterator[Union[str, AgentOutput]]:
-        async for agent_output in self._native_stream()(input):
+        async for agent_output in self._native_stream(tracing)(input):
             if serialize:
                 yield agent_output.serialize(dump_json=True)
             else:
                 yield agent_output
 
-    def _native_stream(self):
+    def _native_stream(self, tracing: Optional[bool] = None):
         """Project engine events onto AgentOutput.
 
         Keeps `serve()`, the /chat endpoint and the A2A handler working against
@@ -502,7 +541,9 @@ class Agentor:
                 from agentor.engine.store import new_run_id
 
                 run_id = new_run_id()
-            async for event in self._loop.astream(input, run_id=run_id):
+            async for event in self._loop.astream(
+                input, run_id=run_id, tracing=self._resolve_tracing(tracing)
+            ):
                 if event.type == "message":
                     yield AgentOutput(type="run_item_stream_event", message=event.text)
                 elif event.type == "tool_call":

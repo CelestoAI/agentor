@@ -121,6 +121,29 @@ class AgentLoop:
         )
         self.tools: Dict[str, Tool] = {t.name: t for t in resolve_tools(tools)}
 
+    def _tracer_for_run(self, tracing: Any) -> Any:
+        """Resolve which tracer, if any, a single run should use.
+
+        `tracing` may also be a tracer object, which is used for that run only
+        and never stored: a caller opting one run in must not silently leave
+        the agent tracing every run after it.
+
+        Identity comparisons rather than truthiness, since a tracer object is
+        itself truthy.
+        """
+        if tracing is None:
+            return self.tracer
+        if tracing is False:
+            return None
+        if tracing is True:
+            if self.tracer is None:
+                raise ValueError(
+                    "tracing=True but no tracer is configured. Pass tracer= "
+                    "when building the agent, or set CELESTO_API_KEY."
+                )
+            return self.tracer
+        return tracing
+
     def with_model(self, model: Any, **kwargs: Any) -> "AgentLoop":
         """Copy this loop with a different model.
 
@@ -290,13 +313,19 @@ class AgentLoop:
         stream_text: bool = False,
         run_id: Optional[str] = None,
         max_turns: Optional[int] = None,
+        tracing: Any = None,
     ) -> AsyncIterator[Event]:
         """Run the agent, emitting every event, tracing and persisting it.
+
+        `tracing` overrides the configured tracer for this run alone: None uses
+        it, False turns it off, True requires one. Useful when a particular
+        input must not leave the process.
 
         Note that a consumer which abandons this generator early stops the
         trace from being exported; `arun` always drains it.
         """
-        collector = self.tracer.collector(self.name) if self.tracer else None
+        tracer = self._tracer_for_run(tracing)
+        collector = tracer.collector(self.name) if tracer else None
         run_started = time.time()
 
         async def record(event: Event) -> None:
@@ -353,7 +382,7 @@ class AgentLoop:
         finally:
             if collector is not None:
                 try:
-                    await asyncio.to_thread(self.tracer.export, collector)
+                    await asyncio.to_thread(tracer.export, collector)
                 except Exception as e:
                     logger.warning("Trace export failed: %s", e)
 
@@ -496,6 +525,7 @@ class AgentLoop:
         input: MessageInput,
         run_id: Optional[str] = None,
         max_turns: Optional[int] = None,
+        tracing: Any = None,
     ) -> RunResult:
         if self.store is not None and run_id is None:
             from agentor.engine.store import new_run_id
@@ -503,7 +533,9 @@ class AgentLoop:
             run_id = new_run_id()
 
         result = RunResult(run_id=run_id)
-        async for event in self.astream(input, run_id=run_id, max_turns=max_turns):
+        async for event in self.astream(
+            input, run_id=run_id, max_turns=max_turns, tracing=tracing
+        ):
             result.events.append(event)
             if event.type == "run_end":
                 result.status = event.status or "completed"
@@ -539,8 +571,11 @@ class AgentLoop:
         input: MessageInput,
         run_id: Optional[str] = None,
         max_turns: Optional[int] = None,
+        tracing: Any = None,
     ) -> RunResult:
-        return self._sync(self.arun(input, run_id=run_id, max_turns=max_turns))
+        return self._sync(
+            self.arun(input, run_id=run_id, max_turns=max_turns, tracing=tracing)
+        )
 
     async def aresume(self, run_id: str) -> RunResult:
         """Continue a persisted run from where it stopped.
