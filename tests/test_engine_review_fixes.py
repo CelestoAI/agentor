@@ -714,3 +714,46 @@ def test_model_settings_reach_the_native_model():
     )
     assert agent._loop.model.params["temperature"] == 0.2
     assert agent._loop.model.params["max_tokens"] == 400
+
+
+# ============================================ provider-hosted tools
+
+
+def test_hosted_tools_fail_with_an_actionable_message():
+    """A generic 'unsupported type' hides why a documented tool stopped working."""
+    from agents import WebSearchTool
+
+    from agentor.engine.tools import resolve_tools
+
+    with pytest.raises(TypeError, match="provider-hosted tool") as exc:
+        resolve_tools([WebSearchTool()])
+
+    message = str(exc.value)
+    assert "web_search" in message
+    assert "engine='agents'" in message
+
+
+def test_agentor_surfaces_the_hosted_tool_message():
+    from agents import WebSearchTool
+
+    from agentor import Agentor
+
+    with pytest.raises(TypeError, match="provider-hosted tool"):
+        Agentor(
+            name="T",
+            model="gpt-4o-mini",
+            tools=[WebSearchTool()],
+            engine="native",
+            api_key="test",
+        )
+
+
+def test_hosted_tools_still_work_on_the_agents_engine():
+    from agents import WebSearchTool
+
+    from agentor import Agentor
+
+    agent = Agentor(
+        name="T", model="gpt-4o-mini", tools=[WebSearchTool()], api_key="test"
+    )
+    assert any(getattr(t, "name", None) == "web_search" for t in agent.tools)

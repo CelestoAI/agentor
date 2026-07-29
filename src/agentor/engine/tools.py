@@ -281,6 +281,18 @@ def resolve_tools(tools: Optional[List[Any]]) -> List[Tool]:
         elif callable(item):
             resolved.append(Tool.from_function(item))
 
+        elif isinstance(getattr(item, "name", None), str):
+            # A provider-hosted tool: it carries a name but nothing to invoke,
+            # because the provider runs it server-side. The native engine talks
+            # to /chat/completions, which has no equivalent.
+            raise TypeError(
+                f"{type(item).__name__} is a provider-hosted tool "
+                f"({item.name!r}), which engine='native' cannot run: hosted "
+                "tools are executed by the provider through OpenAI's Responses "
+                "API. Use engine='agents' for it, or replace it with a regular "
+                "function tool."
+            )
+
         else:
             raise TypeError(
                 f"Unsupported tool type {type(item).__name__!r}. Expected a "
