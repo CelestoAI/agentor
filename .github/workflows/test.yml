@@ -4,9 +4,11 @@ permissions:
 
 on:
   push:
-    branches: [main]
+    branches: [main, agentor-v0.1.0]
   pull_request:
-    branches: [main]
+    # agentor-v0.1.0 is the v0.1.0 integration branch. Without it here, PRs
+    # targeting it merge with no test run at all.
+    branches: [main, agentor-v0.1.0]
 
 jobs:
   pytest:
