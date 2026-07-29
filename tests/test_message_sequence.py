@@ -11,10 +11,18 @@ budget while siblings were still pending split the run of tool messages. The
 feature meant to keep a run alive was ending it.
 """
 
+from collections import Counter
+from typing import Any, Dict, List, Sequence, Tuple
+
 import pytest
 
 from agentor.engine import AgentLoop
 from tests.test_engine import FakeModel, calls, text
+
+#: one entry of the OpenAI-shaped message list handed to a provider
+Message = Dict[str, Any]
+#: (tool_name, json_arguments), as accepted by tests.test_engine.calls
+ToolSpec = Tuple[str, str]
 
 
 def broken(x: str) -> str:
@@ -35,25 +43,36 @@ def working(x: str) -> str:
     return "fine"
 
 
-def assert_well_formed(messages):
-    """Every assistant tool_calls turn is answered contiguously."""
+def assert_well_formed(messages: Sequence[Message]) -> None:
+    """Every assistant tool_calls turn is answered exactly once, contiguously.
+
+    Compares multisets rather than draining a pending set: a duplicate reply to
+    one id, or a reply to an id that was never requested, is as invalid as a
+    missing one, and `set.discard` accepts both silently.
+    """
     for index, message in enumerate(messages):
         if message.get("role") != "assistant" or not message.get("tool_calls"):
             continue
 
-        pending = {call["id"] for call in message["tool_calls"]}
+        expected: Counter = Counter(call["id"] for call in message["tool_calls"])
+        observed: Counter = Counter()
+
         cursor = index + 1
         while cursor < len(messages) and messages[cursor]["role"] == "tool":
-            pending.discard(messages[cursor]["tool_call_id"])
+            observed[messages[cursor]["tool_call_id"]] += 1
             cursor += 1
 
-        assert not pending, (
-            f"tool_call_ids {sorted(pending)} were not answered contiguously; "
+        assert observed == expected, (
+            f"tool replies did not match the calls: missing "
+            f"{sorted((expected - observed).elements())}, unexpected "
+            f"{sorted((observed - expected).elements())}; "
             f"sequence was {[m['role'] for m in messages]}"
         )
 
 
-async def sequence_sent_to_model(specs, budget, turns):
+async def sequence_sent_to_model(
+    specs: Sequence[ToolSpec], budget: int, turns: int
+) -> List[Message]:
     """Run the loop and return the message list from the final request."""
     model = FakeModel(*([calls(*specs)] * turns), text("done"))
     loop = AgentLoop(model=model, tools=[broken, working], max_tool_failures=budget)
