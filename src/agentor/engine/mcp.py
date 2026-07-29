@@ -74,13 +74,17 @@ class MCPServer:
             )
             session = await stack.enter_async_context(ClientSession(read, write))
             await session.initialize()
+            self._stack = stack
+            self._session = session
+            # Discovery stays inside the guard: if it raises after the session
+            # opens, connect() never returns, so nothing else can close it.
+            return await self.list_tools()
         except BaseException:
+            self._stack = None
+            self._session = None
+            self._loop = None
             await stack.aclose()
             raise
-
-        self._stack = stack
-        self._session = session
-        return await self.list_tools()
 
     async def list_tools(self) -> List[Tool]:
         if self._session is None:

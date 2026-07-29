@@ -590,7 +590,9 @@ class Agentor(AgentorBase):
         Run a task with optional fallback to alternative models on rate limit errors.
         """
         if self.engine == "native":
-            return await self._run_native_with_fallback(task, fallback_models)
+            return await self._run_native_with_fallback(
+                task, fallback_models, max_turns
+            )
 
         retryable = _retryable_errors()
         try:
@@ -639,7 +641,10 @@ class Agentor(AgentorBase):
             raise
 
     async def _run_native_with_fallback(
-        self, task: str, fallback_models: Optional[List[str]] = None
+        self,
+        task: str,
+        fallback_models: Optional[List[str]] = None,
+        max_turns: Optional[int] = None,
     ):
         """Native-engine equivalent of _run_with_fallback.
 
@@ -648,7 +653,7 @@ class Agentor(AgentorBase):
         """
         retryable = _retryable_errors()
         try:
-            return await self._loop.arun(task)
+            return await self._loop.arun(task, max_turns=max_turns)
         except retryable as e:
             if not fallback_models:
                 raise
@@ -660,7 +665,7 @@ class Agentor(AgentorBase):
                 try:
                     return await self._loop.with_model(
                         fallback_model, api_key=self.api_key
-                    ).arun(task)
+                    ).arun(task, max_turns=max_turns)
                 except retryable as fallback_error:
                     logger.warning(
                         f"Fallback model '{fallback_model}' also failed: {fallback_error}"
@@ -739,7 +744,14 @@ class Agentor(AgentorBase):
         """
 
         async def stream(input: str) -> AsyncIterator[AgentOutput]:
-            async for event in self._loop.astream(input):
+            # a streamed run is as resumable as a non-streamed one, but only if
+            # it is given a run id to persist under
+            run_id = None
+            if self._loop.store is not None:
+                from agentor.engine.store import new_run_id
+
+                run_id = new_run_id()
+            async for event in self._loop.astream(input, run_id=run_id):
                 if event.type == "message":
                     yield AgentOutput(type="run_item_stream_event", message=event.text)
                 elif event.type == "tool_call":

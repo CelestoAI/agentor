@@ -23,6 +23,38 @@ logger = logging.getLogger(__name__)
 MessageInput = Union[str, List[Dict[str, Any]]]
 
 
+def _strictify(node: Any) -> Any:
+    """Make a JSON schema satisfy OpenAI\'s strict json_schema rules.
+
+    Strict mode requires every object - including nested ones and `$defs` - to
+    set `additionalProperties: false` and to list every property in `required`.
+    Setting it only on the root gets otherwise valid models rejected before
+    generation. Optional fields are already emitted as nullable unions by
+    pydantic, so listing them as required is correct.
+    """
+    if isinstance(node, list):
+        return [_strictify(item) for item in node]
+    if not isinstance(node, dict):
+        return node
+
+    node = {key: _strictify(value) for key, value in node.items()}
+    if isinstance(node.get("properties"), dict):
+        node["type"] = node.get("type", "object")
+        node["additionalProperties"] = False
+        node["required"] = list(node["properties"])
+    return node
+
+
+def _clone_server(server: Any) -> Any:
+    """Build a fresh, unconnected copy of an MCP server template."""
+    clone = object.__new__(type(server))
+    clone.__dict__.update(server.__dict__)
+    clone._stack = None
+    clone._session = None
+    clone._loop = None
+    return clone
+
+
 def _response_format(output_type: Any) -> Optional[Dict[str, Any]]:
     """Build an OpenAI json_schema response format from a pydantic model."""
     if output_type is None:
@@ -32,9 +64,7 @@ def _response_format(output_type: Any) -> Optional[Dict[str, Any]]:
             f"output_type must be a pydantic BaseModel, got {output_type!r}."
         )
 
-    schema = output_type.model_json_schema()
-    # strict json_schema mode rejects extra keys and requires every property
-    schema["additionalProperties"] = False
+    schema = _strictify(output_type.model_json_schema())
     return {
         "type": "json_schema",
         "json_schema": {
@@ -117,17 +147,22 @@ class AgentLoop:
             ]
         return message
 
-    def _schemas(self, disabled: set[str]) -> Optional[List[Dict[str, Any]]]:
-        schemas = [
-            t.to_openai() for name, t in self.tools.items() if name not in disabled
-        ]
+    @staticmethod
+    def _schemas(
+        tools: Dict[str, Tool], disabled: set[str]
+    ) -> Optional[List[Dict[str, Any]]]:
+        schemas = [t.to_openai() for name, t in tools.items() if name not in disabled]
         return schemas or None
 
     # ------------------------------------------------------------ execution
 
     async def _run_tool(
-        self, call: ToolCall, disabled: set[str] = frozenset()
+        self,
+        call: ToolCall,
+        tools: Optional[Dict[str, Tool]] = None,
+        disabled: set[str] = frozenset(),
     ) -> Event:
+        tools = self.tools if tools is None else tools
         try:
             args = json.loads(call.arguments or "{}")
         except json.JSONDecodeError as exc:
@@ -152,9 +187,9 @@ class AgentLoop:
                 result=f"Error: tool {call.name!r} is disabled after repeated failures.",
             )
 
-        tool = self.tools.get(call.name)
+        tool = tools.get(call.name)
         if tool is None:
-            known = ", ".join(sorted(self.tools)) or "none"
+            known = ", ".join(sorted(tools)) or "none"
             return Event(
                 type="tool_result",
                 name=call.name,
@@ -195,23 +230,29 @@ class AgentLoop:
 
     @asynccontextmanager
     async def _connected_mcp_tools(self):
-        """Hold MCP connections open for one run and merge in their tools.
+        """Yield the tool map for one run, with MCP tools merged in.
 
-        Connecting per run rather than per process keeps the loop usable from
-        short-lived workers, where a long-lived session would go stale.
+        The map is built per run and `self.tools` is never mutated: concurrent
+        runs on one loop (which `Agentor.arun` does for a batch of prompts)
+        would otherwise remove each other\'s remote tools mid-flight.
+
+        A fresh `MCPServer` is built per run for the same reason - the server
+        object holds a live session, so sharing one across concurrent runs
+        would let the first to finish close a session another is still using.
         """
         if not self.mcp_servers:
-            yield
+            yield dict(self.tools)
             return
 
-        added: List[str] = []
+        tools = dict(self.tools)
         connected: List[Any] = []
         try:
-            for server in self.mcp_servers:
+            for template in self.mcp_servers:
+                server = _clone_server(template)
                 remote_tools = await server.connect()
                 connected.append(server)
                 for tool in remote_tools:
-                    if tool.name in self.tools:
+                    if tool.name in tools:
                         logger.warning(
                             "MCP server %s exposes %r, which shadows an existing "
                             "tool; use tool_prefix to disambiguate.",
@@ -219,12 +260,9 @@ class AgentLoop:
                             tool.name,
                         )
                         continue
-                    self.tools[tool.name] = tool
-                    added.append(tool.name)
-            yield
+                    tools[tool.name] = tool
+            yield tools
         finally:
-            for name in added:
-                self.tools.pop(name, None)
             for server in connected:
                 await server.close()
 
@@ -233,6 +271,7 @@ class AgentLoop:
         input: MessageInput,
         stream_text: bool = False,
         run_id: Optional[str] = None,
+        max_turns: Optional[int] = None,
     ) -> AsyncIterator[Event]:
         """Run the agent, emitting every event, tracing and persisting it.
 
@@ -240,34 +279,57 @@ class AgentLoop:
         trace from being exported; `arun` always drains it.
         """
         collector = self.tracer.collector(self.name) if self.tracer else None
+        run_started = time.time()
 
-        async with self._connected_mcp_tools():
-            async for event in self._astream(input, stream_text):
-                if collector is not None:
-                    try:
-                        collector.handle(event)
-                    except Exception as e:  # tracing must never break a run
-                        logger.warning("Trace collection failed: %s", e)
-                if self.store is not None and run_id is not None:
-                    try:
-                        self.store.append(run_id, event)
-                    except Exception as e:
-                        # Losing durability is bad, but killing a live run over
-                        # it is worse; the run is still returned to the caller.
-                        logger.error(
-                            "Failed to persist event for run %s: %s", run_id, e
-                        )
-                yield event
+        def record(event: Event) -> None:
+            if collector is not None:
+                try:
+                    collector.handle(event)
+                except Exception as e:  # tracing must never break a run
+                    logger.warning("Trace collection failed: %s", e)
+            if self.store is not None and run_id is not None:
+                try:
+                    self.store.append(run_id, event)
+                except Exception as e:
+                    # Losing durability is bad, but killing a live run over it
+                    # is worse; the run is still returned to the caller.
+                    logger.error("Failed to persist event for run %s: %s", run_id, e)
 
-        if collector is not None:
-            try:
-                await asyncio.to_thread(self.tracer.export, collector)
-            except Exception as e:
-                logger.warning("Trace export failed: %s", e)
+        try:
+            async with self._connected_mcp_tools() as tools:
+                async for event in self._astream(input, stream_text, tools, max_turns):
+                    record(event)
+                    yield event
+        except Exception as exc:
+            # A failed run is exactly the one worth tracing, and a durable log
+            # without a terminal event cannot be told apart from a run still in
+            # flight. Emit one, then re-raise.
+            failure = Event(
+                type="run_end",
+                status="failed",
+                error=f"{type(exc).__name__}: {exc}",
+                started_at=run_started,
+                ended_at=time.time(),
+            )
+            record(failure)
+            yield failure
+            raise
+        finally:
+            if collector is not None:
+                try:
+                    await asyncio.to_thread(self.tracer.export, collector)
+                except Exception as e:
+                    logger.warning("Trace export failed: %s", e)
 
     async def _astream(
-        self, input: MessageInput, stream_text: bool = False
+        self,
+        input: MessageInput,
+        stream_text: bool = False,
+        tools: Optional[Dict[str, Tool]] = None,
+        max_turns: Optional[int] = None,
     ) -> AsyncIterator[Event]:
+        tools = self.tools if tools is None else tools
+        turn_budget = self.max_turns if max_turns is None else max_turns
         messages = self._initial_messages(input)
         failures: Dict[str, int] = {}
         disabled: set[str] = set()
@@ -281,10 +343,13 @@ class AgentLoop:
             agent=self.name,
             model=model_name,
             started_at=run_started,
+            # the input is recorded here so a crash before the first model
+            # response still leaves a resumable run
+            messages=[dict(m) for m in messages],
         )
 
-        for turn in range(1, self.max_turns + 1):
-            schemas = self._schemas(disabled)
+        for turn in range(1, turn_budget + 1):
+            schemas = self._schemas(tools, disabled)
             # snapshot before the call: `messages` is appended to below, and a
             # trace needs the request as it was actually sent
             request_messages = [dict(m) for m in messages]
@@ -350,7 +415,7 @@ class AgentLoop:
                 )
 
             results = await asyncio.gather(
-                *(self._run_tool(call, disabled) for call in response.tool_calls)
+                *(self._run_tool(call, tools, disabled) for call in response.tool_calls)
             )
 
             for event in results:
@@ -366,7 +431,7 @@ class AgentLoop:
 
                 if (
                     event.error is None
-                    or event.name not in self.tools
+                    or event.name not in tools
                     or event.name in disabled
                 ):
                     continue
@@ -391,14 +456,17 @@ class AgentLoop:
         yield Event(
             type="run_end",
             status="max_turns",
-            error=f"Reached max_turns ({self.max_turns}) without a final answer.",
+            error=f"Reached max_turns ({turn_budget}) without a final answer.",
             usage=total,
             started_at=run_started,
             ended_at=time.time(),
         )
 
     async def arun(
-        self, input: MessageInput, run_id: Optional[str] = None
+        self,
+        input: MessageInput,
+        run_id: Optional[str] = None,
+        max_turns: Optional[int] = None,
     ) -> RunResult:
         if self.store is not None and run_id is None:
             from agentor.engine.store import new_run_id
@@ -406,7 +474,7 @@ class AgentLoop:
             run_id = new_run_id()
 
         result = RunResult(run_id=run_id)
-        async for event in self.astream(input, run_id=run_id):
+        async for event in self.astream(input, run_id=run_id, max_turns=max_turns):
             result.events.append(event)
             if event.type == "run_end":
                 result.status = event.status or "completed"
@@ -431,8 +499,13 @@ class AgentLoop:
                 f"Raw output: {text[:500]}"
             ) from e
 
-    def run(self, input: MessageInput, run_id: Optional[str] = None) -> RunResult:
-        return self._sync(self.arun(input, run_id=run_id))
+    def run(
+        self,
+        input: MessageInput,
+        run_id: Optional[str] = None,
+        max_turns: Optional[int] = None,
+    ) -> RunResult:
+        return self._sync(self.arun(input, run_id=run_id, max_turns=max_turns))
 
     async def aresume(self, run_id: str) -> RunResult:
         """Continue a persisted run from where it stopped.
@@ -456,9 +529,14 @@ class AgentLoop:
 
         if is_complete(events):
             end = final_event(events)
+            output = end.text if end else None
+            if self.output_type is not None:
+                # otherwise resume() returns a str for a finished run and a
+                # parsed model for one it had to continue
+                output = self._parse_output(output)
             return RunResult(
                 run_id=run_id,
-                final_output=end.text if end else None,
+                final_output=output,
                 status="completed",
                 events=events,
                 usage=total_usage(events),
