@@ -101,6 +101,8 @@ class AgentLoop:
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         tracer: Any = None,
+        trace_group_id: Optional[str] = None,
+        trace_metadata: Optional[Dict[str, Any]] = None,
         store: Any = None,
         mcp_servers: Optional[List[Any]] = None,
         output_type: Any = None,
@@ -112,6 +114,8 @@ class AgentLoop:
         self.max_turns = max_turns
         self.max_tool_failures = max_tool_failures
         self.tracer = tracer
+        self.trace_group_id = trace_group_id
+        self.trace_metadata = trace_metadata
         self.store = store
         self.mcp_servers = list(mcp_servers or [])
         self.output_type = output_type
@@ -325,7 +329,15 @@ class AgentLoop:
         trace from being exported; `arun` always drains it.
         """
         tracer = self._tracer_for_run(tracing)
-        collector = tracer.collector(self.name) if tracer else None
+        collector = (
+            tracer.collector(
+                self.name,
+                group_id=self.trace_group_id,
+                metadata=self.trace_metadata,
+            )
+            if tracer
+            else None
+        )
         run_started = time.time()
 
         async def record(event: Event) -> None:
@@ -627,6 +639,10 @@ class AgentLoop:
         result = await self.arun(messages, run_id=run_id)
         # the caller cares about the whole run, not just this continuation
         result.events = events + result.events
+        # ...including what it cost. The continuation's run_end only counts its
+        # own generations, so billing a resumed run from it hides everything
+        # spent before the interruption.
+        result.usage = total_usage(result.events)
         return result
 
     def resume(self, run_id: str) -> RunResult:
