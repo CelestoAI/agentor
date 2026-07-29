@@ -140,6 +140,22 @@ Once deployed, your agent will be accessible via a REST endpoint, for example:
 https://api.celesto.ai/deploy/apps/<app-name>
 ```
 
+## Tracing
+
+Agentor sends traces to Celesto automatically when `CELESTO_API_KEY` is set, and prints a
+notice when it does. Turn it off globally with `CELESTO_DISABLE_AUTO_TRACING=True`, or
+decide per run:
+
+```python
+agent.run("public question")                    # traced, if tracing is on
+agent.run("contains customer data", tracing=False)   # this run sends nothing
+agent.run("debug this", tracing=True)           # trace just this one
+```
+
+`tracing=` is accepted by `run`, `arun`, `chat` and `stream_chat`. Traces carry prompts,
+tool arguments and tool results, so use `tracing=False` for inputs that must not leave
+the process.
+
 ## Agent Skills
 
 Skills are folders of instructions, scripts, and resources that Claude loads dynamically to improve performance on specialized tasks.
