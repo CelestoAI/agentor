@@ -9,11 +9,14 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
+import logging
 import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, get_type_hints
 
 from pydantic import create_model
+
+logger = logging.getLogger(__name__)
 
 # Matches "name: description" or "name (type): description" inside an Args:
 # block, which is the Google style used across agentor's own tools.
@@ -185,11 +188,14 @@ def function_tool(
     *,
     name_override: Optional[str] = None,
     description_override: Optional[str] = None,
+    **compat: Any,
 ) -> Any:
     """Turn a function into a `Tool`.
 
-    Compatible with the decorator agentor exported previously, including
-    `name_override`, so existing tool definitions need no change.
+    Options the previously exported decorator accepted (`strict_mode`,
+    `failure_error_function`, `use_docstring_info` and the rest) are still
+    accepted and ignored, so existing definitions keep importing rather than
+    failing on an unexpected keyword.
 
     Example::
 
@@ -198,6 +204,8 @@ def function_tool(
             "Return the weather for a city."
             return f"{city}: sunny"
     """
+    if compat:
+        logger.debug("function_tool ignoring legacy options: %s", sorted(compat))
 
     def decorator(fn: Callable) -> Tool:
         return Tool.from_function(
@@ -221,6 +229,12 @@ class RunContext:
 
     def __init__(self, context: Any = None):
         self.context = context
+
+    def __class_getitem__(cls, _item: Any) -> type:
+        # tools were commonly annotated RunContextWrapper[Config]; staying
+        # subscriptable lets that annotation be renamed without also being
+        # rewritten
+        return cls
 
 
 #: previous name, kept so old annotations and imports keep resolving

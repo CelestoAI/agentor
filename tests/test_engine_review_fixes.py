@@ -724,3 +724,137 @@ def test_agentor_surfaces_the_unrunnable_tool_message():
 
     with pytest.raises(TypeError, match="no callable to invoke"):
         Agentor(name="T", model="gpt-4o-mini", tools=[HostedTool()], api_key="test")
+
+
+# ============================================ openai-agents removal review
+
+
+def test_default_model_is_unchanged_by_the_removal():
+    """Changing the default silently alters quality and billing."""
+    import inspect
+
+    from agentor import Agentor
+
+    assert inspect.signature(Agentor.__init__).parameters["model"].default == (
+        "gpt-5-nano"
+    )
+
+
+def test_from_md_default_matches_the_constructor_default(tmp_path):
+    from agentor import Agentor
+
+    md = tmp_path / "a.md"
+    md.write_text("---\nname: Bot\n---\nYou are helpful.")
+    agent = Agentor.from_md(md, api_key="test")
+    assert agent._loop.model.model == "gpt-5-nano"
+
+
+@pytest.mark.asyncio
+async def test_fallback_keeps_the_configured_model_parameters():
+    """A fallback that drops temperature answers differently to the primary."""
+    import httpx
+    import openai
+
+    from agentor import Agentor, ModelSettings
+
+    response = httpx.Response(
+        429, request=httpx.Request("POST", "https://api.openai.com/v1/chat")
+    )
+    captured = {}
+
+    agent = Agentor(
+        name="T",
+        model="gpt-4o-mini",
+        api_key="test",
+        model_settings=ModelSettings(temperature=0.2, max_tokens=64),
+    )
+
+    async def boom(*a, **k):
+        raise openai.RateLimitError("rate limited", response=response, body=None)
+
+    agent._loop.model.complete = boom
+
+    original_with_model = agent._loop.with_model
+
+    def spy(model, **kwargs):
+        captured.update(kwargs)
+        clone = original_with_model(model, **kwargs)
+        clone.model = FakeModel(text("from fallback"))
+        return clone
+
+    agent._loop.with_model = spy
+    result = await agent.arun("go", fallback_models=["gpt-4o"])
+
+    assert result.final_output == "from fallback"
+    assert captured["temperature"] == 0.2
+    assert captured["max_tokens"] == 64
+
+
+def test_model_settings_accepts_previously_exported_fields():
+    """Rejecting them would break settings written against the old type."""
+    from agentor import ModelSettings
+
+    settings = ModelSettings(
+        temperature=0.5,
+        tool_choice="auto",
+        parallel_tool_calls=True,
+        verbosity="low",
+        some_provider_flag=1,
+    )
+    params = settings.to_params()
+    assert params["tool_choice"] == "auto"
+    assert params["parallel_tool_calls"] is True
+    assert params["some_provider_flag"] == 1, "unknown keys should pass through"
+
+
+def test_model_settings_drops_parameters_with_no_equivalent(caplog):
+    from agentor import ModelSettings
+
+    with caplog.at_level("WARNING"):
+        params = ModelSettings(temperature=0.1, truncation="auto").to_params()
+
+    assert "truncation" not in params, "forwarding it would earn a provider 400"
+    assert "truncation" in caplog.text
+
+
+def test_function_tool_accepts_legacy_decorator_options():
+    """@function_tool(strict_mode=False) must not fail at import time."""
+    from agentor import function_tool
+
+    @function_tool(strict_mode=False, use_docstring_info=True)
+    def greet(name: str) -> str:
+        """Greet.
+
+        Args:
+            name: who.
+        """
+        return name
+
+    assert greet.name == "greet"
+
+
+def test_run_context_is_subscriptable():
+    """Tools were commonly annotated RunContextWrapper[Config]."""
+    from agentor.engine.tools import RunContext, build_schema
+
+    def fn(ctx: RunContext[dict], q: str) -> str:
+        """Doc.
+
+        Args:
+            q: query.
+        """
+        return q
+
+    _, schema, context_param = build_schema(fn)
+    assert context_param == "ctx"
+    assert list(schema["properties"]) == ["q"]
+
+
+def test_agentor_accepts_an_explicit_tracer():
+    """setup_celesto_tracing documents handing its result to Agentor."""
+    from agentor import Agentor
+    from agentor.tracer import setup_celesto_tracing
+
+    tracer = setup_celesto_tracing(endpoint="http://example/ingest", token="t")
+    agent = Agentor(name="T", model="gpt-4o-mini", api_key="test", tracer=tracer)
+    assert agent._loop.tracer is tracer

@@ -117,7 +117,7 @@ class Agentor:
         self,
         name: str,
         instructions: Optional[str] = None,
-        model: Any = "gpt-4o-mini",
+        model: Any = "gpt-5-nano",
         tools: Optional[List[Any]] = None,
         output_type: Any = None,
         debug: bool = False,
@@ -128,6 +128,7 @@ class Agentor:
         max_turns: int = 10,
         store: Any = None,
         base_url: Optional[str] = None,
+        tracer: Any = None,
         engine: Optional[Literal["native"]] = None,
     ):
         if engine not in (None, "native"):
@@ -152,6 +153,7 @@ class Agentor:
             store=store,
             output_type=output_type,
             base_url=base_url,
+            tracer=tracer,
         )
 
     def _init_native(
@@ -167,6 +169,7 @@ class Agentor:
         store: Any = None,
         output_type: Any = None,
         base_url: Optional[str] = None,
+        tracer: Any = None,
     ) -> None:
         """Set up the native engine (see agentor.engine)."""
 
@@ -175,7 +178,8 @@ class Agentor:
         self.api_key = api_key
         self.model = model
         self.enable_tracing = enable_tracing
-        tracer = self._native_tracer(enable_tracing)
+        # an explicit tracer wins over the one built from CELESTO_API_KEY
+        tracer = tracer or self._native_tracer(enable_tracing)
 
         plain_tools, mcp_servers = [], []
         for tool in tools or []:
@@ -430,8 +434,12 @@ class Agentor:
             )
             for fallback_model in fallback_models:
                 try:
+                    # carry the configured parameters across: a fallback that
+                    # silently drops temperature/max_tokens answers differently
                     return await self._loop.with_model(
-                        fallback_model, api_key=self.api_key
+                        fallback_model,
+                        api_key=self.api_key,
+                        **getattr(self._loop.model, "params", {}),
                     ).arun(task, max_turns=max_turns)
                 except Exception as fallback_error:
                     if not _is_retryable(fallback_error):

@@ -97,9 +97,19 @@ class MCPServer:
         if self._session is None:
             raise RuntimeError(f"MCP server {self.name!r} is not connected.")
 
-        listed = await self._session.list_tools()
+        remote_tools = []
+        cursor = None
+        while True:
+            listed = await self._session.list_tools(cursor)
+            remote_tools.extend(listed.tools)
+            # a paginated server returns the rest behind nextCursor; stopping at
+            # the first page would silently hide every tool after it
+            cursor = getattr(listed, "nextCursor", None)
+            if not cursor:
+                break
+
         tools: List[Tool] = []
-        for remote in listed.tools:
+        for remote in remote_tools:
             name = (
                 f"{self.tool_prefix}{remote.name}" if self.tool_prefix else remote.name
             )

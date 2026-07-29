@@ -18,6 +18,23 @@ def remote_tool(name, description="", schema=None):
     )
 
 
+class PagedSession:
+    """A session that returns its tools across two pages."""
+
+    def __init__(self, pages):
+        self.pages = pages
+        self.cursors_seen = []
+
+    async def list_tools(self, cursor=None):
+        self.cursors_seen.append(cursor)
+        index = 0 if cursor is None else int(cursor)
+        is_last = index == len(self.pages) - 1
+        return SimpleNamespace(
+            tools=self.pages[index],
+            nextCursor=None if is_last else str(index + 1),
+        )
+
+
 class FakeSession:
     """Stands in for an mcp ClientSession."""
 
@@ -27,8 +44,9 @@ class FakeSession:
         self._is_error = is_error
         self.calls = []
 
-    async def list_tools(self):
-        return SimpleNamespace(tools=self._tools)
+    async def list_tools(self, cursor=None):
+        # single page; nextCursor absent means "no more"
+        return SimpleNamespace(tools=self._tools, nextCursor=None)
 
     async def call_tool(self, name, arguments):
         self.calls.append((name, arguments))
@@ -222,3 +240,16 @@ def test_closing_from_a_different_event_loop_explains_itself():
 
     with pytest.raises(RuntimeError, match="different event loop"):
         asyncio.run(close())
+
+
+@pytest.mark.asyncio
+async def test_list_tools_follows_pagination():
+    """Stopping at page one silently hides every tool after it."""
+    session = PagedSession(
+        [[remote_tool("alpha"), remote_tool("beta")], [remote_tool("gamma")]]
+    )
+    server = connected(session)
+
+    tools = await server.list_tools()
+    assert [t.name for t in tools] == ["alpha", "beta", "gamma"]
+    assert session.cursors_seen == [None, "1"]
