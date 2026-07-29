@@ -270,15 +270,17 @@ def resolve_tools(tools: Optional[List[Any]]) -> List[Tool]:
             resolved.append(Tool.from_function(item))
 
         elif isinstance(getattr(item, "name", None), str):
-            # A provider-hosted tool: it carries a name but nothing to invoke,
-            # because the provider runs it server-side. The native engine talks
-            # to /chat/completions, which has no equivalent.
+            # Tool-shaped - it carries a name - but with nothing to invoke.
+            # That covers provider-hosted tools, whose body lives on the
+            # provider, and SDK-specific tool types whose execution is driven
+            # by a runner agentor does not use. The message deliberately does
+            # not assert which: both are unrunnable here, and guessing wrong
+            # sends the reader looking in the wrong place.
             raise TypeError(
-                f"{type(item).__name__} is a provider-hosted tool "
-                f"({item.name!r}). Agentor does not run hosted tools: they are "
-                "executed by the provider through OpenAI's Responses API, "
-                "which the engine does not speak. Replace it with a regular "
-                "function tool."
+                f"{type(item).__name__} ({item.name!r}) exposes no callable to "
+                "invoke, so agentor cannot run it. Provider-hosted tools (web "
+                "search, file search) and SDK-specific tool types are not "
+                "supported; define a function tool instead."
             )
 
         else:

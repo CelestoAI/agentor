@@ -676,7 +676,7 @@ def test_model_settings_reach_the_native_model():
     assert agent._loop.model.params["max_tokens"] == 400
 
 
-# ============================================ provider-hosted tools
+# ============================================ unrunnable tool objects
 
 
 class HostedTool:
@@ -685,11 +685,17 @@ class HostedTool:
     name = "web_search"
 
 
-def test_hosted_tools_fail_with_an_actionable_message():
+class LocalRunnerTool:
+    """An SDK tool executed by its own runner - the same shape, run locally."""
+
+    name = "local_shell"
+
+
+def test_unrunnable_tools_fail_with_an_actionable_message():
     """A generic 'unsupported type' hides why a documented tool stopped working."""
     from agentor.engine.tools import resolve_tools
 
-    with pytest.raises(TypeError, match="provider-hosted tool") as exc:
+    with pytest.raises(TypeError, match="no callable to invoke") as exc:
         resolve_tools([HostedTool()])
 
     message = str(exc.value)
@@ -697,8 +703,24 @@ def test_hosted_tools_fail_with_an_actionable_message():
     assert "function tool" in message
 
 
-def test_agentor_surfaces_the_hosted_tool_message():
+def test_the_message_does_not_assert_the_wrong_execution_model():
+    """Locally executed SDK tools share the shape of provider-hosted ones.
+
+    A message blaming OpenAI's Responses API would send the reader looking in
+    entirely the wrong place for a tool that runs on their own machine.
+    """
+    from agentor.engine.tools import resolve_tools
+
+    with pytest.raises(TypeError) as exc:
+        resolve_tools([LocalRunnerTool()])
+
+    message = str(exc.value)
+    assert "local_shell" in message
+    assert "Responses API" not in message
+
+
+def test_agentor_surfaces_the_unrunnable_tool_message():
     from agentor import Agentor
 
-    with pytest.raises(TypeError, match="provider-hosted tool"):
+    with pytest.raises(TypeError, match="no callable to invoke"):
         Agentor(name="T", model="gpt-4o-mini", tools=[HostedTool()], api_key="test")
