@@ -292,7 +292,7 @@ class Agentor(AgentorBase):
         self.agent = None
         self.mcp_servers = []
         self.enable_tracing = enable_tracing
-        self._setup_tracing(enable_tracing)
+        tracer = self._native_tracer(enable_tracing)
 
         for tool in tools or []:
             if isinstance(tool, MCPServerStreamableHttp):
@@ -320,27 +320,38 @@ class Agentor(AgentorBase):
             context=CelestoConfig(),
             max_turns=max_turns,
             api_key=api_key,
+            tracer=tracer,
             **params,
         )
 
-    def _setup_tracing(self, enable_tracing: bool) -> None:
-        """Tracing setup shared with AgentorBase, without the agents-only bits."""
+    def _native_tracer(self, enable_tracing: bool):
+        """Build a tracer for the native engine.
+
+        The openai-agents trace processor cannot see native runs at all, so
+        this uses the engine's own event stream instead.
+        """
         if not enable_tracing and (
             celesto_config.api_key is None or celesto_config.disable_auto_tracing
         ):
-            return
-        if enable_tracing and not celesto_config.api_key:
-            raise ValueError(
-                "Celesto API key is required to enable tracing. "
-                "Find it at https://celesto.ai/dashboard and set CELESTO_API_KEY."
-            )
+            return None
+        if not celesto_config.api_key:
+            if enable_tracing:
+                raise ValueError(
+                    "Celesto API key is required to enable tracing. "
+                    "Find it at https://celesto.ai/dashboard and set CELESTO_API_KEY."
+                )
+            return None
+
+        from agentor.engine.tracing import CelestoTracer
+
         try:
-            setup_celesto_tracing(
+            return CelestoTracer(
                 endpoint=f"{celesto_config.base_url}/traces/ingest",
                 token=celesto_config.api_key.get_secret_value(),
             )
         except Exception as e:
             logger.warning(f"Failed to setup Celesto tracing: {e}")
+            return None
 
     def _inject_skills(self, skills: List[str]) -> str:
         """Inject skills into the agent system prompt."""

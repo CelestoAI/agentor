@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 from agentor.engine.events import Event, RunResult, Usage
@@ -35,6 +36,7 @@ class AgentLoop:
         max_tool_failures: int = 2,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
+        tracer: Any = None,
         **model_params: Any,
     ):
         self.name = name
@@ -42,6 +44,7 @@ class AgentLoop:
         self.context = context
         self.max_turns = max_turns
         self.max_tool_failures = max_tool_failures
+        self.tracer = tracer
         self.model: Model = resolve_model(
             model, api_key=api_key, base_url=base_url, **model_params
         )
@@ -131,6 +134,7 @@ class AgentLoop:
                 result=f"Error: unknown tool {call.name!r}. Available tools: {known}.",
             )
 
+        started = time.time()
         try:
             result = await tool.call(args, context=self.context)
             return Event(
@@ -139,6 +143,8 @@ class AgentLoop:
                 args=args,
                 call_id=call.id,
                 result=result,
+                started_at=started,
+                ended_at=time.time(),
             )
         except Exception as exc:
             # Surfaced to the model rather than raised: a failing tool is
@@ -151,6 +157,8 @@ class AgentLoop:
                 call_id=call.id,
                 error=f"{type(exc).__name__}: {exc}",
                 result=f"Error: {type(exc).__name__}: {exc}",
+                started_at=started,
+                ended_at=time.time(),
             )
 
     # ------------------------------------------------------------ the loop
@@ -158,19 +166,53 @@ class AgentLoop:
     async def astream(
         self, input: MessageInput, stream_text: bool = False
     ) -> AsyncIterator[Event]:
+        """Run the agent, emitting every event, and trace it if configured.
+
+        Note that a consumer which abandons this generator early stops the
+        trace from being exported; `arun` always drains it.
+        """
+        if self.tracer is None:
+            async for event in self._astream(input, stream_text):
+                yield event
+            return
+
+        collector = self.tracer.collector(self.name)
+        async for event in self._astream(input, stream_text):
+            try:
+                collector.handle(event)
+            except Exception as e:  # tracing must never break a run
+                logger.warning("Trace collection failed: %s", e)
+            yield event
+
+        try:
+            await asyncio.to_thread(self.tracer.export, collector)
+        except Exception as e:
+            logger.warning("Trace export failed: %s", e)
+
+    async def _astream(
+        self, input: MessageInput, stream_text: bool = False
+    ) -> AsyncIterator[Event]:
         messages = self._initial_messages(input)
         failures: Dict[str, int] = {}
         disabled: set[str] = set()
         total = Usage()
 
+        model_name = getattr(self.model, "model", None)
+        run_started = time.time()
+
         yield Event(
             type="run_start",
             agent=self.name,
-            model=getattr(self.model, "model", None),
+            model=model_name,
+            started_at=run_started,
         )
 
         for turn in range(1, self.max_turns + 1):
             schemas = self._schemas(disabled)
+            # snapshot before the call: `messages` is appended to below, and a
+            # trace needs the request as it was actually sent
+            request_messages = [dict(m) for m in messages]
+            call_started = time.time()
 
             if stream_text:
                 response = None
@@ -185,7 +227,20 @@ class AgentLoop:
                 response = await self.model.complete(messages, schemas)
 
             total = total + response.usage
-            messages.append(self._assistant_message(response))
+            assistant = self._assistant_message(response)
+            messages.append(assistant)
+
+            yield Event(
+                type="generation",
+                turn=turn,
+                model=model_name,
+                messages=request_messages,
+                text=response.content,
+                calls=assistant.get("tool_calls"),
+                usage=response.usage,
+                started_at=call_started,
+                ended_at=time.time(),
+            )
 
             if not response.tool_calls:
                 text = response.content or ""
@@ -196,6 +251,8 @@ class AgentLoop:
                     status="completed",
                     usage=total,
                     turn=turn,
+                    started_at=run_started,
+                    ended_at=time.time(),
                 )
                 return
 
@@ -256,6 +313,8 @@ class AgentLoop:
             status="max_turns",
             error=f"Reached max_turns ({self.max_turns}) without a final answer.",
             usage=total,
+            started_at=run_started,
+            ended_at=time.time(),
         )
 
     async def arun(self, input: MessageInput) -> RunResult:

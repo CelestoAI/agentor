@@ -1,10 +1,8 @@
 """Tests for the Celesto tracing module."""
 
-import os
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import httpx
-import pytest
 from agents.tracing import Span, Trace
 
 from agentor.tracer import (
