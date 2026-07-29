@@ -142,19 +142,25 @@ https://api.celesto.ai/deploy/apps/<app-name>
 
 ## Tracing
 
-Agentor sends traces to Celesto automatically when `CELESTO_API_KEY` is set, and prints a
-notice when it does. Turn it off globally with `CELESTO_DISABLE_AUTO_TRACING=True`, or
-decide per run:
+Tracing is **off unless you ask for it**. A trace carries prompts, tool arguments and tool
+results, so nothing leaves your process by default.
+
+Turn it on for an agent:
 
 ```python
-agent.run("public question")                    # traced, if tracing is on
-agent.run("contains customer data", tracing=False)   # this run sends nothing
-agent.run("debug this", tracing=True)           # trace just this one
+agent = Agentor(name="Assistant", enable_tracing=True)   # needs CELESTO_API_KEY
 ```
 
-`tracing=` is accepted by `run`, `arun`, `chat` and `stream_chat`. Traces carry prompts,
-tool arguments and tool results, so use `tracing=False` for inputs that must not leave
-the process.
+Or decide per run:
+
+```python
+agent.run("public question")
+agent.run("contains customer data", tracing=False)  # this run sends nothing
+agent.run("debug this", tracing=True)               # trace just this one
+```
+
+`tracing=` is accepted by `run`, `arun`, `chat` and `stream_chat`. View traces at
+[celesto.ai/observe](https://celesto.ai/observe).
 
 ## Agent Skills
 

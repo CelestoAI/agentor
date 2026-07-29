@@ -139,7 +139,7 @@ async def test_agentor_stream_chat_can_opt_out():
 
 
 def test_tracing_true_builds_a_tracer_from_the_api_key(monkeypatch):
-    """Opting a single run in should work even when auto-tracing is off."""
+    """Opting one run in should work without tracing the whole agent."""
     from agentor import config as config_module
     from agentor.engine.tracing import CelestoTracer
 
@@ -148,10 +148,9 @@ def test_tracing_true_builds_a_tracer_from_the_api_key(monkeypatch):
             return "cel_test"
 
     monkeypatch.setattr(config_module.celesto_config, "api_key", _Secret())
-    monkeypatch.setattr(config_module.celesto_config, "disable_auto_tracing", True)
 
     agent = native(FakeModel(text("hi")))
-    assert agent._loop.tracer is None, "auto-tracing is off"
+    assert agent._loop.tracer is None, "tracing is opt-in"
 
     agent._resolve_tracing(True)
     assert isinstance(agent._loop.tracer, CelestoTracer)
@@ -161,7 +160,6 @@ def test_tracing_true_without_any_key_explains_itself(monkeypatch):
     from agentor import config as config_module
 
     monkeypatch.setattr(config_module.celesto_config, "api_key", None)
-    monkeypatch.setattr(config_module.celesto_config, "disable_auto_tracing", True)
 
     agent = native(FakeModel(text("hi")))
     with pytest.raises(ValueError, match="requires a Celesto API key"):

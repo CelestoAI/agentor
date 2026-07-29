@@ -213,9 +213,9 @@ class Agentor:
     def _resolve_tracing(self, tracing: Optional[bool]) -> Optional[bool]:
         """Turn a per-run tracing flag into something the loop can act on.
 
-        `tracing=True` on an agent with no tracer is a reasonable request, not
-        an error: build one from CELESTO_API_KEY so a single run can be traced
-        even when auto-tracing is off.
+        `tracing=True` on an agent with no tracer is a reasonable request,
+        not an error: build one from CELESTO_API_KEY so a single run can be
+        traced without turning tracing on for the whole agent.
         """
         if tracing and self._loop.tracer is None:
             if not celesto_config.api_key:
@@ -230,26 +230,19 @@ class Agentor:
         return tracing
 
     def _native_tracer(self, enable_tracing: bool):
-        """Build a tracer from CELESTO_API_KEY, if tracing is on."""
-        if not enable_tracing and (
-            celesto_config.api_key is None or celesto_config.disable_auto_tracing
-        ):
+        """Build a tracer, but only when tracing was asked for.
+
+        Tracing is opt-in. A trace carries prompts, tool arguments and tool
+        results, so merely having a Celesto API key configured - which the SDK
+        and the MCP hub also use - is not consent to ship run contents to a
+        remote endpoint.
+        """
+        if not enable_tracing:
             return None
         if not celesto_config.api_key:
-            if enable_tracing:
-                raise ValueError(
-                    "Celesto API key is required to enable tracing. "
-                    "Find it at https://celesto.ai/dashboard and set CELESTO_API_KEY."
-                )
-            return None
-
-        if not enable_tracing:
-            # Auto-enabled from CELESTO_API_KEY. Say so: quietly shipping run
-            # contents to a remote endpoint should never be a surprise.
-            print(
-                "auto enabled LLM monitoring and tracing. "
-                "View traces: https://celesto.ai/observe"
-                "\nTo disable, set CELESTO_DISABLE_AUTO_TRACING=True."
+            raise ValueError(
+                "Celesto API key is required to enable tracing. "
+                "Find it at https://celesto.ai/dashboard and set CELESTO_API_KEY."
             )
 
         try:
@@ -390,7 +383,7 @@ class Agentor:
             input: The prompt.
             tracing: Override tracing for this run alone. None keeps whatever
                 the agent was configured with, False sends nothing for this
-                run, True traces it even if auto-tracing is off.
+                run, True traces it even when the agent has tracing off.
         """
         return self._loop.run(input, tracing=self._resolve_tracing(tracing))
 
@@ -414,8 +407,8 @@ class Agentor:
             fallback_models: Optional list of fallback model names to try if the primary model
                 fails due to rate limits or API errors. Models are tried in order.
             tracing: Override tracing for this call alone. None keeps the
-                agent's configuration, False sends nothing, True traces even
-                when auto-tracing is off.
+                agent's configuration, False sends nothing, True traces
+                even when the agent has tracing off.
         """
         tracing = self._resolve_tracing(tracing)
         if isinstance(input, list):

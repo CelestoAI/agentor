@@ -174,22 +174,42 @@ def test_export_skips_when_there_is_nothing_to_send(monkeypatch):
     assert posts == [], "an empty collector must not hit the network"
 
 
-def test_agentor_native_wires_a_tracer_when_configured(monkeypatch):
+def test_a_key_alone_does_not_enable_tracing(monkeypatch):
+    """Tracing is opt-in: having a Celesto key is not consent to send runs."""
     from agentor import config as config_module
 
-    monkeypatch.setattr(
-        config_module.celesto_config, "api_key", _Secret("cel_test"), raising=False
-    )
-    monkeypatch.setattr(
-        config_module.celesto_config, "disable_auto_tracing", False, raising=False
-    )
+    monkeypatch.setattr(config_module.celesto_config, "api_key", _Secret("cel_test"))
+
+    from agentor import Agentor
+
+    agent = Agentor(name="T", model=FakeModel(text("x")), api_key="test")
+    assert agent._loop.tracer is None
+
+
+def test_enable_tracing_wires_a_tracer(monkeypatch):
+    from agentor import config as config_module
+
+    monkeypatch.setattr(config_module.celesto_config, "api_key", _Secret("cel_test"))
 
     from agentor import Agentor
 
     agent = Agentor(
-        name="T", model=FakeModel(text("x")), engine="native", api_key="test"
+        name="T", model=FakeModel(text("x")), api_key="test", enable_tracing=True
     )
     assert isinstance(agent._loop.tracer, CelestoTracer)
+
+
+def test_enable_tracing_without_a_key_raises(monkeypatch):
+    from agentor import config as config_module
+
+    monkeypatch.setattr(config_module.celesto_config, "api_key", None)
+
+    from agentor import Agentor
+
+    with pytest.raises(ValueError, match="API key is required"):
+        Agentor(
+            name="T", model=FakeModel(text("x")), api_key="test", enable_tracing=True
+        )
 
 
 class _Secret:
