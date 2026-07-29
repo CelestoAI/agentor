@@ -1,6 +1,13 @@
-from dataclasses import dataclass
+from __future__ import annotations
 
-from superauth.google import CalendarAPI, GmailAPI
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+# superauth pulls in google-api-python-client (~99MB) and ships with the
+# `google` extra. These names are only ever used as annotations here, so
+# postponed evaluation keeps AppContext importable without it installed.
+if TYPE_CHECKING:
+    from superauth.google import CalendarAPI, GmailAPI
 
 
 @dataclass

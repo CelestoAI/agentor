@@ -32,7 +32,7 @@ def test_agentor(mock_run_sync):
     assert "The weather in London is sunny" in result
 
 
-@patch("agentor.core.agent.uvicorn.run")
+@patch("uvicorn.run")
 def test_agentor_serve(mock_uvicorn_run):
     agent = Agentor(
         name="Agentor",

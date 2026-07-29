@@ -156,14 +156,31 @@ LiteMCP (`mcp/api_router.py`, 662 lines), A2A (`a2a.py`), `tool_search.py`, `ski
 
 Each phase ships independently and leaves `main` green.
 
-### Phase 0 — Kill the import tax (1 day) — *do this regardless of the decision*
+### Phase 0 — Kill the import tax ✅ *shipped*
 
-- Move `litellm` behind `agentor[litellm]`; lazy-import at call site.
-- Move `google-api-*` (93 MB) behind the existing `google` extra — it is currently required for everyone.
-- Lazy-import `fastapi`/`uvicorn` inside `.serve()`.
+- litellm lazy-imported at every call site; it no longer loads on the OpenAI path at all.
+- `agentor.__init__` and `agentor.core.__init__` resolve heavy names through `__getattr__`
+  (with `TYPE_CHECKING` blocks so IDEs and type checkers are unaffected).
+- `google-api-*` **and `superauth`** moved to the `google` extra. superauth was the real culprit:
+  it hard-requires `google-api-python-client`, so moving the google packages alone changed nothing.
+- `uvicorn` lazy inside `.serve()`.
 
-**Result: 2.65s → ~0.4s import, 477 MB → well under 100 MB.** Highest user-visible win in the
-whole plan, and it is independent of everything below.
+**Measured result:**
+
+| | before | after |
+|---|---|---|
+| `import agentor` | 2.65s | **0.004s** |
+| `from agentor import Agentor` | 2.65s | **~1.4s** |
+| clean core install | 311 MB | **210 MB** |
+
+litellm stays a *required* dep for now — `core/agent.py` routes any `provider/model` string
+through `LitellmModel`, which is the README-advertised multi-provider path. Demoting it to an
+extra happens in Phase 1, once `ChatCompletionsModel` exists to replace it.
+
+The residual ~1.4s is openai-agents itself (1.19s, mostly `mcp` → `jsonschema`); that leaves in Phase 5.
+
+Fixing this also surfaced a latent circular import (`agentor.a2a` → `agentor.core` → `core.agent`
+→ `agentor.a2a`) that the old eager `__init__` had been masking.
 
 ### Phase 1 — Core loop behind the existing API (3–4 days)
 

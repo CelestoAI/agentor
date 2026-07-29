@@ -43,8 +43,7 @@ def greet(name: str) -> str:
     return f"Hello {name}"
 
 
-@patch("agentor.core.llm.litellm")
-def test_llm_uses_llm_function_format(mock_litellm):
+def test_llm_uses_llm_function_format():
     tool_definition: ToolType = {
         "type": "function",
         "function": {
@@ -63,10 +62,13 @@ def test_llm_uses_llm_function_format(mock_litellm):
         },
     }
 
-    mock_litellm.responses.return_value = litellm.responses(
-        model="", input="", mock_response="This is a test."
-    )
+    # Build the canned response before patching, so this call reaches the real
+    # litellm and not the mock that replaces it below.
+    canned = litellm.responses(model="", input="", mock_response="This is a test.")
 
-    llm = LLM(model="gpt-5-mini", api_key="test")
-    resp = llm.chat("", tools=[tool_definition])
+    with patch("litellm.responses", return_value=canned) as mock_responses:
+        llm = LLM(model="gpt-5-mini", api_key="test")
+        resp = llm.chat("", tools=[tool_definition])
+
     assert resp.output[-1].content[0].text == "This is a test."
+    assert mock_responses.call_args.kwargs["tools"] == [tool_definition]

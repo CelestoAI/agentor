@@ -1,18 +1,9 @@
 import warnings
-
-from agents import function_tool
-
-from agentor.core.agent import Agentor, CelestoMCPHub, LitellmModel, ModelSettings
-from agentor.core.llm import LLM
-from agentor.core.tool import tool
-from agentor.tool_search import ToolSearch
-
-from .output_text_formatter import pydantic_to_xml
-from .utils import AppContext
+from typing import TYPE_CHECKING
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-__version__ = "0.0.22"
+__version__ = "0.1.0.dev0"
 
 __all__ = [
     "Agentor",
@@ -26,12 +17,48 @@ __all__ = [
     "ModelSettings",
     "LitellmModel",
     "LLM",
-    "ToolSearch",
 ]
 
+# Import cost lives behind __getattr__ so `import agentor` stays cheap: pulling
+# the engine costs ~1.2s (openai-agents), and litellm another ~1.0s on top.
+# Users of agentor.tools, or of the CLI, should not pay for either.
+# TYPE_CHECKING keeps type checkers and IDE completion working as before.
+if TYPE_CHECKING:
+    from agents import function_tool
+    from agents.extensions.models.litellm_model import LitellmModel
+    from agents.model_settings import ModelSettings
 
-# Lazy import core to avoid triggering Google agent initialization
+    from agentor.core.agent import Agentor, CelestoMCPHub
+    from agentor.core.llm import LLM
+    from agentor.core.tool import tool
+    from agentor.tool_search import ToolSearch
+
+    from .output_text_formatter import pydantic_to_xml
+    from .utils import AppContext
+
+
+_LAZY_ATTRS = {
+    "Agentor": ("agentor.core.agent", "Agentor"),
+    "CelestoMCPHub": ("agentor.core.agent", "CelestoMCPHub"),
+    "ModelSettings": ("agentor.core.agent", "ModelSettings"),
+    "LLM": ("agentor.core.llm", "LLM"),
+    "tool": ("agentor.core.tool", "tool"),
+    "ToolSearch": ("agentor.tool_search", "ToolSearch"),
+    "function_tool": ("agents", "function_tool"),
+    "LitellmModel": ("agents.extensions.models.litellm_model", "LitellmModel"),
+    "pydantic_to_xml": ("agentor.output_text_formatter", "pydantic_to_xml"),
+    "AppContext": ("agentor.utils", "AppContext"),
+}
+
+
 def __getattr__(name):
+    if name in _LAZY_ATTRS:
+        import importlib
+
+        module_name, attr = _LAZY_ATTRS[name]
+        value = getattr(importlib.import_module(module_name), attr)
+        globals()[name] = value  # cache so later lookups skip __getattr__
+        return value
     if name == "CelestoSDK":
         try:
             from celesto.sdk.client import CelestoSDK as _CelestoSDK
@@ -46,7 +73,10 @@ def __getattr__(name):
         import importlib
 
         agents_module = importlib.import_module(".core", package=__name__)
-        # Cache the module to avoid repeated imports
         globals()["core"] = agents_module
         return agents_module
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
+
+def __dir__():
+    return sorted(__all__ + ["core"])

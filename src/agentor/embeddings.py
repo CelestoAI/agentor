@@ -1,7 +1,5 @@
 from typing import List, Union
 
-from litellm import embedding
-
 
 class Embeddings:
     def __init__(self, model: str = "text-embedding-3-small"):
@@ -14,6 +12,8 @@ class Embeddings:
         Returns:
             The embeddings of the input text.
         """
+        from litellm import embedding
+
         if isinstance(input, str):
             input = [input]
 

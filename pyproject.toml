@@ -14,18 +14,11 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "python-frontmatter>=1.1.0",
     "openai>=1.97.0",
-    "google-api-python-client>=2.178.0",
-    "google-auth-httplib2>=0.2.0",
-    "google-auth-oauthlib>=1.2.2",
     "backoff>=2.2.1",
-    "google-api-core>=2.25.1",
-    "google-auth>=2.40.3",
-    "googleapis-common-protos>=1.70.0",
     "typeguard>=4.4.4",
     "litellm>=1.93.0",
     "jinja2>=3.1.6",
     "openai-agents>=0.18.3",
-    "superauth>=0.0.1",
     "uvicorn>=0.37.0",
     "fastapi>=0.120.0",
     "mcp>=1.16.0",
@@ -60,6 +53,18 @@ postgres = ["psycopg2-binary>=2.9.0"]
 github = ["PyGithub>=2.0.0"]
 slack = ["slack_sdk>=3.0.0"]
 scrapegraph = ["scrapegraph-py>=2.1.0; python_version >= '3.12'"]
+# ~100MB, needed only by GmailTool / CalendarTool; both degrade with a clear
+# ImportError when absent. superauth belongs here too: it hard-requires
+# google-api-python-client, so listing it as a core dep pulled all of this back in.
+google = [
+    "superauth>=0.0.1",
+    "google-api-python-client>=2.178.0",
+    "google-auth-httplib2>=0.2.0",
+    "google-auth-oauthlib>=1.2.2",
+    "google-api-core>=2.25.1",
+    "google-auth>=2.40.3",
+    "googleapis-common-protos>=1.70.0",
+]
 all = [
     "exa-py>=1.0.0",
     "gitpython>=3.1.0",
@@ -67,6 +72,13 @@ all = [
     "PyGithub>=2.0.0",
     "slack_sdk>=3.0.0",
     "scrapegraph-py>=2.1.0; python_version >= '3.12'",
+    "superauth>=0.0.1",
+    "google-api-python-client>=2.178.0",
+    "google-auth-httplib2>=0.2.0",
+    "google-auth-oauthlib>=1.2.2",
+    "google-api-core>=2.25.1",
+    "google-auth>=2.40.3",
+    "googleapis-common-protos>=1.70.0",
 ]
 
 [tool.hatch.version]

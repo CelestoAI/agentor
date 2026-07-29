@@ -1,8 +1,6 @@
 import os
 from typing import List, Literal
 
-import litellm
-
 from agentor.types import ToolType
 
 _LLM_API_KEY_ENV_VAR = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY")
@@ -28,6 +26,8 @@ class LLM:
         tool_choice: Literal[None, "auto", "required"] = "auto",
         previous_response_id: str | None = None,
     ):
+        import litellm
+
         return litellm.responses(
             model=self.model,
             input=input,
@@ -45,6 +45,8 @@ class LLM:
         tool_choice: Literal[None, "auto", "required"] = "auto",
         previous_response_id: str | None = None,
     ):
+        import litellm
+
         return await litellm.aresponses(
             model=self.model,
             input=input,
