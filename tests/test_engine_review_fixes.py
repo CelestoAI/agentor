@@ -663,3 +663,54 @@ def test_cross_loop_close_leaves_the_connection_recoverable():
     asyncio.run(close_from_another_loop())
     assert server._stack is stack, "state must survive so cleanup can be retried"
     assert server._session is not None
+
+
+# ============================================ multi-provider entry point
+
+
+def test_base_url_routes_to_the_chat_completions_adapter():
+    """The multi-provider story is unusable if base_url isn't on the public API."""
+    from agentor import Agentor
+    from agentor.engine.models import ChatCompletionsModel
+
+    agent = Agentor(
+        name="T",
+        model="openrouter/auto",
+        base_url="https://openrouter.ai/api/v1",
+        api_key="test",
+        engine="native",
+    )
+    assert isinstance(agent._loop.model, ChatCompletionsModel)
+    assert agent._loop.model.model == "openrouter/auto"
+
+
+def test_provider_prefixed_model_still_routes_to_litellm_without_base_url():
+    from agentor import Agentor
+    from agentor.engine.models import LiteLLMModel
+
+    agent = Agentor(
+        name="T", model="gemini/gemini-2.0-flash", api_key="test", engine="native"
+    )
+    assert isinstance(agent._loop.model, LiteLLMModel)
+
+
+def test_base_url_on_the_agents_engine_is_refused_not_ignored():
+    """Silently dropping it would look like the endpoint was honoured."""
+    from agentor import Agentor
+
+    with pytest.raises(ValueError, match="base_url requires engine='native'"):
+        Agentor(name="T", model="gpt-4o", base_url="https://example/v1", api_key="k")
+
+
+def test_model_settings_reach_the_native_model():
+    from agentor import Agentor, ModelSettings
+
+    agent = Agentor(
+        name="T",
+        model="gpt-4o-mini",
+        api_key="test",
+        engine="native",
+        model_settings=ModelSettings(temperature=0.2, max_tokens=400),
+    )
+    assert agent._loop.model.params["temperature"] == 0.2
+    assert agent._loop.model.params["max_tokens"] == 400

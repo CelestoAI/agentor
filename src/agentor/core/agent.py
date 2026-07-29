@@ -211,6 +211,15 @@ class Agentor(AgentorBase):
     Use any model supported by LiteLLM, e.g. "gemini/gemini-pro" or "anthropic/claude-4".
         >>> agent = Agentor(name="Assistant", model="gemini/gemini-pro", api_key=os.environ.get("GEMINI_API_KEY"))
 
+    Or point base_url at any OpenAI-compatible endpoint (requires engine="native"):
+        >>> agent = Agentor(
+        ...     name="Assistant",
+        ...     model="openrouter/auto",
+        ...     base_url="https://openrouter.ai/api/v1",
+        ...     api_key=os.environ["OPENROUTER_API_KEY"],
+        ...     engine="native",
+        ... )
+
     Set model settings to configure the model behavior, e.g. temperature, top_p, etc.
         >>> from agentor import ModelSettings
         >>> model_settings = ModelSettings(temperature=0.5)
@@ -241,6 +250,7 @@ class Agentor(AgentorBase):
         engine: Literal["agents", "native"] = "agents",
         max_turns: int = 10,
         store: Any = None,
+        base_url: Optional[str] = None,
     ):
         if skills is not None:
             available_skills = self._inject_skills(skills)
@@ -259,8 +269,16 @@ class Agentor(AgentorBase):
                 enable_tracing=enable_tracing,
                 store=store,
                 output_type=output_type,
+                base_url=base_url,
             )
             return
+
+        if base_url is not None:
+            raise ValueError(
+                "base_url requires engine='native'. The openai-agents engine "
+                "configures endpoints through its own client, so honouring it "
+                "here would silently do nothing."
+            )
 
         super().__init__(name, instructions, model, api_key, enable_tracing)
         tools = tools or []
@@ -316,6 +334,7 @@ class Agentor(AgentorBase):
         enable_tracing: bool,
         store: Any = None,
         output_type: Any = None,
+        base_url: Optional[str] = None,
     ) -> None:
         """Set up the native engine (see agentor.engine)."""
         from agentor.engine import AgentLoop
@@ -357,6 +376,7 @@ class Agentor(AgentorBase):
             context=CelestoConfig(),
             max_turns=max_turns,
             api_key=api_key,
+            base_url=base_url,
             tracer=tracer,
             store=store,
             mcp_servers=mcp_servers,
