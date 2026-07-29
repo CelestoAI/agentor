@@ -281,6 +281,20 @@ def resolve_tools(tools: Optional[List[Any]]) -> List[Tool]:
         elif callable(item):
             resolved.append(Tool.from_function(item))
 
+        elif isinstance(getattr(item, "name", None), str):
+            # Tool-shaped - it carries a name - but with nothing to invoke.
+            # That covers provider-hosted tools, whose body lives on the
+            # provider, and SDK-specific tool types whose execution is driven
+            # by a runner agentor does not use. The message deliberately does
+            # not assert which: both are unrunnable here, and guessing wrong
+            # sends the reader looking in the wrong place.
+            raise TypeError(
+                f"{type(item).__name__} ({item.name!r}) exposes no callable to "
+                "invoke, so agentor cannot run it. Provider-hosted tools (web "
+                "search, file search) and SDK-specific tool types are not "
+                "supported; define a function tool instead."
+            )
+
         else:
             raise TypeError(
                 f"Unsupported tool type {type(item).__name__!r}. Expected a "
