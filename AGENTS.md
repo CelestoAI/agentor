@@ -2,32 +2,35 @@
 
 ## Project Overview
 
-Agentor is an open-source framework for building multi-agent AI systems with secure integrations across email, calendars, CRMs, and more. It enables connecting LLMs to tools and services, supporting Model Context Protocol (MCP) and Agent-to-Agent (A2A) communication protocols.
+Agentor is an open-source framework for building AI agents with secure integrations across email, calendars, CRMs, and more. It connects LLMs to tools and services, and speaks both the Model Context Protocol (MCP) and Agent-to-Agent (A2A) protocols.
+
+Since v0.1.0 it runs on its own agent engine; the `openai-agents` dependency is gone. See [`docs/dev/MIGRATION_PLAN.md`](docs/dev/MIGRATION_PLAN.md) for why.
 
 **Key Features:**
 
-- Multi-agent orchestration with specialized agent roles
-- Secure Google Workspace integration (Gmail, Calendar)
+- An agent loop the project owns end to end, emitting a typed event stream
+- Durable runs: the event stream is persisted, so a run resumes after a crash
+- Any OpenAI-compatible provider via `base_url`, with litellm as the escape hatch
 - LiteMCP - FastAPI-compatible MCP server with decorator API
 - A2A Protocol support for agent interoperability
-- Vector-based memory management for conversation context
 - Tool registry and extensible tool system
 
 ## Repository Structure
 
-```
+```text
 agentor/
 ├── src/agentor/           # Main package source code
-│   ├── agents/            # Agent core implementation (A2A protocol)
-│   ├── agenthub/          # Specialized agents (Google, memory, web search)
-│   ├── cli/               # Command-line interface
-│   ├── mcp/               # Model Context Protocol server
-│   ├── memory/            # Vector database and memory management
-│   ├── sdk/               # Celesto AI SDK client
+│   ├── core/              # Agentor, the user-facing agent class
+│   ├── engine/            # The agent loop: events, tools, models, store, tracing, mcp
+│   ├── mcp/               # LiteMCP server, API router, proxy
 │   ├── tools/             # Tool registry and implementations
-│   └── chat.py            # Main chat orchestration
+│   ├── durable/           # Deprecation shim; durability moved into engine/store.py
+│   ├── a2a.py             # Agent-to-Agent protocol
+│   ├── skills.py          # Agent Skills loading
+│   └── tool_search.py     # Tool Search API
 ├── tests/                 # Test suite
 ├── examples/              # Usage examples
+├── docs/dev/              # Design and migration records
 ├── .github/               # GitHub configuration and workflows
 └── pyproject.toml         # Project metadata and dependencies
 ```
@@ -167,14 +170,11 @@ pip install -e .
 
 ### CLI Commands
 
-The package provides a CLI tool:
+This package ships no console script. The `celesto` CLI is a separate package
+(`pip install celesto`); `tests/test_cli.py` skips when it is absent.
 
 ```bash
-# After installation
-agentor --help
-
-# Deploy an agent
-agentor deploy
+celesto --help
 ```
 
 ### Serving Agents
@@ -182,70 +182,69 @@ agentor deploy
 ```python
 from agentor import Agentor
 
-agent = Agentor(name="My Agent", model="gpt-4")
+agent = Agentor(name="My Agent", model="gpt-5-nano")
 agent.serve(port=8000)  # Serves with A2A protocol enabled
 ```
 
 ## Architecture and Key Components
 
-### 1. Multi-Agent Orchestration System
+### 1. The Agent Loop
 
-**Location:** `src/agentor/agenthub/main.py`
+**Location:** `src/agentor/engine/loop.py`
 
-Hierarchical agent structure with specialized roles:
+`AgentLoop` is the whole engine: call the model, run the tools it asked for, feed
+the results back, repeat until it stops asking. Everything it does is emitted as
+a typed event (`engine/events.py`) rather than logged, which is what makes
+durability and tracing projections of one stream rather than separate features.
 
-- **Concept Research Agent** - Topic research and information gathering
-- **Coder Agent** - Code-related operations
-- **Google Agent** - Workspace integration
-- **Main Triage Agent** - Request routing and delegation
+Bounded by `max_turns` and by `max_tool_failures` - a tool that keeps raising is
+disabled rather than allowed to consume every turn. That budget is enforced at
+execution, not just by withdrawing the schema, because a model will happily go on
+calling a tool it can no longer see.
 
-**Importance Score:** 85/100
+### 2. Models
 
-### 2. Google Workspace Integration
+**Location:** `src/agentor/engine/models.py`
 
-**Location:** `src/agentor/agenthub/google/google_agent.py`
+One shape reaches almost every provider: an OpenAI-compatible
+`/chat/completions` endpoint behind `base_url`. `LiteLLMModel` is the escape
+hatch for providers that offer nothing compatible.
 
-- Gmail and Calendar operations management
-- Privacy-aware email and calendar data handling
-- Consent-based access control
-- Business rules for email processing
-- Timezone-aware calendar management
+### 3. Durable Runs
 
-**Importance Score:** 90/100
+**Location:** `src/agentor/engine/store.py`
 
-### 3. Memory Management System
+An append-only event log, fsynced per event, with `replay_messages` to rebuild
+the conversation. `FileStore` survives process death; `MemoryStore` is for tests.
+Concurrent resume of one unfinished run is not safe - the bundled stores carry no
+lease.
 
-**Location:** `src/agentor/memory/api.py`
+### 4. Tracing
 
-- Vector database storage for conversation history (LanceDB)
-- Semantic conversation context retrieval
-- Conversation memory search capabilities
-- Embeddings-based similarity search
+**Location:** `src/agentor/engine/tracing.py`
 
-**Importance Score:** 75/100
+A projection of the event stream onto Celesto's trace format. Opt-in: pass
+`enable_tracing=True`, or `tracing=` on a single run. Holding `CELESTO_API_KEY`
+is not consent to ship prompts and tool results to a remote endpoint.
 
-### 4. Model Context Protocol (MCP)
+### 5. Model Context Protocol (MCP)
 
-**Location:** `src/agentor/mcp/api_router.py`, `src/agentor/mcp/server.py`
+**Location:** `src/agentor/mcp/api_router.py`, `src/agentor/mcp/server.py`, `src/agentor/engine/mcp.py`
 
-- LiteMCP: Native ASGI MCP server with FastAPI-like decorators
-- Tool and resource registration
-- JSON-RPC communication protocol
-- Agent communication routing
-- Built-in CORS support
+- LiteMCP: native ASGI MCP server with FastAPI-like decorators
+- Tool and resource registration, JSON-RPC, built-in CORS
+- Client side (`engine/mcp.py`) runs on the official `mcp` package
 
-**Importance Score:** 80/100
+### 6. Agent-to-Agent (A2A) Protocol
 
-### 5. Agent-to-Agent (A2A) Protocol
-
-**Location:** `src/agentor/agents/a2a.py`
+**Location:** `src/agentor/a2a.py`
 
 - Standard agent communication specifications
 - Automatic agent card generation at `/.well-known/agent-card.json`
-- JSON-RPC based messaging
+- JSON-RPC-based messaging
 - Support for streaming and non-streaming responses
 
-### 6. Tool Registry
+### 7. Tool Registry
 
 **Location:** `src/agentor/tools/registry.py`
 
@@ -273,7 +272,7 @@ from agentor import Agentor
 
 agent = Agentor(
     name="My Agent",
-    model="gpt-4",
+    model="gpt-5-nano",
     tools=[my_tool],
     instructions="Agent behavior instructions",
 )
@@ -302,6 +301,9 @@ agent = Agentor(
 - **test.yml**: Runs pytest across multiple OS and Python versions (3.11-3.13)
 - **release.yml**: Handles package releases to PyPI
 
+There is no docs workflow. User-facing documentation is published from the
+separate `mintlify-docs` repository to https://docs.celesto.ai/agentor.
+
 ### CI Test Matrix
 
 - Operating Systems: Ubuntu, macOS, Windows
@@ -309,18 +311,23 @@ agent = Agentor(
 
 ## Additional Resources
 
-- **Documentation**: https://docs.celesto.ai
-- **Examples**: `examples/` directory and https://github.com/celestoai/agentor/tree/main/docs/examples
+- **Documentation**: https://docs.celesto.ai/agentor
+- **Examples**: the `examples/` directory
 - **Discord Community**: https://discord.gg/KNb5UkrAmm
 
 ## Core Business Value
 
 The system delivers value through:
 
-- Task delegation via specialized agents
-- Secure Google workspace integration
-- Contextual memory management for persistent conversations
+- An owned agent loop, so behaviour and observability are not gated on a vendor SDK
+- Durable runs that survive process death
+- Secure Google Workspace integration
 - Extensible tool registration and execution
 - Standard protocol support (MCP, A2A) for interoperability
 
-<!-- Keep .github/copilot-instructions.md and AGENTS.md in sync -->
+<!--
+  This file is the single source of contributor guidance.
+  .github/copilot-instructions.md points here rather than duplicating it: the
+  two were kept "in sync" by hand, drifted anyway, and both went on describing
+  subsystems (agenthub/, memory/) that had been deleted.
+-->

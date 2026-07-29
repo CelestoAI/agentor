@@ -34,11 +34,15 @@ def tool(
         ...     return "The weather in London is sunny"
     """
 
-    tool_name = name or func.__name__
-    tool_description = description or func.__doc__
-
+    # Resolved per-function rather than up front: in the @tool(...) form `func`
+    # is None, so reading func.__name__ here raised AttributeError for every
+    # call that passed only `description`.
     def decorator(fn: ToolFunc) -> BaseTool:
-        return BaseTool.from_function(fn, name=tool_name, description=tool_description)
+        return BaseTool.from_function(
+            fn,
+            name=name or fn.__name__,
+            description=description or fn.__doc__,
+        )
 
     if func is not None:
         # Used as @tool

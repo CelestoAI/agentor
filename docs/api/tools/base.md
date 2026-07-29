@@ -1,3 +1,0 @@
-# Base
-
-::: agentor.tools.base

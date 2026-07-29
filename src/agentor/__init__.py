@@ -1,7 +1,4 @@
-import warnings
 from typing import TYPE_CHECKING
-
-warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 __version__ = "0.1.0rc2"
 
@@ -22,10 +19,9 @@ __all__ = [
     "LLM",
 ]
 
-# Import cost lives behind __getattr__ so `import agentor` stays cheap: pulling
-# the engine costs ~1.2s (openai-agents), and litellm another ~1.0s on top.
-# Users of agentor.tools, or of the CLI, should not pay for either.
-# TYPE_CHECKING keeps type checkers and IDE completion working as before.
+# Import cost lives behind __getattr__ so `import agentor` stays cheap: reaching
+# the engine costs ~0.5s, most of it litellm. Users of agentor.tools should not
+# pay for it. TYPE_CHECKING keeps type checkers and IDE completion working.
 if TYPE_CHECKING:
     from agentor.core.agent import Agentor, CelestoMCPHub
     from agentor.core.llm import LLM
