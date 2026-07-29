@@ -91,6 +91,22 @@ print(result)
 agent.serve()
 ```
 
+### Any OpenAI-compatible provider
+
+Point `base_url` at any provider that speaks OpenAI's `/chat/completions` — OpenRouter,
+Groq, Together, Fireworks, DeepSeek, vLLM, Ollama, or Anthropic's and Gemini's compatible
+endpoints — with no extra dependency:
+
+```python
+agent = Agentor(
+    name="Assistant",
+    model="openrouter/auto",
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ["OPENROUTER_API_KEY"],
+    engine="native",
+)
+```
+
 Run the following command to query the Agent server:
 
 ```bash

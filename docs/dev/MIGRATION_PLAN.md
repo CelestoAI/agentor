@@ -324,17 +324,54 @@ log stays JSON-serialisable — durability and structured output do not interfer
 
 233 tests passing.
 
+### Phase 5c — Multi-provider verified ✅ *shipped*
+
+**The plan's biggest untested assumption is now tested.** Everything the native engine does
+works against OpenRouter — a genuinely third-party, non-OpenAI endpoint — via `base_url` alone,
+12/12 checks:
+
+| | |
+|---|---|
+| completion + usage accounting | ✅ |
+| parallel tool calling | ✅ |
+| streaming, incl. tool calls reassembled from fragmented deltas | ✅ |
+| structured output — strict `json_schema`, nested models, optional fields | ✅ |
+| public `Agentor` API | ✅ |
+| **durable run interrupted and resumed against the third-party provider** | ✅ |
+
+Structured output surviving is the notable one: strict `json_schema` is the feature most likely
+to be unsupported downstream, and it worked.
+
+Verifying it exposed a gap that made the whole story unusable in practice: **`base_url` was not
+on the public API at all.** The pitch is "point `base_url` at any OpenAI-compatible provider",
+but reaching it meant constructing a `ChatCompletionsModel` by hand. It is now a first-class
+argument:
+
+```python
+agent = Agentor(
+    name="Assistant",
+    model="openrouter/auto",
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ["OPENROUTER_API_KEY"],
+    engine="native",
+)
+```
+
+Passing it with `engine="agents"` raises rather than being silently ignored, since openai-agents
+configures endpoints through its own client and would quietly disregard it. Without `base_url`, a
+`provider/model` string still routes to litellm exactly as before.
+
 ### Phase 5b — Flip the default and remove openai-agents (not started)
 
 Remaining before the flip:
 
 - `WebSearchTool` and other OpenAI hosted tools need a Responses API adapter, or to be documented
-  as `engine="agents"` only.
-- **Verify a non-OpenAI provider end to end.** `base_url` routing is verified only against
-  OpenAI's own endpoint; no third-party keys were available. This is the single biggest untested
-  assumption in the plan.
+  as `engine="agents"` only. This is now the last real blocker.
 - Then: flip the default, drop the dependency, delete the openai-agents half of
   `output_text_formatter.py` and `tracer.py`.
+
+Note that CI never ran on the v0.1.0 stack until it was about to merge: `test.yml` only triggered
+on `main`, so five PRs sat green on nothing but AI reviewers. Fixed in `e84fd3e`.
 
 **Total: ~2.5 weeks.**
 
