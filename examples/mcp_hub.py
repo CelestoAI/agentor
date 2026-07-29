@@ -1,5 +1,6 @@
-from agentor import Agentor, CelestoMCPHub
 import asyncio
+
+from agentor import Agentor, CelestoMCPHub
 
 
 async def main():

@@ -50,6 +50,23 @@ The recommended method of installing `agentor` is with pip from PyPI.
 pip install agentor
 ```
 
+The v0.1.0 line, with the new agent engine, is currently in alpha and is not installed by
+default. To try it:
+
+```bash
+pip install --pre agentor
+```
+
+Tools with heavy or vendor-specific dependencies ship as extras, so the base
+install stays small:
+
+```bash
+pip install "agentor[google]"   # GmailTool, CalendarTool
+pip install "agentor[all]"      # every optional tool
+```
+
+Available extras: `google`, `exa`, `git`, `github`, `slack`, `postgres`, `scrapegraph`, `all`.
+
 <details>
   <summary>More ways...</summary>
 
@@ -79,6 +96,21 @@ print(result)
 
 # Serve Agent with a single line of code
 agent.serve()
+```
+
+### Any OpenAI-compatible provider
+
+Point `base_url` at any provider that speaks OpenAI's `/chat/completions` — OpenRouter,
+Groq, Together, Fireworks, DeepSeek, vLLM, Ollama, or Anthropic's and Gemini's compatible
+endpoints — with no extra dependency:
+
+```python
+agent = Agentor(
+    name="Assistant",
+    model="openrouter/auto",
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ["OPENROUTER_API_KEY"],
+)
 ```
 
 Run the following command to query the Agent server:

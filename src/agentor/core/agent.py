@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 import json
 import logging
+import sys
 import uuid
 from pathlib import Path
 from typing import (
@@ -17,60 +20,55 @@ from typing import (
 )
 
 import frontmatter
-import litellm
 import openai
-import uvicorn
 from a2a import types as a2a_types
 from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
-from agents import (
-    Agent,
-    AgentOutputSchemaBase,
-    FunctionTool,
-    ModelSettings,
-    Runner,
-    WebSearchTool,
-    function_tool,
-    set_default_openai_key,
-)
-from agents.extensions.models.litellm_model import LitellmModel
-from agents.mcp import MCPServerStreamableHttp
-from agents.models.default_models import get_default_model_settings
 from fastapi import FastAPI
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from agentor.a2a import A2AController, AgentSkill
 from agentor.config import celesto_config
-from agentor.output_text_formatter import AgentOutput, format_stream_events
+from agentor.engine import AgentLoop, function_tool
+from agentor.engine.mcp import MCPServer
+from agentor.engine.settings import ModelSettings
+from agentor.engine.tools import resolve_tools
+from agentor.output_text_formatter import AgentOutput, ToolAction
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.skills import Skills
-from agentor.tools.base import BaseTool
 from agentor.tools.registry import CelestoConfig, ToolRegistry
 from agentor.tracer import setup_celesto_tracing
 
 logger = logging.getLogger(__name__)
 
 
-class ToolFunctionParameters(TypedDict, total=False):
-    type: str
-    properties: Dict[str, Any]
-    required: List[str]
+def _retryable_errors() -> tuple[type[BaseException], ...]:
+    """Error types worth retrying on a fallback model.
+
+    litellm's errors are only included when litellm is already loaded, which
+    avoids forcing a ~1s import on the OpenAI-only path. Call this when an
+    error is in hand, never up front: litellm is imported lazily on its first
+    request, so a tuple built before that call would omit its errors and the
+    very first rate limit would skip the fallbacks entirely.
+    """
+    errors: list[type[BaseException]] = [openai.RateLimitError, openai.APIError]
+    litellm = sys.modules.get("litellm")
+    if litellm is not None:
+        errors.extend([litellm.RateLimitError, litellm.APIError])
+    return tuple(errors)
 
 
-class ToolFunction(TypedDict, total=False):
-    name: str
-    description: Optional[str]
-    parameters: ToolFunctionParameters
-
-
-class Tool(TypedDict):
-    type: Literal["function"]
-    function: ToolFunction
+def _is_retryable(exc: BaseException) -> bool:
+    return isinstance(exc, _retryable_errors())
 
 
 @function_tool(name_override="get_weather")
 def get_dummy_weather(city: str) -> str:
-    """Returns the dummy weather in the given city."""
+    """Returns the dummy weather in the given city.
+
+    Args:
+        city: The city to look up.
+    """
     return f"The dummy weather in {city} is sunny"
 
 
@@ -84,58 +82,7 @@ class AgentInputType(TypedDict):
     content: str
 
 
-class AgentorBase:
-    def __init__(
-        self,
-        name: str,
-        instructions: Optional[str],
-        model: Optional[str],
-        api_key: Optional[str],
-        enable_tracing: bool = False,
-    ):
-        self.agent = None
-        self.name = name
-        self.instructions = instructions
-        self.model = model
-
-        self.api_key = api_key
-        if isinstance(model, str) and "/" in model:
-            self.model = LitellmModel(model, api_key=api_key)
-
-        self.enable_tracing = enable_tracing
-        if self.enable_tracing:
-            if not celesto_config.api_key:
-                raise ValueError(
-                    (
-                        "Celesto API key is required to enable tracing.\n",
-                        "Find the API key in the dashboard: https://celesto.ai/dashboard \n",
-                        "and set it in the environment variable CELESTO_API_KEY.",
-                    )
-                )
-            setup_celesto_tracing(
-                endpoint=f"{celesto_config.base_url}/traces/ingest",
-                token=celesto_config.api_key.get_secret_value(),
-            )
-        elif (
-            celesto_config.api_key is not None
-            and not celesto_config.disable_auto_tracing
-        ):
-            try:
-                print(
-                    (
-                        "auto enabled LLM monitoring and tracing. View traces: https://celesto.ai/observe"
-                        "\nTo disable, set CELESTO_DISABLE_AUTO_TRACING=True."
-                    )
-                )
-                setup_celesto_tracing(
-                    endpoint=f"{celesto_config.base_url}/traces/ingest",
-                    token=celesto_config.api_key.get_secret_value(),
-                )
-            except Exception as e:
-                logger.warning(f"Failed to setup Celesto tracing: {e}")
-
-
-class Agentor(AgentorBase):
+class Agentor:
     """
     Build an Agent, connect tools, and serve as an API in just few lines of code.
 
@@ -151,6 +98,15 @@ class Agentor(AgentorBase):
     Use any model supported by LiteLLM, e.g. "gemini/gemini-pro" or "anthropic/claude-4".
         >>> agent = Agentor(name="Assistant", model="gemini/gemini-pro", api_key=os.environ.get("GEMINI_API_KEY"))
 
+    Or point base_url at any OpenAI-compatible endpoint (requires engine="native"):
+        >>> agent = Agentor(
+        ...     name="Assistant",
+        ...     model="openrouter/auto",
+        ...     base_url="https://openrouter.ai/api/v1",
+        ...     api_key=os.environ["OPENROUTER_API_KEY"],
+        ...     engine="native",
+        ... )
+
     Set model settings to configure the model behavior, e.g. temperature, top_p, etc.
         >>> from agentor import ModelSettings
         >>> model_settings = ModelSettings(temperature=0.5)
@@ -161,68 +117,130 @@ class Agentor(AgentorBase):
         self,
         name: str,
         instructions: Optional[str] = None,
-        model: Optional[str | LitellmModel] = "gpt-5-nano",
-        tools: Optional[
-            List[
-                Union[
-                    FunctionTool,
-                    str,
-                    MCPServerStreamableHttp,
-                    BaseTool,
-                ]
-            ]
-        ] = None,
-        output_type: type[Any] | AgentOutputSchemaBase | None = None,
+        model: Any = "gpt-5-nano",
+        tools: Optional[List[Any]] = None,
+        output_type: Any = None,
         debug: bool = False,
         api_key: Optional[str] = None,
         model_settings: Optional[ModelSettings] = None,
         skills: Optional[List[str]] = None,
         enable_tracing: bool = False,
+        max_turns: int = 20,
+        store: Any = None,
+        base_url: Optional[str] = None,
+        tracer: Any = None,
+        engine: Optional[Literal["native"]] = None,
     ):
+        if engine not in (None, "native"):
+            raise ValueError(
+                f"Unknown engine {engine!r}. The openai-agents engine was "
+                "removed in v0.1.0; the native engine is the only one and is "
+                "the default. Drop the engine= argument."
+            )
         if skills is not None:
             available_skills = self._inject_skills(skills)
             instructions = f"{instructions or ''}\n\n{available_skills}"
-        super().__init__(name, instructions, model, api_key, enable_tracing)
-        tools = tools or []
-        resolved_tools: List[FunctionTool] = []
-        mcp_servers: List[MCPServerStreamableHttp] = []
 
-        for tool in tools:
-            if isinstance(tool, str):
-                resolved_tools.append(ToolRegistry.get(tool)["tool"])
-            elif isinstance(tool, FunctionTool):
-                resolved_tools.append(tool)
-            elif isinstance(tool, BaseTool):
-                # Convert all capabilities to individual OpenAI functions
-                resolved_tools.extend(tool.to_openai_function())
-            elif isinstance(tool, MCPServerStreamableHttp):
-                mcp_servers.append(tool)
-            elif isinstance(tool, WebSearchTool):
-                resolved_tools.append(tool)
-            else:
-                raise TypeError(
-                    f"Unsupported tool type '{type(tool).__name__}'. "
-                    "Expected str, FunctionTool, ToolConvertor, BaseTool, or MCPServerStreamableHttp."
-                )
-
-        self.tools = resolved_tools
-        self.mcp_servers = mcp_servers
-
-        if model_settings is None:
-            model_settings = get_default_model_settings()
-
-        if self.api_key:
-            set_default_openai_key(self.api_key)
-
-        self.agent: Agent = Agent(
+        self._init_native(
             name=name,
             instructions=instructions,
-            model=self.model,
-            tools=self.tools,
-            mcp_servers=self.mcp_servers or [],
-            output_type=output_type,
+            model=model,
+            tools=tools,
+            api_key=api_key,
             model_settings=model_settings,
+            max_turns=max_turns,
+            enable_tracing=enable_tracing,
+            store=store,
+            output_type=output_type,
+            base_url=base_url,
+            tracer=tracer,
         )
+
+    def _init_native(
+        self,
+        name: str,
+        instructions: Optional[str],
+        model: Any,
+        tools: Optional[List[Any]],
+        api_key: Optional[str],
+        model_settings: Optional[ModelSettings],
+        max_turns: int,
+        enable_tracing: bool,
+        store: Any = None,
+        output_type: Any = None,
+        base_url: Optional[str] = None,
+        tracer: Any = None,
+    ) -> None:
+        """Set up the native engine (see agentor.engine)."""
+
+        self.name = name
+        self.instructions = instructions
+        self.api_key = api_key
+        self.model = model
+        self.enable_tracing = enable_tracing
+        # an explicit tracer wins over the one built from CELESTO_API_KEY
+        tracer = tracer or self._native_tracer(enable_tracing)
+
+        plain_tools, mcp_servers = [], []
+        for tool in tools or []:
+            if isinstance(tool, MCPServer):
+                mcp_servers.append(tool)
+            else:
+                plain_tools.append(tool)
+
+        # Fail loudly rather than silently dropping a tool the caller passed.
+        self._tools = resolve_tools(plain_tools)
+        self.tools = self._tools
+        self.mcp_servers = mcp_servers
+
+        params = model_settings.to_params() if model_settings else {}
+        self._loop = AgentLoop(
+            name=name,
+            model=model or "gpt-4o-mini",
+            instructions=instructions,
+            tools=self._tools,
+            context=CelestoConfig(),
+            max_turns=max_turns,
+            api_key=api_key,
+            base_url=base_url,
+            tracer=tracer,
+            store=store,
+            mcp_servers=mcp_servers,
+            output_type=output_type,
+            **params,
+        )
+
+    def _native_tracer(self, enable_tracing: bool):
+        """Build a tracer from CELESTO_API_KEY, if tracing is on."""
+        if not enable_tracing and (
+            celesto_config.api_key is None or celesto_config.disable_auto_tracing
+        ):
+            return None
+        if not celesto_config.api_key:
+            if enable_tracing:
+                raise ValueError(
+                    "Celesto API key is required to enable tracing. "
+                    "Find it at https://celesto.ai/dashboard and set CELESTO_API_KEY."
+                )
+            return None
+
+        if not enable_tracing:
+            # Auto-enabled from CELESTO_API_KEY. Say so: quietly shipping run
+            # contents to a remote endpoint should never be a surprise.
+            print(
+                "auto enabled LLM monitoring and tracing. "
+                "View traces: https://celesto.ai/observe"
+                "\nTo disable, set CELESTO_DISABLE_AUTO_TRACING=True."
+            )
+
+        try:
+            return setup_celesto_tracing(
+                endpoint=f"{celesto_config.base_url}/traces/ingest",
+                token=celesto_config.api_key.get_secret_value(),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to setup Celesto tracing: {e}")
+            return None
 
     def _inject_skills(self, skills: List[str]) -> str:
         """Inject skills into the agent system prompt."""
@@ -237,18 +255,9 @@ class Agentor(AgentorBase):
         cls,
         md_path: str | Path,
         *,
-        model: Optional[str | LitellmModel] = None,
-        tools: Optional[
-            List[
-                Union[
-                    FunctionTool,
-                    str,
-                    MCPServerStreamableHttp,
-                    BaseTool,
-                ]
-            ]
-        ] = None,
-        output_type: type[Any] | AgentOutputSchemaBase | None = None,
+        model: Any = None,
+        tools: Optional[List[Any]] = None,
+        output_type: Any = None,
         debug: bool = False,
         api_key: Optional[str] = None,
         model_settings: Optional[ModelSettings] = None,
@@ -297,16 +306,7 @@ class Agentor(AgentorBase):
                     "Temperature in markdown frontmatter must be a number."
                 )
 
-        resolved_tools: Optional[
-            List[
-                Union[
-                    FunctionTool,
-                    str,
-                    MCPServerStreamableHttp,
-                    BaseTool,
-                ]
-            ]
-        ]
+        resolved_tools: Optional[List[Any]]
         if tools is not None:
             resolved_tools = tools
         else:
@@ -364,14 +364,14 @@ class Agentor(AgentorBase):
             model_settings=resolved_model_settings,
         )
 
-    def run(self, input: str) -> List[str] | str:
-        return Runner.run_sync(self.agent, input, context=CelestoConfig())
+    def run(self, input: str) -> Any:
+        return self._loop.run(input)
 
     async def arun(
         self,
         input: list[str] | str | list[AgentInputType],
         limit_concurrency: int = 10,
-        max_turns: int = 20,
+        max_turns: Optional[int] = None,
         fallback_models: Optional[List[str]] = None,
     ) -> List[str] | str:
         """
@@ -381,13 +381,14 @@ class Agentor(AgentorBase):
         Args:
             input: A string prompt or a list of string prompts.
             limit_concurrency: The maximum number of concurrent tasks to run in case of a batch of prompts.
-            max_turns: The maximum number of turns to run the agent.
+            max_turns: Maximum turns for this call. Defaults to the value the
+                agent was constructed with.
             fallback_models: Optional list of fallback model names to try if the primary model
                 fails due to rate limits or API errors. Models are tried in order.
         """
         if isinstance(input, list):
             if isinstance(input[0], dict):
-                return await Runner.run(self.agent, input, context=CelestoConfig())
+                return await self._loop.arun(input, max_turns=max_turns)
 
             futures = []
             if limit_concurrency > 0:
@@ -415,74 +416,55 @@ class Agentor(AgentorBase):
     async def _run_with_fallback(
         self,
         task: str,
-        max_turns: int,
+        max_turns: Optional[int] = None,
         fallback_models: Optional[List[str]] = None,
     ):
-        """
-        Run a task with optional fallback to alternative models on rate limit errors.
+        """Run a task, falling back to other models on rate limits.
+
+        Swapping the model copies the loop rather than rebuilding the agent,
+        because the model is not baked into the agent here.
         """
         try:
-            return await Runner.run(
-                self.agent,
-                task,
-                context=CelestoConfig(),
-                max_turns=max_turns,
-            )
-        except (
-            openai.RateLimitError,
-            litellm.RateLimitError,
-            openai.APIError,
-            litellm.APIError,
-        ) as e:
-            if not fallback_models:
+            return await self._loop.arun(task, max_turns=max_turns)
+        except Exception as e:
+            if not _is_retryable(e) or not fallback_models:
                 raise
-
             logger.warning(
                 f"Primary model failed with {type(e).__name__}: {e}. "
                 f"Trying fallback models: {fallback_models}"
             )
-
             for fallback_model in fallback_models:
                 try:
-                    # Create a temporary agent with the fallback model
-                    fallback_agent = Agent(
-                        name=self.agent.name,
-                        instructions=self.agent.instructions,
-                        model=LitellmModel(fallback_model)
-                        if "/" in fallback_model
-                        else fallback_model,
-                        tools=self.tools,
-                        mcp_servers=self.mcp_servers or [],
-                        output_type=self.agent.output_type,
-                        model_settings=self.agent.model_settings,
-                    )
-                    return await Runner.run(
-                        fallback_agent,
-                        task,
-                        context=CelestoConfig(),
-                        max_turns=max_turns,
-                    )
-                except (
-                    openai.RateLimitError,
-                    litellm.RateLimitError,
-                    openai.APIError,
-                    litellm.APIError,
-                ) as fallback_error:
+                    # carry the configured parameters across: a fallback that
+                    # silently drops temperature/max_tokens answers differently
+                    return await self._loop.with_model(
+                        fallback_model,
+                        api_key=self.api_key,
+                        **getattr(self._loop.model, "params", {}),
+                    ).arun(task, max_turns=max_turns)
+                except Exception as fallback_error:
+                    if not _is_retryable(fallback_error):
+                        raise
                     logger.warning(
                         f"Fallback model '{fallback_model}' also failed: {fallback_error}"
                     )
                     continue
-
-            # All fallback models failed, raise the original error
             raise
+
+    def resume(self, run_id: str):
+        """Continue a persisted run. Requires a store."""
+        return self._loop.resume(run_id)
+
+    async def aresume(self, run_id: str):
+        """Async variant of resume()."""
+        return await self._loop.aresume(run_id)
 
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(
             THINKING_PROMPT,
             query=query,
         )
-        result = Runner.run_sync(self.agent, prompt, context=CelestoConfig())
-        return result.final_output
+        return self._loop.run(prompt).final_output
 
     async def chat(
         self,
@@ -492,23 +474,55 @@ class Agentor(AgentorBase):
     ):
         if stream:
             return self.stream_chat(input, serialize=serialize)
-        else:
-            return await Runner.run(self.agent, input=input, context=CelestoConfig())
+        return await self._loop.arun(input)
 
     async def stream_chat(
         self,
         input: str,
         serialize: bool = True,
     ) -> AsyncIterator[Union[str, AgentOutput]]:
-        result = Runner.run_streamed(self.agent, input=input, context=CelestoConfig())
-        async for agent_output in format_stream_events(
-            result.stream_events(),
-            allowed_events=["run_item_stream_event"],
-        ):
+        async for agent_output in self._native_stream()(input):
             if serialize:
                 yield agent_output.serialize(dump_json=True)
             else:
                 yield agent_output
+
+    def _native_stream(self):
+        """Project engine events onto AgentOutput.
+
+        Keeps `serve()`, the /chat endpoint and the A2A handler working against
+        one wire format regardless of which engine produced the run.
+        """
+
+        async def stream(input: str) -> AsyncIterator[AgentOutput]:
+            # a streamed run is as resumable as a non-streamed one, but only if
+            # it is given a run id to persist under
+            run_id = None
+            if self._loop.store is not None:
+                from agentor.engine.store import new_run_id
+
+                run_id = new_run_id()
+            async for event in self._loop.astream(input, run_id=run_id):
+                if event.type == "message":
+                    yield AgentOutput(type="run_item_stream_event", message=event.text)
+                elif event.type == "tool_call":
+                    yield AgentOutput(
+                        type="run_item_stream_event",
+                        tool_action=ToolAction(name=event.name, type="tool_called"),
+                    )
+                elif event.type == "tool_result":
+                    yield AgentOutput(
+                        type="run_item_stream_event",
+                        message=event.result,
+                        tool_action=ToolAction(name=event.name, type="tool_output"),
+                    )
+                elif event.type == "run_end" and event.status != "completed":
+                    yield AgentOutput(
+                        type="run_item_stream_event",
+                        message=event.error or "Run did not complete.",
+                    )
+
+        return stream
 
     def serve(
         self,
@@ -517,6 +531,8 @@ class Agentor(AgentorBase):
         log_level: Literal["debug", "info", "warning", "error"] = "info",
         access_log: bool = True,
     ):
+        import uvicorn
+
         if host not in ("0.0.0.0", "127.0.0.1", "localhost"):
             raise ValueError(
                 f"Invalid host: {host}. Must be 0.0.0.0, 127.0.0.1, or localhost."
@@ -674,6 +690,8 @@ class Agentor(AgentorBase):
 
 
 class CelestoMCPHub:
+    """The Celesto-hosted MCP server, as an async context manager."""
+
     def __init__(
         self,
         timeout: int = 10,
@@ -681,23 +699,23 @@ class CelestoMCPHub:
         cache_tools_list: bool = True,
         api_key: Optional[str] = None,
     ) -> None:
-        api_key = api_key or celesto_config.api_key.get_secret_value()
+        api_key = api_key or (
+            celesto_config.api_key.get_secret_value()
+            if celesto_config.api_key
+            else None
+        )
         if api_key is None:
             raise ValueError("API key is required to use the Celesto MCP Hub.")
-        self.mcp_server = MCPServerStreamableHttp(
+        self.mcp_server = MCPServer(
+            url=f"{celesto_config.base_url}/mcp",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=timeout,
             name="Celesto AI MCP Server",
-            params={
-                "url": f"{celesto_config.base_url}/mcp",
-                "headers": {"Authorization": f"Bearer {api_key}"},
-                "timeout": timeout,
-                "cache_tools_list": cache_tools_list,
-                "max_retry_attempts": max_retry_attempts,
-            },
         )
 
-    async def __aenter__(self) -> MCPServerStreamableHttp:
+    async def __aenter__(self) -> MCPServer:
         await self.mcp_server.connect()
         return self.mcp_server
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
-        await self.mcp_server.cleanup()
+        await self.mcp_server.close()

@@ -1,8 +1,10 @@
-from agentor.mcp import MCPAPIRouter, Context, get_context
+from typing import Annotated
+
+import pytest
 from fastapi import Depends
 from fastapi.testclient import TestClient
-import pytest
-from typing import Annotated
+
+from agentor.mcp import Context, MCPAPIRouter, get_context
 
 
 @pytest.mark.asyncio
@@ -19,6 +21,7 @@ async def test_mcp_tool_with_context():
 
     # Create a test client
     from fastapi import FastAPI
+
     app = FastAPI()
     app.include_router(router.get_fastapi_router())
     client = TestClient(app)
@@ -30,19 +33,18 @@ async def test_mcp_tool_with_context():
             "jsonrpc": "2.0",
             "id": 1,
             "method": "tools/call",
-            "params": {
-                "name": "get_user_info",
-                "arguments": {"location": "NYC"}
-            }
+            "params": {"name": "get_user_info", "arguments": {"location": "NYC"}},
         },
         headers={"user-agent": "test-client/1.0"},
-        cookies={"session_id": "test-session-123"}
+        cookies={"session_id": "test-session-123"},
     )
 
     assert response.status_code == 200
     result = response.json()
     assert "result" in result
-    assert result["result"]["content"][0]["text"] == "NYC|test-client/1.0|test-session-123"
+    assert (
+        result["result"]["content"][0]["text"] == "NYC|test-client/1.0|test-session-123"
+    )
 
 
 @pytest.mark.asyncio
@@ -51,16 +53,14 @@ async def test_mcp_tool_with_annotated_context():
     router = MCPAPIRouter()
 
     @router.tool()
-    def check_auth(
-        resource: str, 
-        ctx: Annotated[Context, Depends(get_context)]
-    ) -> str:
+    def check_auth(resource: str, ctx: Annotated[Context, Depends(get_context)]) -> str:
         """Check auth with resource"""
         auth_header = ctx.headers.get("authorization", "no-auth")
         return f"Accessing {resource} with {auth_header}"
 
     # Create a test client
     from fastapi import FastAPI
+
     app = FastAPI()
     app.include_router(router.get_fastapi_router())
     client = TestClient(app)
@@ -72,18 +72,18 @@ async def test_mcp_tool_with_annotated_context():
             "jsonrpc": "2.0",
             "id": 1,
             "method": "tools/call",
-            "params": {
-                "name": "check_auth",
-                "arguments": {"resource": "documents"}
-            }
+            "params": {"name": "check_auth", "arguments": {"resource": "documents"}},
         },
-        headers={"authorization": "Bearer token123"}
+        headers={"authorization": "Bearer token123"},
     )
 
     assert response.status_code == 200
     result = response.json()
     assert "result" in result
-    assert result["result"]["content"][0]["text"] == "Accessing documents with Bearer token123"
+    assert (
+        result["result"]["content"][0]["text"]
+        == "Accessing documents with Bearer token123"
+    )
 
 
 @pytest.mark.asyncio
@@ -98,6 +98,7 @@ async def test_mcp_tool_without_context():
 
     # Create a test client
     from fastapi import FastAPI
+
     app = FastAPI()
     app.include_router(router.get_fastapi_router())
     client = TestClient(app)
@@ -108,11 +109,8 @@ async def test_mcp_tool_without_context():
             "jsonrpc": "2.0",
             "id": 1,
             "method": "tools/call",
-            "params": {
-                "name": "simple_tool",
-                "arguments": {"message": "hello"}
-            }
-        }
+            "params": {"name": "simple_tool", "arguments": {"message": "hello"}},
+        },
     )
 
     assert response.status_code == 200
@@ -128,9 +126,7 @@ async def test_context_not_in_tool_schema():
 
     @router.tool()
     def tool_with_context(
-        name: str,
-        age: int,
-        ctx: Context = Depends(get_context)
+        name: str, age: int, ctx: Context = Depends(get_context)
     ) -> str:
         """Tool with context"""
         return f"{name} is {age}"
@@ -154,10 +150,7 @@ async def test_context_with_empty_headers_and_cookies():
     router = MCPAPIRouter()
 
     @router.tool()
-    def tool_with_context(
-        message: str,
-        ctx: Context = Depends(get_context)
-    ) -> str:
+    def tool_with_context(message: str, ctx: Context = Depends(get_context)) -> str:
         """Tool with context"""
         header_count = len(ctx.headers)
         cookie_count = len(ctx.cookies)
@@ -165,6 +158,7 @@ async def test_context_with_empty_headers_and_cookies():
 
     # Create a test client
     from fastapi import FastAPI
+
     app = FastAPI()
     app.include_router(router.get_fastapi_router())
     client = TestClient(app)
@@ -176,11 +170,8 @@ async def test_context_with_empty_headers_and_cookies():
             "jsonrpc": "2.0",
             "id": 1,
             "method": "tools/call",
-            "params": {
-                "name": "tool_with_context",
-                "arguments": {"message": "test"}
-            }
-        }
+            "params": {"name": "tool_with_context", "arguments": {"message": "test"}},
+        },
     )
 
     assert response.status_code == 200

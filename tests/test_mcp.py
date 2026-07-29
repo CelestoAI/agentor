@@ -1,8 +1,10 @@
+from typing import Annotated
+
+import pytest
+from fastapi import Depends
+
 from agentor import CelestoMCPHub
 from agentor.mcp import MCPAPIRouter
-from fastapi import Depends
-import pytest
-from typing import Annotated
 
 
 @pytest.mark.asyncio

@@ -39,9 +39,7 @@ def _mock_calendar_service():
 
     # Mock calendarList for timezone retrieval
     calendar_list = service.calendarList.return_value
-    calendar_list.get.return_value.execute.return_value = {
-        "timeZone": "UTC"
-    }
+    calendar_list.get.return_value.execute.return_value = {"timeZone": "UTC"}
 
     return service
 

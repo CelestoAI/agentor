@@ -3,11 +3,10 @@ from unittest.mock import MagicMock, patch
 
 import openai
 import pytest
-from agents import ModelSettings
 
+from agentor import ModelSettings
 from agentor.core import Agentor
 from agentor.prompts import THINKING_PROMPT, render_prompt
-from agentor.tools.registry import ToolRegistry
 
 
 def test_prompt_rendering():
@@ -19,9 +18,9 @@ def test_prompt_rendering():
     assert "What is the weather in London?" in prompt
 
 
-@patch("agentor.core.agent.Runner.run_sync")
-def test_agentor(mock_run_sync):
-    mock_run_sync.return_value = "The weather in London is sunny"
+@patch("agentor.engine.loop.AgentLoop.run")
+def test_agentor(mock_run):
+    mock_run.return_value = "The weather in London is sunny"
     agent = Agentor(
         name="Agentor",
         model="gpt-5-mini",
@@ -32,7 +31,7 @@ def test_agentor(mock_run_sync):
     assert "The weather in London is sunny" in result
 
 
-@patch("agentor.core.agent.uvicorn.run")
+@patch("uvicorn.run")
 def test_agentor_serve(mock_uvicorn_run):
     agent = Agentor(
         name="Agentor",
@@ -70,7 +69,7 @@ def test_agentor_create_app():
     } <= set(app.openapi()["paths"])
 
 
-@patch("agentor.core.agent.Runner.run")
+@patch("agentor.engine.loop.AgentLoop.arun")
 @pytest.mark.asyncio
 async def test_agentor_batch_prompts(mock_run):
     mock_run.side_effect = [
@@ -110,14 +109,9 @@ You are a concise weather assistant."""
     assert agent.name == "WeatherBot"
     assert agent.instructions == "You are a concise weather assistant."
     assert agent.model == "gpt-4o-mini"
-    model_settings = agent.agent.model_settings
-    assert model_settings is not None
-    temperature = getattr(model_settings, "temperature", None)
-    if temperature is None and isinstance(model_settings, dict):
-        temperature = model_settings.get("temperature")
-    assert temperature == 0.3
+    assert agent._loop.model.params["temperature"] == 0.3
     assert len(agent.tools) == 1
-    assert agent.tools[0] is ToolRegistry.get("get_weather")["tool"]
+    assert agent.tools[0].name == "get_weather"
     assert any("missing_tool" in message for message in caplog.messages)
 
 
@@ -174,7 +168,7 @@ You are a helpful assistant."""
 
     assert agent.name == "WeatherBot"
     assert len(agent.tools) == 1
-    assert agent.tools[0] is ToolRegistry.get("get_weather")["tool"]
+    assert agent.tools[0].name == "get_weather"
     assert any("missing_tool" in message for message in caplog.messages)
 
 
@@ -191,8 +185,8 @@ You are a helpful assistant."""
     model_settings = ModelSettings(top_p=0.9)
     agent = Agentor.from_md(md_file, api_key="test-key", model_settings=model_settings)
 
-    assert agent.agent.model_settings.temperature == 0.5
-    assert agent.agent.model_settings.top_p == 0.9
+    assert agent._loop.model.params["temperature"] == 0.5
+    assert agent._loop.model.params["top_p"] == 0.9
 
 
 def test_agentor_from_md_temperature_not_overridden(tmp_path):
@@ -208,11 +202,11 @@ You are a helpful assistant."""
     model_settings = ModelSettings(temperature=0.8)
     agent = Agentor.from_md(md_file, api_key="test-key", model_settings=model_settings)
 
-    assert agent.agent.model_settings.temperature == 0.8
+    assert agent._loop.model.params["temperature"] == 0.8
 
 
 @pytest.mark.asyncio
-@patch("agentor.core.agent.Runner.run")
+@patch("agentor.engine.loop.AgentLoop.arun")
 async def test_arun_with_agent_input_type(mock_run):
     mock_run.return_value = MagicMock(final_output="The weather in London is sunny")
     agent = Agentor(
@@ -224,14 +218,13 @@ async def test_arun_with_agent_input_type(mock_run):
     )
     mock_run.assert_called_once()
     args, kwargs = mock_run.call_args
-    assert args[0] is agent.agent
-    assert args[1] == [{"role": "user", "content": "What is the weather in London?"}]
+    assert args[0] == [{"role": "user", "content": "What is the weather in London?"}]
     assert result is not None
     assert result.final_output == "The weather in London is sunny"
 
 
 @pytest.mark.asyncio
-@patch("agentor.core.agent.Runner.run")
+@patch("agentor.engine.loop.AgentLoop.arun")
 async def test_arun_with_fallback_on_rate_limit(mock_run):
     """Test that fallback models are used when rate limit error occurs."""
     # First call raises RateLimitError, second call succeeds
@@ -260,7 +253,7 @@ async def test_arun_with_fallback_on_rate_limit(mock_run):
 
 
 @pytest.mark.asyncio
-@patch("agentor.core.agent.Runner.run")
+@patch("agentor.engine.loop.AgentLoop.arun")
 async def test_arun_with_fallback_tries_multiple_models(mock_run):
     """Test that multiple fallback models are tried in order."""
     rate_limit_error = openai.RateLimitError(
@@ -271,7 +264,9 @@ async def test_arun_with_fallback_tries_multiple_models(mock_run):
     mock_run.side_effect = [
         rate_limit_error,  # Primary model fails
         rate_limit_error,  # First fallback fails
-        MagicMock(final_output="Success with second fallback"),  # Second fallback succeeds
+        MagicMock(
+            final_output="Success with second fallback"
+        ),  # Second fallback succeeds
     ]
 
     agent = Agentor(
@@ -289,7 +284,7 @@ async def test_arun_with_fallback_tries_multiple_models(mock_run):
 
 
 @pytest.mark.asyncio
-@patch("agentor.core.agent.Runner.run")
+@patch("agentor.engine.loop.AgentLoop.arun")
 async def test_arun_raises_when_all_fallbacks_fail(mock_run):
     """Test that original error is raised when all fallback models fail."""
     rate_limit_error = openai.RateLimitError(
@@ -316,7 +311,7 @@ async def test_arun_raises_when_all_fallbacks_fail(mock_run):
 
 
 @pytest.mark.asyncio
-@patch("agentor.core.agent.Runner.run")
+@patch("agentor.engine.loop.AgentLoop.arun")
 async def test_arun_without_fallback_raises_immediately(mock_run):
     """Test that rate limit error is raised immediately when no fallback models provided."""
     rate_limit_error = openai.RateLimitError(
@@ -339,7 +334,7 @@ async def test_arun_without_fallback_raises_immediately(mock_run):
 
 
 @pytest.mark.asyncio
-@patch("agentor.core.agent.Runner.run")
+@patch("agentor.engine.loop.AgentLoop.arun")
 async def test_arun_batch_with_fallback_on_rate_limit(mock_run):
     """Test that fallback models work with batch processing."""
     rate_limit_error = openai.RateLimitError(
@@ -372,9 +367,7 @@ async def test_arun_batch_with_fallback_on_rate_limit(mock_run):
 @patch("agentor.core.agent.setup_celesto_tracing")
 def test_agentor_with_enable_tracing_true(mock_setup_tracing):
     """Test that tracing is enabled when enable_tracing=True and API key is present."""
-    with patch.dict(
-        "os.environ", {"CELESTO_API_KEY": "test-api-key-123"}, clear=False
-    ):
+    with patch.dict("os.environ", {"CELESTO_API_KEY": "test-api-key-123"}, clear=False):
         from agentor.config import CelestoConfig
 
         # Create new config instance with the env var
@@ -391,7 +384,9 @@ def test_agentor_with_enable_tracing_true(mock_setup_tracing):
             # Verify setup_celesto_tracing was called
             mock_setup_tracing.assert_called_once()
             call_kwargs = mock_setup_tracing.call_args
-            assert "https://api.celesto.ai/v1/traces/ingest" in call_kwargs[1]["endpoint"]
+            assert (
+                "https://api.celesto.ai/v1/traces/ingest" in call_kwargs[1]["endpoint"]
+            )
             assert call_kwargs[1]["token"] == "test-api-key-123"
 
 
@@ -421,7 +416,10 @@ def test_agentor_auto_tracing_enabled(mock_setup_tracing, capsys):
     """Test that auto-tracing is enabled when API key is present and not disabled."""
     with patch.dict(
         "os.environ",
-        {"CELESTO_API_KEY": "test-api-key-456", "CELESTO_DISABLE_AUTO_TRACING": "false"},
+        {
+            "CELESTO_API_KEY": "test-api-key-456",
+            "CELESTO_DISABLE_AUTO_TRACING": "false",
+        },
         clear=False,
     ):
         from agentor.config import CelestoConfig
@@ -514,4 +512,7 @@ def test_agentor_auto_tracing_error_handling(mock_setup_tracing, caplog):
                 )
 
                 # Should log warning
-                assert any("Failed to setup Celesto tracing" in message for message in caplog.messages)
+                assert any(
+                    "Failed to setup Celesto tracing" in message
+                    for message in caplog.messages
+                )

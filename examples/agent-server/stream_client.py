@@ -1,4 +1,5 @@
 import os
+
 import requests
 
 # When deployed to Celesto (agentor deploy --folder ./examples/agent-server)
