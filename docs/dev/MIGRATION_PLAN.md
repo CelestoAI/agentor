@@ -182,13 +182,48 @@ The residual ~1.4s is openai-agents itself (1.19s, mostly `mcp` → `jsonschema`
 Fixing this also surfaced a latent circular import (`agentor.a2a` → `agentor.core` → `core.agent`
 → `agentor.a2a`) that the old eager `__init__` had been masking.
 
-### Phase 1 — Core loop behind the existing API (3–4 days)
+### Phase 1 — Core loop behind the existing API ✅ *shipped*
 
-Land `events.py`, `tool.py`, `model.py`, `loop.py`. Gate with `Agentor(engine="native")`,
-defaulting to the openai-agents path. Port the test suite to run against both engines.
+`agentor/engine/` — **917 LOC**, gated by `Agentor(engine="native")`, default still `"agents"`.
+Nothing in it imports openai-agents, so Phase 5 is a deletion rather than a rewrite.
 
-Carry over from the spike: per-tool failure budget, tool errors fed back as messages rather
-than raised, `max_turns` as a hard stop.
+| file | LOC | |
+|---|---|---|
+| `events.py` | 87 | `Event`, `RunResult`, `Usage` — the single description of a run |
+| `tools.py` | 260 | schema generation, docstring parsing, one `Tool` type |
+| `models.py` | 257 | `Model` protocol, `ChatCompletionsModel`, `LiteLLMModel` |
+| `loop.py` | 279 | the loop: sync/async/stream, budgets, model swap |
+
+**Measured:**
+
+| | agents engine | native engine |
+|---|---|---|
+| import | 1.124s | **0.047s** |
+| agent construction (5 tools) | 1.17 ms | 4.39 ms |
+
+Construction is ~3 ms slower because schemas are built with pydantic (`create_model` +
+`model_json_schema` is 0.176 ms of the 0.211 ms per tool). Deliberately not optimised: it is
+noise next to a 500 ms+ model call, and a cache would add invalidation logic for no visible gain.
+
+**Verified against the live API** (22/22 checks) and 30 unit tests driven by a scripted fake model:
+
+- Schema parity with openai-agents, **including param descriptions parsed from Google-style
+  docstrings**. Skipping those would have quietly degraded tool-calling accuracy.
+- `RunContextWrapper` is detected by name, excluded from the schema, and injected at call time,
+  so existing registry tools work unchanged — without importing openai-agents.
+- Parallel tool calls, streamed tool-call reassembly from fragmented deltas, usage accounting.
+- Tool errors are fed back to the model rather than raised; unknown tools and malformed JSON
+  arguments are reported, not fatal.
+- `stream_chat` projects engine events onto the existing `AgentOutput` wire format, so `serve()`,
+  `/chat` and the A2A handler are untouched.
+
+**The spike bug is fixed, and testing it found a second one.** A failing tool used to burn all 10
+turns; a failure budget now disables it after 2. The first fix only withdrew the tool's *schema* —
+but a model can still emit a call for a tool it was not offered, which let the broken tool keep
+running. The budget is now enforced at execution.
+
+Known gaps in `engine="native"`, all raising or deferred rather than silently ignored:
+MCP servers (raises `NotImplementedError`), `output_type` structured output, `WebSearchTool`.
 
 ### Phase 2 — One tool abstraction (2 days)
 

@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
 from agentor.a2a import A2AController, AgentSkill
 from agentor.config import celesto_config
-from agentor.output_text_formatter import AgentOutput, format_stream_events
+from agentor.output_text_formatter import AgentOutput, ToolAction, format_stream_events
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.skills import Skills
 from agentor.tools.base import BaseTool
@@ -208,10 +208,27 @@ class Agentor(AgentorBase):
         model_settings: Optional[ModelSettings] = None,
         skills: Optional[List[str]] = None,
         enable_tracing: bool = False,
+        engine: Literal["agents", "native"] = "agents",
+        max_turns: int = 10,
     ):
         if skills is not None:
             available_skills = self._inject_skills(skills)
             instructions = f"{instructions or ''}\n\n{available_skills}"
+
+        self.engine = engine
+        if engine == "native":
+            self._init_native(
+                name=name,
+                instructions=instructions,
+                model=model,
+                tools=tools,
+                api_key=api_key,
+                model_settings=model_settings,
+                max_turns=max_turns,
+                enable_tracing=enable_tracing,
+            )
+            return
+
         super().__init__(name, instructions, model, api_key, enable_tracing)
         tools = tools or []
         resolved_tools: List[FunctionTool] = []
@@ -253,6 +270,77 @@ class Agentor(AgentorBase):
             output_type=output_type,
             model_settings=model_settings,
         )
+
+    def _init_native(
+        self,
+        name: str,
+        instructions: Optional[str],
+        model: Any,
+        tools: Optional[List[Any]],
+        api_key: Optional[str],
+        model_settings: Optional[ModelSettings],
+        max_turns: int,
+        enable_tracing: bool,
+    ) -> None:
+        """Set up the native engine (see agentor.engine)."""
+        from agentor.engine import AgentLoop
+        from agentor.engine.tools import resolve_tools
+
+        self.name = name
+        self.instructions = instructions
+        self.api_key = api_key
+        self.agent = None
+        self.mcp_servers = []
+        self.enable_tracing = enable_tracing
+        self._setup_tracing(enable_tracing)
+
+        for tool in tools or []:
+            if isinstance(tool, MCPServerStreamableHttp):
+                raise NotImplementedError(
+                    "MCP servers are not supported by engine='native' yet. "
+                    "Use engine='agents' for MCP-backed tools."
+                )
+
+        # Fail loudly rather than silently dropping a tool the caller passed.
+        self._tools = resolve_tools(tools)
+        self.tools = self._tools
+
+        params: Dict[str, Any] = {}
+        for field in ("temperature", "top_p", "max_tokens"):
+            value = getattr(model_settings, field, None)
+            if value is not None:
+                params[field] = value
+
+        self.model = model
+        self._loop = AgentLoop(
+            name=name,
+            model=model or "gpt-4o-mini",
+            instructions=instructions,
+            tools=self._tools,
+            context=CelestoConfig(),
+            max_turns=max_turns,
+            api_key=api_key,
+            **params,
+        )
+
+    def _setup_tracing(self, enable_tracing: bool) -> None:
+        """Tracing setup shared with AgentorBase, without the agents-only bits."""
+        if not enable_tracing and (
+            celesto_config.api_key is None or celesto_config.disable_auto_tracing
+        ):
+            return
+        if enable_tracing and not celesto_config.api_key:
+            raise ValueError(
+                "Celesto API key is required to enable tracing. "
+                "Find it at https://celesto.ai/dashboard and set CELESTO_API_KEY."
+            )
+        try:
+            setup_celesto_tracing(
+                endpoint=f"{celesto_config.base_url}/traces/ingest",
+                token=celesto_config.api_key.get_secret_value(),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to setup Celesto tracing: {e}")
 
     def _inject_skills(self, skills: List[str]) -> str:
         """Inject skills into the agent system prompt."""
@@ -395,6 +483,8 @@ class Agentor(AgentorBase):
         )
 
     def run(self, input: str) -> List[str] | str:
+        if self.engine == "native":
+            return self._loop.run(input)
         return Runner.run_sync(self.agent, input, context=CelestoConfig())
 
     async def arun(
@@ -417,6 +507,8 @@ class Agentor(AgentorBase):
         """
         if isinstance(input, list):
             if isinstance(input[0], dict):
+                if self.engine == "native":
+                    return await self._loop.arun(input)
                 return await Runner.run(self.agent, input, context=CelestoConfig())
 
             futures = []
@@ -451,6 +543,9 @@ class Agentor(AgentorBase):
         """
         Run a task with optional fallback to alternative models on rate limit errors.
         """
+        if self.engine == "native":
+            return await self._run_native_with_fallback(task, fallback_models)
+
         retryable = _retryable_errors()
         try:
             return await Runner.run(
@@ -497,11 +592,43 @@ class Agentor(AgentorBase):
             # All fallback models failed, raise the original error
             raise
 
+    async def _run_native_with_fallback(
+        self, task: str, fallback_models: Optional[List[str]] = None
+    ):
+        """Native-engine equivalent of _run_with_fallback.
+
+        Swapping the model is a copy of the loop rather than a rebuilt agent,
+        because the model is not baked into the agent here.
+        """
+        retryable = _retryable_errors()
+        try:
+            return await self._loop.arun(task)
+        except retryable as e:
+            if not fallback_models:
+                raise
+            logger.warning(
+                f"Primary model failed with {type(e).__name__}: {e}. "
+                f"Trying fallback models: {fallback_models}"
+            )
+            for fallback_model in fallback_models:
+                try:
+                    return await self._loop.with_model(
+                        fallback_model, api_key=self.api_key
+                    ).arun(task)
+                except retryable as fallback_error:
+                    logger.warning(
+                        f"Fallback model '{fallback_model}' also failed: {fallback_error}"
+                    )
+                    continue
+            raise
+
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(
             THINKING_PROMPT,
             query=query,
         )
+        if self.engine == "native":
+            return self._loop.run(prompt).final_output
         result = Runner.run_sync(self.agent, prompt, context=CelestoConfig())
         return result.final_output
 
@@ -513,6 +640,8 @@ class Agentor(AgentorBase):
     ):
         if stream:
             return self.stream_chat(input, serialize=serialize)
+        elif self.engine == "native":
+            return await self._loop.arun(input)
         else:
             return await Runner.run(self.agent, input=input, context=CelestoConfig())
 
@@ -521,15 +650,54 @@ class Agentor(AgentorBase):
         input: str,
         serialize: bool = True,
     ) -> AsyncIterator[Union[str, AgentOutput]]:
-        result = Runner.run_streamed(self.agent, input=input, context=CelestoConfig())
-        async for agent_output in format_stream_events(
-            result.stream_events(),
-            allowed_events=["run_item_stream_event"],
-        ):
+        if self.engine == "native":
+            stream = self._native_stream()(input)
+        else:
+            result = Runner.run_streamed(
+                self.agent, input=input, context=CelestoConfig()
+            )
+            stream = format_stream_events(
+                result.stream_events(),
+                allowed_events=["run_item_stream_event"],
+            )
+
+        async for agent_output in stream:
             if serialize:
                 yield agent_output.serialize(dump_json=True)
             else:
                 yield agent_output
+
+    def _native_stream(self):
+        """Project engine events onto AgentOutput.
+
+        Keeps `serve()`, the /chat endpoint and the A2A handler working against
+        one wire format regardless of which engine produced the run.
+        """
+
+        async def stream(input: str) -> AsyncIterator[AgentOutput]:
+            async for event in self._loop.astream(input):
+                if event.type == "message":
+                    yield AgentOutput(
+                        type="run_item_stream_event", message=event.text
+                    )
+                elif event.type == "tool_call":
+                    yield AgentOutput(
+                        type="run_item_stream_event",
+                        tool_action=ToolAction(name=event.name, type="tool_called"),
+                    )
+                elif event.type == "tool_result":
+                    yield AgentOutput(
+                        type="run_item_stream_event",
+                        message=event.result,
+                        tool_action=ToolAction(name=event.name, type="tool_output"),
+                    )
+                elif event.type == "run_end" and event.status != "completed":
+                    yield AgentOutput(
+                        type="run_item_stream_event",
+                        message=event.error or "Run did not complete.",
+                    )
+
+        return stream
 
     def serve(
         self,
