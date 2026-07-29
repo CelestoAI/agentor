@@ -863,12 +863,22 @@ def test_agentor_accepts_an_explicit_tracer():
 # ============================================ whole-line review
 
 
-def test_version_is_a_stable_release():
-    """pip skips prereleases by default, so 0.1.0.devN would strand upgraders."""
+def test_version_is_a_valid_prerelease():
+    """0.1.0 ships as an alpha on purpose.
+
+    pip excludes prereleases by default, which is exactly what is wanted here:
+    this release drops a dependency, removes DurableAgent and drops hosted
+    tools, so `pip install --upgrade agentor` should NOT sweep 0.0.x users into
+    it. They opt in with --pre or an explicit pin.
+    """
+    from packaging.version import Version
+
     import agentor
 
-    assert "dev" not in agentor.__version__
-    assert "rc" not in agentor.__version__
+    version = Version(agentor.__version__)
+    assert version.is_prerelease, "0.1.0 is intended to ship as a prerelease"
+    assert version.base_version == "0.1.0"
+    assert version.pre[0] == "a", f"expected an alpha, got {agentor.__version__}"
 
 
 def test_the_previous_mcp_import_still_works():

@@ -50,6 +50,13 @@ The recommended method of installing `agentor` is with pip from PyPI.
 pip install agentor
 ```
 
+The v0.1.0 line, with the new agent engine, is currently in alpha and is not installed by
+default. To try it:
+
+```bash
+pip install --pre agentor
+```
+
 Tools with heavy or vendor-specific dependencies ship as extras, so the base
 install stays small:
 
