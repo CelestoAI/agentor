@@ -231,10 +231,38 @@ Collapse `FunctionTool` / `BaseTool` / `ToolRegistry` onto the single `Tool` typ
 `RunContextWrapper` from user-facing signatures — context becomes a plain argument.
 Keep `@tool`, `@capability`, and `BaseTool.from_function` working.
 
-### Phase 3 — Native tracing (2 days)
+### Phase 3 — Native tracing ✅ *shipped*
 
-Celesto exporter consumes `Event` directly. Deletes the `hasattr` introspection in `tracer.py`
-and — for the first time — covers every code path, including `LLM` and durable runs.
+Reordered ahead of Phase 2, for two reasons: Phase 2 mostly deletes the `FunctionTool` bridge,
+which cannot go until the native engine is the default (Phase 5); and Phase 1 opened a hole that
+needed closing.
+
+**The hole:** `engine="native"` wired tracing to the openai-agents trace processor, which cannot
+observe a run that never enters openai-agents. Native runs produced **no traces, with no warning**.
+
+`agentor/engine/tracing.py` (160 LOC) projects the event stream onto Celesto trace payloads:
+one trace per run, a `generation` span per model call, a `function` span per tool call, all
+parented to an `agent` span. No `hasattr` chains — the events already describe the run, so the
+tracer reads nothing from the engine's internals. That is the structural difference from
+`tracer.py`, whose `_convert_span` is ~75 lines of defensive introspection into another vendor's
+objects.
+
+Verified on a live run:
+
+```
+TRACE trace_17d6486d…  Weather Agent
+  SPAN generation  gpt-4o-mini    67 tokens
+  SPAN function    get_weather
+  SPAN generation  gpt-4o-mini    94 tokens
+  SPAN agent       Weather Agent  161 tokens
+```
+
+- Tracing failures cannot break a run: collector and export errors are caught and logged, proven
+  by a test with a tracer that raises from both.
+- Export runs on a worker thread, so a slow ingest endpoint does not block the event loop.
+- Known limitation: a caller that abandons `astream` early never reaches export. `arun` always drains.
+
+12 tracing tests; 198 passing overall.
 
 ### Phase 4 — Fold in durability (2–3 days)
 

@@ -1,8 +1,10 @@
-from agentor.mcp import MCPAPIRouter, Context, get_context
+from typing import Annotated
+
+import pytest
 from fastapi import Depends
 from fastapi.testclient import TestClient
-import pytest
-from typing import Annotated
+
+from agentor.mcp import Context, MCPAPIRouter, get_context
 
 
 @pytest.mark.asyncio

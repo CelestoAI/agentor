@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Literal, Optional
 EventType = Literal[
     "run_start",
     "text_delta",
+    "generation",
     "message",
     "tool_call",
     "tool_result",
@@ -59,6 +60,14 @@ class Event:
     status: Optional[RunStatus] = None
     agent: Optional[str] = None
     model: Optional[str] = None
+    #: messages sent to the model; set on `generation` so a trace can show the
+    #: exact request, which is the part that is hardest to reconstruct later
+    messages: Optional[List[Dict[str, Any]]] = None
+    #: tool calls the model asked for, on `generation`
+    calls: Optional[List[Dict[str, Any]]] = None
+    #: epoch seconds bounding the work this event describes; spans need both
+    started_at: Optional[float] = None
+    ended_at: Optional[float] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if v is not None}

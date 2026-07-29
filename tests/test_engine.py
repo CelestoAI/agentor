@@ -333,11 +333,49 @@ async def test_astream_emits_expected_event_sequence():
     types = [e.type async for e in loop.astream("go")]
     assert types == [
         "run_start",
+        "generation",
         "tool_call",
         "tool_result",
+        "generation",
         "message",
         "run_end",
     ]
+
+
+@pytest.mark.asyncio
+async def test_generation_events_carry_span_data():
+    model = FakeModel(calls(("weather", '{"city": "Rome"}')), text("sunny"))
+    loop = AgentLoop(model=model, tools=[weather], instructions="sys")
+
+    events = [e async for e in loop.astream("go")]
+    generations = [e for e in events if e.type == "generation"]
+    assert len(generations) == 2
+
+    first, second = generations
+    # the request as actually sent, before the assistant reply was appended
+    assert [m["role"] for m in first.messages] == ["system", "user"]
+    assert first.calls[0]["function"]["name"] == "weather"
+    assert first.model == "fake-model"
+    assert first.ended_at >= first.started_at
+
+    # the second call must include the tool result
+    assert [m["role"] for m in second.messages] == [
+        "system",
+        "user",
+        "assistant",
+        "tool",
+    ]
+    assert second.text == "sunny"
+
+
+@pytest.mark.asyncio
+async def test_tool_result_events_are_timed():
+    model = FakeModel(calls(("weather", '{"city": "Rome"}')), text("ok"))
+    loop = AgentLoop(model=model, tools=[weather])
+
+    result = await loop.arun("go")
+    (event,) = [e for e in result.events if e.type == "tool_result"]
+    assert event.started_at is not None and event.ended_at >= event.started_at
 
 
 @pytest.mark.asyncio
