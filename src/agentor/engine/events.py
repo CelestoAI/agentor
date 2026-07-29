@@ -8,7 +8,7 @@ of this stream, so there is no second format to keep in sync.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from typing import Any, Dict, List, Literal, Optional
 
 EventType = Literal[
@@ -75,6 +75,16 @@ class Event:
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), default=str)
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Event":
+        data = dict(data)
+        usage = data.get("usage")
+        if isinstance(usage, dict):
+            data["usage"] = Usage(**usage)
+        # tolerate fields added by a newer version writing the same log
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
 
 @dataclass
 class RunResult:
@@ -82,6 +92,8 @@ class RunResult:
 
     final_output: Optional[str] = None
     status: RunStatus = "completed"
+    #: set when the run is persisted; pass it to resume()
+    run_id: Optional[str] = None
     events: List[Event] = field(default_factory=list)
     usage: Usage = field(default_factory=Usage)
     #: full message list, suitable for feeding back in to continue the conversation

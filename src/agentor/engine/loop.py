@@ -37,6 +37,7 @@ class AgentLoop:
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         tracer: Any = None,
+        store: Any = None,
         **model_params: Any,
     ):
         self.name = name
@@ -45,6 +46,7 @@ class AgentLoop:
         self.max_turns = max_turns
         self.max_tool_failures = max_tool_failures
         self.tracer = tracer
+        self.store = store
         self.model: Model = resolve_model(
             model, api_key=api_key, base_url=base_url, **model_params
         )
@@ -164,30 +166,38 @@ class AgentLoop:
     # ------------------------------------------------------------ the loop
 
     async def astream(
-        self, input: MessageInput, stream_text: bool = False
+        self,
+        input: MessageInput,
+        stream_text: bool = False,
+        run_id: Optional[str] = None,
     ) -> AsyncIterator[Event]:
-        """Run the agent, emitting every event, and trace it if configured.
+        """Run the agent, emitting every event, tracing and persisting it.
 
         Note that a consumer which abandons this generator early stops the
         trace from being exported; `arun` always drains it.
         """
-        if self.tracer is None:
-            async for event in self._astream(input, stream_text):
-                yield event
-            return
+        collector = self.tracer.collector(self.name) if self.tracer else None
 
-        collector = self.tracer.collector(self.name)
         async for event in self._astream(input, stream_text):
-            try:
-                collector.handle(event)
-            except Exception as e:  # tracing must never break a run
-                logger.warning("Trace collection failed: %s", e)
+            if collector is not None:
+                try:
+                    collector.handle(event)
+                except Exception as e:  # tracing must never break a run
+                    logger.warning("Trace collection failed: %s", e)
+            if self.store is not None and run_id is not None:
+                try:
+                    self.store.append(run_id, event)
+                except Exception as e:
+                    # Losing durability is bad, but killing a live run over it
+                    # is worse; the run is still returned to the caller.
+                    logger.error("Failed to persist event for run %s: %s", run_id, e)
             yield event
 
-        try:
-            await asyncio.to_thread(self.tracer.export, collector)
-        except Exception as e:
-            logger.warning("Trace export failed: %s", e)
+        if collector is not None:
+            try:
+                await asyncio.to_thread(self.tracer.export, collector)
+            except Exception as e:
+                logger.warning("Trace export failed: %s", e)
 
     async def _astream(
         self, input: MessageInput, stream_text: bool = False
@@ -317,9 +327,16 @@ class AgentLoop:
             ended_at=time.time(),
         )
 
-    async def arun(self, input: MessageInput) -> RunResult:
-        result = RunResult()
-        async for event in self.astream(input):
+    async def arun(
+        self, input: MessageInput, run_id: Optional[str] = None
+    ) -> RunResult:
+        if self.store is not None and run_id is None:
+            from agentor.engine.store import new_run_id
+
+            run_id = new_run_id()
+
+        result = RunResult(run_id=run_id)
+        async for event in self.astream(input, run_id=run_id):
             result.events.append(event)
             if event.type == "run_end":
                 result.status = event.status or "completed"
@@ -328,11 +345,61 @@ class AgentLoop:
                 result.error = event.error
         return result
 
-    def run(self, input: MessageInput) -> RunResult:
+    def run(self, input: MessageInput, run_id: Optional[str] = None) -> RunResult:
+        return self._sync(self.arun(input, run_id=run_id))
+
+    async def aresume(self, run_id: str) -> RunResult:
+        """Continue a persisted run from where it stopped.
+
+        A completed run is returned as-is rather than re-executed, so calling
+        this after a crash is safe whether or not the run had finished.
+        """
+        if self.store is None:
+            raise ValueError("resume() requires a store; pass store= to AgentLoop.")
+
+        from agentor.engine.store import (
+            final_event,
+            is_complete,
+            replay_messages,
+            total_usage,
+        )
+
+        events = self.store.load(run_id)
+        if not events:
+            raise KeyError(f"No persisted run with id {run_id!r}.")
+
+        if is_complete(events):
+            end = final_event(events)
+            return RunResult(
+                run_id=run_id,
+                final_output=end.text if end else None,
+                status="completed",
+                events=events,
+                usage=total_usage(events),
+            )
+
+        messages = replay_messages(events)
+        if not messages:
+            raise ValueError(
+                f"Run {run_id!r} has no recoverable messages; start a new run."
+            )
+
+        result = await self.arun(messages, run_id=run_id)
+        # the caller cares about the whole run, not just this continuation
+        result.events = events + result.events
+        return result
+
+    def resume(self, run_id: str) -> RunResult:
+        return self._sync(self.aresume(run_id))
+
+    @staticmethod
+    def _sync(coro):
         try:
             asyncio.get_running_loop()
         except RuntimeError:
-            return asyncio.run(self.arun(input))
+            return asyncio.run(coro)
+        coro.close()
         raise RuntimeError(
-            "run() cannot be called from a running event loop; await arun() instead."
+            "This method cannot be called from a running event loop; "
+            "await the async variant instead."
         )

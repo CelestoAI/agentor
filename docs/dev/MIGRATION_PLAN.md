@@ -264,10 +264,37 @@ TRACE trace_17d6486d…  Weather Agent
 
 12 tracing tests; 198 passing overall.
 
-### Phase 4 — Fold in durability (2–3 days)
+### Phase 4 — Fold in durability ✅ *shipped*
 
-`store.py` absorbs the `DurableAgent` jsonl event log. `Agentor(store=FileStore("runs/"))`
-gets resume + HITL interrupt. **Delete `durable/` (439 lines).**
+`agentor/engine/store.py` (164 LOC) replaces `DurableAgent` (439 LOC, deleted).
+
+Durability falls out of the event stream rather than being built beside it: persisting a run is
+appending its events, and resuming is replaying them into a message list. Because each
+`generation` event records the request **exactly as sent**, replay reconstructs the conversation
+without inferring anything — which is what the old implementation had to do by hand.
+
+```python
+agent = Agentor(name="Agent", tools=[...], engine="native", store=FileStore("runs"))
+result = agent.run("do the thing")
+agent.resume(result.run_id)     # continue after a crash
+```
+
+**Verified across real process boundaries against the live API**: process 1 starts a run that
+stops holding an unused tool result and writes a 5-event log; process 2, a fresh interpreter
+knowing only the run id, reads it from disk and finishes the job.
+
+- `FileStore` fsyncs each event — a crash is the case it exists for.
+- A torn final line (the expected result of a hard kill) is skipped, not fatal.
+- `Event.from_dict` ignores unknown fields, so a newer writer cannot break an older reader.
+- Resuming a completed run returns the stored result without calling the model again.
+- A failing store logs and lets the run finish; losing durability is bad, killing a live run over
+  it is worse.
+
+`DurableAgent` raises an `AttributeError` carrying the migration snippet rather than a bare
+`ImportError`. 20 store tests; 215 passing overall.
+
+**Deferred:** HITL interrupt/approval. The store makes it straightforward, but nothing in the
+codebase needs it yet and the brief says not to ship features nobody uses.
 
 ### Phase 5 — Drop openai-agents (1 day)
 
