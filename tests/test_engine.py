@@ -4,9 +4,11 @@ The loop is exercised against a scripted fake model so behaviour is asserted
 without network access.
 """
 
+import json
 from typing import Literal, Optional
 
 import pytest
+from pydantic import BaseModel
 
 from agentor.engine import AgentLoop, Tool, resolve_tools
 from agentor.engine.events import Usage
@@ -26,14 +28,20 @@ class FakeModel:
         self.responses = list(responses)
         self.calls = []
 
-    async def complete(self, messages, tools=None):
-        self.calls.append({"messages": [dict(m) for m in messages], "tools": tools})
+    async def complete(self, messages, tools=None, response_format=None):
+        self.calls.append(
+            {
+                "messages": [dict(m) for m in messages],
+                "tools": tools,
+                "response_format": response_format,
+            }
+        )
         if not self.responses:
             return ModelResponse(content="done")
         return self.responses.pop(0)
 
-    async def stream(self, messages, tools=None):
-        response = await self.complete(messages, tools)
+    async def stream(self, messages, tools=None, response_format=None):
+        response = await self.complete(messages, tools, response_format)
         for piece in (response.content or "").split(" "):
             yield StreamChunk(delta=piece + " ")
         yield StreamChunk(final=response)
@@ -408,6 +416,75 @@ def test_run_rejects_being_called_inside_event_loop():
     asyncio.run(main())
 
 
+# --------------------------------------------------------- structured output
+
+
+class Person(BaseModel):
+    name: str
+    age: int
+
+
+@pytest.mark.asyncio
+async def test_output_type_parses_the_final_answer():
+    model = FakeModel(text('{"name": "Ada", "age": 36}'))
+    loop = AgentLoop(model=model, output_type=Person)
+    result = await loop.arun("who?")
+
+    assert isinstance(result.final_output, Person)
+    assert result.final_output.name == "Ada"
+
+
+@pytest.mark.asyncio
+async def test_output_type_sends_a_strict_json_schema():
+    model = FakeModel(text('{"name": "Ada", "age": 36}'))
+    await AgentLoop(model=model, output_type=Person).arun("who?")
+
+    fmt = model.calls[0]["response_format"]
+    assert fmt["type"] == "json_schema"
+    assert fmt["json_schema"]["name"] == "Person"
+    assert fmt["json_schema"]["strict"] is True
+    assert fmt["json_schema"]["schema"]["additionalProperties"] is False
+
+
+@pytest.mark.asyncio
+async def test_events_stay_serialisable_with_output_type():
+    """Parsing happens at the boundary so the persisted log stays JSON."""
+    model = FakeModel(text('{"name": "Ada", "age": 36}'))
+    result = await AgentLoop(model=model, output_type=Person).arun("who?")
+
+    end = next(e for e in result.events if e.type == "run_end")
+    assert isinstance(end.text, str)
+    json.loads(end.to_json())
+
+
+@pytest.mark.asyncio
+async def test_output_type_mismatch_raises_with_the_raw_text():
+    model = FakeModel(text("not json at all"))
+    loop = AgentLoop(model=model, output_type=Person)
+
+    with pytest.raises(ValueError, match="did not match Person"):
+        await loop.arun("who?")
+
+
+def test_output_type_must_be_a_pydantic_model():
+    with pytest.raises(TypeError, match="must be a pydantic BaseModel"):
+        AgentLoop(model=FakeModel(text("x")), output_type=dict)
+
+
+@pytest.mark.asyncio
+async def test_no_output_type_sends_no_response_format():
+    """A model adapter predating structured output must keep working."""
+
+    class TwoArgModel:
+        model = "old"
+
+        async def complete(self, messages, tools=None):
+            return ModelResponse(content="fine")
+
+    result = await AgentLoop(model=TwoArgModel()).arun("go")
+    assert result.final_output == "fine"
+
+
 # --------------------------------------------------- Agentor integration
 
 
@@ -459,12 +536,22 @@ async def test_agentor_native_chat_non_streaming():
     assert result.final_output == "answer"
 
 
-def test_agentor_native_rejects_mcp_servers_loudly():
+def test_agentor_native_adapts_mcp_servers():
+    """An openai-agents MCP server must work unchanged on the native engine."""
+    from agentor.engine.mcp import MCPServer
     from agentor.mcp import MCPServerStreamableHttp
 
-    server = MCPServerStreamableHttp(name="m", params={"url": "http://example"})
-    with pytest.raises(NotImplementedError, match="MCP servers"):
-        native(FakeModel(text("x")), tools=[server])
+    server = MCPServerStreamableHttp(
+        name="m", params={"url": "http://example/mcp", "headers": {"A": "b"}}
+    )
+    agent = native(FakeModel(text("x")), tools=[server])
+
+    (adapted,) = agent._loop.mcp_servers
+    assert isinstance(adapted, MCPServer)
+    assert adapted.url == "http://example/mcp"
+    assert adapted.headers == {"A": "b"}
+    # an MCP server is not a local tool
+    assert agent.tools == []
 
 
 @pytest.mark.asyncio

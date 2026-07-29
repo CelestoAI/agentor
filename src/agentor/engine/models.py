@@ -43,11 +43,17 @@ class StreamChunk:
 @runtime_checkable
 class Model(Protocol):
     async def complete(
-        self, messages: List[Dict[str, Any]], tools: Optional[List[Dict]] = None
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict]] = None,
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> ModelResponse: ...
 
     def stream(
-        self, messages: List[Dict[str, Any]], tools: Optional[List[Dict]] = None
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict]] = None,
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[StreamChunk]: ...
 
 
@@ -87,7 +93,10 @@ class ChatCompletionsModel:
             )
 
     def _request(
-        self, messages: List[Dict[str, Any]], tools: Optional[List[Dict]]
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict]],
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
             "model": self.model,
@@ -96,13 +105,18 @@ class ChatCompletionsModel:
         }
         if tools:
             payload["tools"] = tools
+        if response_format:
+            payload["response_format"] = response_format
         return payload
 
     async def complete(
-        self, messages: List[Dict[str, Any]], tools: Optional[List[Dict]] = None
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict]] = None,
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> ModelResponse:
         raw = await self.client.chat.completions.create(
-            **self._request(messages, tools)
+            **self._request(messages, tools, response_format)
         )
         message = raw.choices[0].message
         return ModelResponse(
@@ -120,9 +134,12 @@ class ChatCompletionsModel:
         )
 
     async def stream(
-        self, messages: List[Dict[str, Any]], tools: Optional[List[Dict]] = None
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict]] = None,
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[StreamChunk]:
-        request = self._request(messages, tools)
+        request = self._request(messages, tools, response_format)
         request["stream"] = True
         request["stream_options"] = {"include_usage": True}
 
@@ -189,7 +206,10 @@ class LiteLLMModel:
         self.params = params
 
     async def complete(
-        self, messages: List[Dict[str, Any]], tools: Optional[List[Dict]] = None
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict]] = None,
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> ModelResponse:
         import litellm
 
@@ -198,6 +218,7 @@ class LiteLLMModel:
             messages=messages,
             tools=tools or None,
             api_key=self.api_key,
+            response_format=response_format,
             **self.params,
         )
         message = raw.choices[0].message
@@ -216,7 +237,10 @@ class LiteLLMModel:
         )
 
     async def stream(
-        self, messages: List[Dict[str, Any]], tools: Optional[List[Dict]] = None
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict]] = None,
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[StreamChunk]:
         # litellm mirrors the OpenAI streaming shape, so reuse that accumulator
         # rather than maintaining a second one.
@@ -235,7 +259,7 @@ class LiteLLMModel:
                         return await litellm.acompletion(api_key=self.api_key, **kwargs)
 
         model.client = _Shim()
-        async for chunk in model.stream(messages, tools):
+        async for chunk in model.stream(messages, tools, response_format):
             yield chunk
 
 

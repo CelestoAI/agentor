@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import time
+from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 from agentor.engine.events import Event, RunResult, Usage
@@ -20,6 +21,28 @@ from agentor.engine.tools import Tool, resolve_tools
 logger = logging.getLogger(__name__)
 
 MessageInput = Union[str, List[Dict[str, Any]]]
+
+
+def _response_format(output_type: Any) -> Optional[Dict[str, Any]]:
+    """Build an OpenAI json_schema response format from a pydantic model."""
+    if output_type is None:
+        return None
+    if not hasattr(output_type, "model_json_schema"):
+        raise TypeError(
+            f"output_type must be a pydantic BaseModel, got {output_type!r}."
+        )
+
+    schema = output_type.model_json_schema()
+    # strict json_schema mode rejects extra keys and requires every property
+    schema["additionalProperties"] = False
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": output_type.__name__,
+            "schema": schema,
+            "strict": True,
+        },
+    }
 
 
 class AgentLoop:
@@ -38,6 +61,8 @@ class AgentLoop:
         base_url: Optional[str] = None,
         tracer: Any = None,
         store: Any = None,
+        mcp_servers: Optional[List[Any]] = None,
+        output_type: Any = None,
         **model_params: Any,
     ):
         self.name = name
@@ -47,6 +72,9 @@ class AgentLoop:
         self.max_tool_failures = max_tool_failures
         self.tracer = tracer
         self.store = store
+        self.mcp_servers = list(mcp_servers or [])
+        self.output_type = output_type
+        self._response_format = _response_format(output_type)
         self.model: Model = resolve_model(
             model, api_key=api_key, base_url=base_url, **model_params
         )
@@ -165,6 +193,41 @@ class AgentLoop:
 
     # ------------------------------------------------------------ the loop
 
+    @asynccontextmanager
+    async def _connected_mcp_tools(self):
+        """Hold MCP connections open for one run and merge in their tools.
+
+        Connecting per run rather than per process keeps the loop usable from
+        short-lived workers, where a long-lived session would go stale.
+        """
+        if not self.mcp_servers:
+            yield
+            return
+
+        added: List[str] = []
+        connected: List[Any] = []
+        try:
+            for server in self.mcp_servers:
+                remote_tools = await server.connect()
+                connected.append(server)
+                for tool in remote_tools:
+                    if tool.name in self.tools:
+                        logger.warning(
+                            "MCP server %s exposes %r, which shadows an existing "
+                            "tool; use tool_prefix to disambiguate.",
+                            server.name,
+                            tool.name,
+                        )
+                        continue
+                    self.tools[tool.name] = tool
+                    added.append(tool.name)
+            yield
+        finally:
+            for name in added:
+                self.tools.pop(name, None)
+            for server in connected:
+                await server.close()
+
     async def astream(
         self,
         input: MessageInput,
@@ -178,20 +241,23 @@ class AgentLoop:
         """
         collector = self.tracer.collector(self.name) if self.tracer else None
 
-        async for event in self._astream(input, stream_text):
-            if collector is not None:
-                try:
-                    collector.handle(event)
-                except Exception as e:  # tracing must never break a run
-                    logger.warning("Trace collection failed: %s", e)
-            if self.store is not None and run_id is not None:
-                try:
-                    self.store.append(run_id, event)
-                except Exception as e:
-                    # Losing durability is bad, but killing a live run over it
-                    # is worse; the run is still returned to the caller.
-                    logger.error("Failed to persist event for run %s: %s", run_id, e)
-            yield event
+        async with self._connected_mcp_tools():
+            async for event in self._astream(input, stream_text):
+                if collector is not None:
+                    try:
+                        collector.handle(event)
+                    except Exception as e:  # tracing must never break a run
+                        logger.warning("Trace collection failed: %s", e)
+                if self.store is not None and run_id is not None:
+                    try:
+                        self.store.append(run_id, event)
+                    except Exception as e:
+                        # Losing durability is bad, but killing a live run over
+                        # it is worse; the run is still returned to the caller.
+                        logger.error(
+                            "Failed to persist event for run %s: %s", run_id, e
+                        )
+                yield event
 
         if collector is not None:
             try:
@@ -226,7 +292,10 @@ class AgentLoop:
 
             if stream_text:
                 response = None
-                async for chunk in self.model.stream(messages, schemas):
+                # only passed when set, so a Model adapter that predates
+                # structured output keeps working
+                extra = (self._response_format,) if self._response_format else ()
+                async for chunk in self.model.stream(messages, schemas, *extra):
                     if chunk.delta:
                         yield Event(type="text_delta", text=chunk.delta, turn=turn)
                     if chunk.final is not None:
@@ -234,7 +303,8 @@ class AgentLoop:
                 if response is None:
                     response = ModelResponse()
             else:
-                response = await self.model.complete(messages, schemas)
+                extra = (self._response_format,) if self._response_format else ()
+                response = await self.model.complete(messages, schemas, *extra)
 
             total = total + response.usage
             assistant = self._assistant_message(response)
@@ -343,7 +413,23 @@ class AgentLoop:
                 result.final_output = event.text
                 result.usage = event.usage or Usage()
                 result.error = event.error
+
+        # Events stay plain text so the log remains JSON-serialisable; only the
+        # returned result carries the parsed object.
+        if self.output_type is not None and result.status == "completed":
+            result.final_output = self._parse_output(result.final_output)
         return result
+
+    def _parse_output(self, text: Optional[str]) -> Any:
+        if not text:
+            return None
+        try:
+            return self.output_type.model_validate_json(text)
+        except Exception as e:
+            raise ValueError(
+                f"Model output did not match {self.output_type.__name__}: {e}\n"
+                f"Raw output: {text[:500]}"
+            ) from e
 
     def run(self, input: MessageInput, run_id: Optional[str] = None) -> RunResult:
         return self._sync(self.arun(input, run_id=run_id))

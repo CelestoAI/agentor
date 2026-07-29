@@ -66,6 +66,31 @@ def _litellm_model_cls() -> type["LitellmModel"]:
     return LitellmModel
 
 
+def _adapt_mcp_server(server: MCPServerStreamableHttp):
+    """Wrap an openai-agents MCP server as a native engine MCPServer.
+
+    Only the connection parameters are reused; the native client speaks to the
+    server through the official `mcp` package.
+    """
+    from agentor.engine.mcp import MCPServer
+
+    params = getattr(server, "params", None) or {}
+    url = (
+        params.get("url") if isinstance(params, dict) else getattr(params, "url", None)
+    )
+    if not url:
+        raise ValueError(f"MCP server {server!r} has no url to connect to.")
+
+    headers = params.get("headers") if isinstance(params, dict) else None
+    timeout = (params.get("timeout") if isinstance(params, dict) else None) or 30.0
+    return MCPServer(
+        url=url,
+        headers=headers,
+        timeout=float(timeout),
+        name=getattr(server, "name", None) or url,
+    )
+
+
 def _retryable_errors() -> tuple[type[BaseException], ...]:
     """Error types worth retrying on a fallback model.
 
@@ -228,6 +253,7 @@ class Agentor(AgentorBase):
                 max_turns=max_turns,
                 enable_tracing=enable_tracing,
                 store=store,
+                output_type=output_type,
             )
             return
 
@@ -284,6 +310,7 @@ class Agentor(AgentorBase):
         max_turns: int,
         enable_tracing: bool,
         store: Any = None,
+        output_type: Any = None,
     ) -> None:
         """Set up the native engine (see agentor.engine)."""
         from agentor.engine import AgentLoop
@@ -293,20 +320,22 @@ class Agentor(AgentorBase):
         self.instructions = instructions
         self.api_key = api_key
         self.agent = None
-        self.mcp_servers = []
         self.enable_tracing = enable_tracing
         tracer = self._native_tracer(enable_tracing)
 
+        # openai-agents MCP servers are accepted and adapted, so the same
+        # Agentor(...) call works on either engine.
+        plain_tools, mcp_servers = [], []
         for tool in tools or []:
             if isinstance(tool, MCPServerStreamableHttp):
-                raise NotImplementedError(
-                    "MCP servers are not supported by engine='native' yet. "
-                    "Use engine='agents' for MCP-backed tools."
-                )
+                mcp_servers.append(_adapt_mcp_server(tool))
+            else:
+                plain_tools.append(tool)
 
         # Fail loudly rather than silently dropping a tool the caller passed.
-        self._tools = resolve_tools(tools)
+        self._tools = resolve_tools(plain_tools)
         self.tools = self._tools
+        self.mcp_servers = mcp_servers
 
         params: Dict[str, Any] = {}
         for field in ("temperature", "top_p", "max_tokens"):
@@ -325,6 +354,8 @@ class Agentor(AgentorBase):
             api_key=api_key,
             tracer=tracer,
             store=store,
+            mcp_servers=mcp_servers,
+            output_type=output_type,
             **params,
         )
 
@@ -710,9 +741,7 @@ class Agentor(AgentorBase):
         async def stream(input: str) -> AsyncIterator[AgentOutput]:
             async for event in self._loop.astream(input):
                 if event.type == "message":
-                    yield AgentOutput(
-                        type="run_item_stream_event", message=event.text
-                    )
+                    yield AgentOutput(type="run_item_stream_event", message=event.text)
                 elif event.type == "tool_call":
                     yield AgentOutput(
                         type="run_item_stream_event",
