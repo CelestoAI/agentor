@@ -858,3 +858,101 @@ def test_agentor_accepts_an_explicit_tracer():
     tracer = setup_celesto_tracing(endpoint="http://example/ingest", token="t")
     agent = Agentor(name="T", model="gpt-4o-mini", api_key="test", tracer=tracer)
     assert agent._loop.tracer is tracer
+
+
+# ============================================ whole-line review
+
+
+def test_version_is_a_stable_release():
+    """pip skips prereleases by default, so 0.1.0.devN would strand upgraders."""
+    import agentor
+
+    assert "dev" not in agentor.__version__
+    assert "rc" not in agentor.__version__
+
+
+def test_the_previous_mcp_import_still_works():
+    """0.0.22 code must not fail at import before it can read a migration note."""
+    import warnings
+
+    from agentor.mcp import MCPServer, MCPServerStreamableHttp
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        server = MCPServerStreamableHttp(
+            name="x",
+            params={"url": "http://e/mcp", "headers": {"A": "b"}, "timeout": 10},
+            cache_tools_list=True,
+            max_retry_attempts=3,
+        )
+
+    assert isinstance(server, MCPServer)
+    assert server.url == "http://e/mcp"
+    assert server.headers == {"A": "b"}
+    assert any(w.category is DeprecationWarning for w in caught)
+
+
+def test_the_old_mcp_shim_rejects_a_missing_url():
+    from agentor.mcp import MCPServerStreamableHttp
+
+    with pytest.raises(ValueError, match="requires params"):
+        MCPServerStreamableHttp(name="x", params={})
+
+
+@pytest.mark.asyncio
+async def test_run_result_carries_the_conversation():
+    """RunResult.messages is documented as resumable context; it must contain it."""
+    model = FakeModel(calls(("weather", '{"city": "Oslo"}')), text("sunny"))
+    result = await AgentLoop(model=model, tools=[weather], instructions="sys").arun(
+        "weather?"
+    )
+
+    roles = [m["role"] for m in result.messages]
+    assert roles == ["system", "user", "assistant", "tool", "assistant"]
+    assert result.messages[-1]["content"] == "sunny"
+
+
+@pytest.mark.asyncio
+async def test_resume_does_not_duplicate_the_system_prompt():
+    """replay already returns the system message; prepending sends it twice."""
+    store = MemoryStore()
+    first = await AgentLoop(
+        model=FakeModel(calls(("weather", '{"city": "X"}'))),
+        tools=[weather],
+        store=store,
+        max_turns=1,
+        instructions="SYSTEM PROMPT",
+    ).arun("go")
+
+    model = FakeModel(text("done"))
+    await AgentLoop(
+        model=model, tools=[weather], store=store, instructions="SYSTEM PROMPT"
+    ).aresume(first.run_id)
+
+    roles = [m["role"] for m in model.calls[0]["messages"]]
+    assert roles.count("system") == 1, f"duplicated system prompt: {roles}"
+
+
+@pytest.mark.asyncio
+async def test_a_supplied_system_message_is_not_duplicated():
+    model = FakeModel(text("ok"))
+    await AgentLoop(model=model, instructions="AGENT").arun(
+        [{"role": "system", "content": "CALLER"}, {"role": "user", "content": "hi"}]
+    )
+
+    messages = model.calls[0]["messages"]
+    assert [m["role"] for m in messages] == ["system", "user"]
+    assert messages[0]["content"] == "CALLER", "the caller's system message wins"
+
+
+@pytest.mark.asyncio
+async def test_arun_respects_the_constructor_turn_budget():
+    """run() honoured it while arun() silently overrode it with its default."""
+    from agentor import Agentor
+
+    model = FakeModel(*[calls(("weather", '{"city": "X"}')) for _ in range(10)])
+    agent = Agentor(name="T", model=model, tools=[weather], api_key="test", max_turns=3)
+    result = await agent.arun("go")
+
+    assert result.status == "max_turns"
+    assert len(model.calls) == 3

@@ -168,3 +168,37 @@ class MCPServer:
 
     async def __aexit__(self, *exc_info) -> None:
         await self.close()
+
+
+def MCPServerStreamableHttp(
+    name: Optional[str] = None,
+    params: Optional[Dict[str, Any]] = None,
+    **_ignored: Any,
+) -> MCPServer:
+    """Compatibility shim for the constructor agentor exported before v0.1.0.
+
+    0.0.x code passes `params={"url": ..., "headers": ..., "timeout": ...}` and
+    options such as `cache_tools_list` that the native client does not need.
+    Failing on import would break those callers before they could read a
+    migration message, so the old call is translated instead.
+    """
+    import warnings
+
+    warnings.warn(
+        "MCPServerStreamableHttp is deprecated; use "
+        "agentor.mcp.MCPServer(url=..., headers=..., timeout=...) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    params = params or {}
+    url = params.get("url")
+    if not url:
+        raise ValueError("MCPServerStreamableHttp requires params={'url': ...}.")
+
+    return MCPServer(
+        url=url,
+        headers=params.get("headers"),
+        timeout=float(params.get("timeout") or 30.0),
+        name=name or url,
+    )

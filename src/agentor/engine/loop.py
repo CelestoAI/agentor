@@ -135,13 +135,20 @@ class AgentLoop:
     # ------------------------------------------------------------ messages
 
     def _initial_messages(self, input: MessageInput) -> List[Dict[str, Any]]:
-        messages: List[Dict[str, Any]] = []
-        if self.instructions:
-            messages.append({"role": "system", "content": self.instructions})
         if isinstance(input, str):
+            messages: List[Dict[str, Any]] = []
+            if self.instructions:
+                messages.append({"role": "system", "content": self.instructions})
             messages.append({"role": "user", "content": input})
-        else:
-            messages.extend(input)
+            return messages
+
+        messages = list(input)
+        # A replayed run, or a caller supplying their own history, already
+        # carries its system message. Prepending another sends the instructions
+        # twice, which changes behaviour and some providers reject outright.
+        has_system = any(m.get("role") == "system" for m in messages)
+        if self.instructions and not has_system:
+            messages.insert(0, {"role": "system", "content": self.instructions})
         return messages
 
     @staticmethod
@@ -503,6 +510,12 @@ class AgentLoop:
                 result.final_output = event.text
                 result.usage = event.usage or Usage()
                 result.error = event.error
+
+        # documented as "feed this back in to continue the conversation", so it
+        # has to actually contain the conversation
+        from agentor.engine.store import replay_messages
+
+        result.messages = replay_messages(result.events)
 
         # Events stay plain text so the log remains JSON-serialisable; only the
         # returned result carries the parsed object.

@@ -379,7 +379,7 @@ Native replacements for everything openai-agents used to supply:
 | `agents.function_tool` | `agentor.engine.tools.function_tool` |
 | `agents.ModelSettings` | `agentor.engine.settings.ModelSettings` (+ `extra` passthrough) |
 | `agents.FunctionTool` | `agentor.engine.tools.Tool` |
-| `agents.mcp.MCPServerStreamableHttp` | `agentor.mcp.MCPServer` |
+| `agents.mcp.MCPServerStreamableHttp` | `agentor.mcp.MCPServer` (old name still importable, deprecated) |
 | `LitellmModel` | `agentor.engine.models.LiteLLMModel` (old name still exported) |
 | openai-agents tracing | `agentor.engine.tracing`, via `setup_celesto_tracing` |
 
