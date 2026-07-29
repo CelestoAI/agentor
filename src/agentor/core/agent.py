@@ -66,19 +66,49 @@ def _litellm_model_cls() -> type["LitellmModel"]:
     return LitellmModel
 
 
+def _adapt_mcp_server(server: MCPServerStreamableHttp):
+    """Wrap an openai-agents MCP server as a native engine MCPServer.
+
+    Only the connection parameters are reused; the native client speaks to the
+    server through the official `mcp` package.
+    """
+    from agentor.engine.mcp import MCPServer
+
+    params = getattr(server, "params", None) or {}
+    url = (
+        params.get("url") if isinstance(params, dict) else getattr(params, "url", None)
+    )
+    if not url:
+        raise ValueError(f"MCP server {server!r} has no url to connect to.")
+
+    headers = params.get("headers") if isinstance(params, dict) else None
+    timeout = (params.get("timeout") if isinstance(params, dict) else None) or 30.0
+    return MCPServer(
+        url=url,
+        headers=headers,
+        timeout=float(timeout),
+        name=getattr(server, "name", None) or url,
+    )
+
+
 def _retryable_errors() -> tuple[type[BaseException], ...]:
     """Error types worth retrying on a fallback model.
 
-    litellm's errors are only included when litellm is already loaded. That is
-    sufficient: the only way an agent can raise them is via LitellmModel, which
-    imports litellm itself. Probing `sys.modules` avoids forcing the import on
-    the OpenAI-only path.
+    litellm's errors are only included when litellm is already loaded, which
+    avoids forcing a ~1s import on the OpenAI-only path. Call this when an
+    error is in hand, never up front: litellm is imported lazily on its first
+    request, so a tuple built before that call would omit its errors and the
+    very first rate limit would skip the fallbacks entirely.
     """
     errors: list[type[BaseException]] = [openai.RateLimitError, openai.APIError]
     litellm = sys.modules.get("litellm")
     if litellm is not None:
         errors.extend([litellm.RateLimitError, litellm.APIError])
     return tuple(errors)
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    return isinstance(exc, _retryable_errors())
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -228,6 +258,7 @@ class Agentor(AgentorBase):
                 max_turns=max_turns,
                 enable_tracing=enable_tracing,
                 store=store,
+                output_type=output_type,
             )
             return
 
@@ -284,6 +315,7 @@ class Agentor(AgentorBase):
         max_turns: int,
         enable_tracing: bool,
         store: Any = None,
+        output_type: Any = None,
     ) -> None:
         """Set up the native engine (see agentor.engine)."""
         from agentor.engine import AgentLoop
@@ -293,20 +325,22 @@ class Agentor(AgentorBase):
         self.instructions = instructions
         self.api_key = api_key
         self.agent = None
-        self.mcp_servers = []
         self.enable_tracing = enable_tracing
         tracer = self._native_tracer(enable_tracing)
 
+        # openai-agents MCP servers are accepted and adapted, so the same
+        # Agentor(...) call works on either engine.
+        plain_tools, mcp_servers = [], []
         for tool in tools or []:
             if isinstance(tool, MCPServerStreamableHttp):
-                raise NotImplementedError(
-                    "MCP servers are not supported by engine='native' yet. "
-                    "Use engine='agents' for MCP-backed tools."
-                )
+                mcp_servers.append(_adapt_mcp_server(tool))
+            else:
+                plain_tools.append(tool)
 
         # Fail loudly rather than silently dropping a tool the caller passed.
-        self._tools = resolve_tools(tools)
+        self._tools = resolve_tools(plain_tools)
         self.tools = self._tools
+        self.mcp_servers = mcp_servers
 
         params: Dict[str, Any] = {}
         for field in ("temperature", "top_p", "max_tokens"):
@@ -325,6 +359,8 @@ class Agentor(AgentorBase):
             api_key=api_key,
             tracer=tracer,
             store=store,
+            mcp_servers=mcp_servers,
+            output_type=output_type,
             **params,
         )
 
@@ -523,7 +559,7 @@ class Agentor(AgentorBase):
         if isinstance(input, list):
             if isinstance(input[0], dict):
                 if self.engine == "native":
-                    return await self._loop.arun(input)
+                    return await self._loop.arun(input, max_turns=max_turns)
                 return await Runner.run(self.agent, input, context=CelestoConfig())
 
             futures = []
@@ -559,7 +595,9 @@ class Agentor(AgentorBase):
         Run a task with optional fallback to alternative models on rate limit errors.
         """
         if self.engine == "native":
-            return await self._run_native_with_fallback(task, fallback_models)
+            return await self._run_native_with_fallback(
+                task, fallback_models, max_turns
+            )
 
         retryable = _retryable_errors()
         try:
@@ -608,18 +646,20 @@ class Agentor(AgentorBase):
             raise
 
     async def _run_native_with_fallback(
-        self, task: str, fallback_models: Optional[List[str]] = None
+        self,
+        task: str,
+        fallback_models: Optional[List[str]] = None,
+        max_turns: Optional[int] = None,
     ):
         """Native-engine equivalent of _run_with_fallback.
 
         Swapping the model is a copy of the loop rather than a rebuilt agent,
         because the model is not baked into the agent here.
         """
-        retryable = _retryable_errors()
         try:
-            return await self._loop.arun(task)
-        except retryable as e:
-            if not fallback_models:
+            return await self._loop.arun(task, max_turns=max_turns)
+        except Exception as e:
+            if not _is_retryable(e) or not fallback_models:
                 raise
             logger.warning(
                 f"Primary model failed with {type(e).__name__}: {e}. "
@@ -629,8 +669,10 @@ class Agentor(AgentorBase):
                 try:
                     return await self._loop.with_model(
                         fallback_model, api_key=self.api_key
-                    ).arun(task)
-                except retryable as fallback_error:
+                    ).arun(task, max_turns=max_turns)
+                except Exception as fallback_error:
+                    if not _is_retryable(fallback_error):
+                        raise
                     logger.warning(
                         f"Fallback model '{fallback_model}' also failed: {fallback_error}"
                     )
@@ -708,11 +750,16 @@ class Agentor(AgentorBase):
         """
 
         async def stream(input: str) -> AsyncIterator[AgentOutput]:
-            async for event in self._loop.astream(input):
+            # a streamed run is as resumable as a non-streamed one, but only if
+            # it is given a run id to persist under
+            run_id = None
+            if self._loop.store is not None:
+                from agentor.engine.store import new_run_id
+
+                run_id = new_run_id()
+            async for event in self._loop.astream(input, run_id=run_id):
                 if event.type == "message":
-                    yield AgentOutput(
-                        type="run_item_stream_event", message=event.text
-                    )
+                    yield AgentOutput(type="run_item_stream_event", message=event.text)
                 elif event.type == "tool_call":
                     yield AgentOutput(
                         type="run_item_stream_event",

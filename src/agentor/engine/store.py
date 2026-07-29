@@ -99,20 +99,38 @@ def replay_messages(events: List[Event]) -> List[Dict[str, Any]]:
     recent one plus its own reply and any tool results that followed is the
     full conversation. Nothing needs to be inferred.
     """
+    start: Optional[Event] = None
     last_generation: Optional[Event] = None
     trailing: List[Event] = []
 
     for event in events:
-        if event.type == "generation":
+        if event.type == "run_start" and start is None:
+            start = event
+        elif event.type == "generation":
             last_generation = event
             trailing = []
         elif event.type == "tool_result" and last_generation is not None:
             trailing.append(event)
 
     if last_generation is None:
-        return []
+        # Crashed before the first response; the input recorded at run_start is
+        # all that is needed to start over.
+        return [dict(m) for m in (start.messages or [])] if start else []
 
     messages: List[Dict[str, Any]] = [dict(m) for m in (last_generation.messages or [])]
+
+    requested = {
+        call.get("id") for call in (last_generation.calls or []) if call.get("id")
+    }
+    answered = {event.call_id for event in trailing if event.call_id}
+
+    if requested - answered:
+        # The run stopped between requesting tools and recording every result.
+        # Replaying the assistant turn would send tool_calls with no matching
+        # tool messages, which providers reject outright, and the unfinished
+        # tools would never run. Rewind to the request that produced it and let
+        # the model decide again.
+        return messages
 
     assistant: Dict[str, Any] = {"role": "assistant", "content": last_generation.text}
     if last_generation.calls:
@@ -142,9 +160,12 @@ def final_event(events: List[Event]) -> Optional[Event]:
 
 
 def total_usage(events: List[Event]) -> Usage:
-    end = final_event(events)
-    if end is not None and end.usage is not None:
-        return end.usage
+    """Sum every generation in the log.
+
+    Deliberately not the terminal event's usage: a resumed run has one
+    `run_end` per segment, and the last one counts only the continuation, so
+    reading it would silently drop everything spent before the resume.
+    """
     total = Usage()
     for event in events:
         if event.type == "generation" and event.usage:

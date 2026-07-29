@@ -3,7 +3,6 @@
 import json
 
 import pytest
-from tests.test_engine import FakeModel, calls, text, weather
 
 from agentor.engine import AgentLoop
 from agentor.engine.events import Event, Usage
@@ -14,6 +13,7 @@ from agentor.engine.store import (
     replay_messages,
     total_usage,
 )
+from tests.test_engine import FakeModel, calls, text, weather
 
 # ------------------------------------------------------------ serialization
 

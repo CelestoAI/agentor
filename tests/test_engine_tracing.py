@@ -1,10 +1,10 @@
 """Tests for native-engine tracing (agentor.engine.tracing)."""
 
 import pytest
-from tests.test_engine import FakeModel, calls, text, weather
 
 from agentor.engine import AgentLoop
 from agentor.engine.tracing import CelestoTracer, TraceCollector
+from tests.test_engine import FakeModel, calls, text, weather
 
 
 class RecordingTracer:

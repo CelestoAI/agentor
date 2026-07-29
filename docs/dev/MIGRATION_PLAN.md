@@ -296,11 +296,45 @@ knowing only the run id, reads it from disk and finishes the job.
 **Deferred:** HITL interrupt/approval. The store makes it straightforward, but nothing in the
 codebase needs it yet and the brief says not to ship features nobody uses.
 
-### Phase 5 — Drop openai-agents (1 day)
+### Phase 5a — Close the native engine's gaps ✅ *shipped*
 
-Swap `agents.mcp.MCPServerStreamableHttp` for the official `mcp` client — **verified working**
-via `mcp.client.streamable_http.streamablehttp_client` + `ClientSession`, already a direct dep.
-Flip the default engine, remove the dependency, delete `output_text_formatter.py`'s SDK half.
+Split out from Phase 5. Flipping the default engine changes behaviour for every user, so it
+should not ride along with the work that makes the flip possible — and not on top of an
+unreviewed stack.
+
+**MCP** (`agentor/engine/mcp.py`, 150 LOC) on the official `mcp` package. Remote tools become
+ordinary `Tool` objects, so the loop, the failure budget and tracing all apply to them unchanged.
+Connections are held for the duration of a run and closed after — including when the run raises.
+An `Agentor(tools=[MCPServerStreamableHttp(...)])` call is adapted automatically, so the same
+code works on either engine.
+
+Verified against a real server (agentor's own LiteMCP, 9/9): discovery, remote calls, local and
+remote tools in one run, cleanup, and MCP calls appearing as spans in traces.
+
+*An MCP session is bound to the event loop that opened it.* Closing it from another loop produced
+anyio's `Attempted to exit cancel scope in a different task`, which names the mechanism rather
+than the mistake — `close()` now raises a message that says what to do instead. Worth noting the
+error came from **my own verification script**, not the engine; the production path was clean.
+
+**Structured output.** `output_type=SomeModel` sends a strict `json_schema` response format and
+parses the result. Parsing happens at the boundary so events stay plain text and the persisted
+log stays JSON-serialisable — durability and structured output do not interfere.
+
+`response_format` is only passed when set, so a `Model` adapter written before this still works.
+
+233 tests passing.
+
+### Phase 5b — Flip the default and remove openai-agents (not started)
+
+Remaining before the flip:
+
+- `WebSearchTool` and other OpenAI hosted tools need a Responses API adapter, or to be documented
+  as `engine="agents"` only.
+- **Verify a non-OpenAI provider end to end.** `base_url` routing is verified only against
+  OpenAI's own endpoint; no third-party keys were available. This is the single biggest untested
+  assumption in the plan.
+- Then: flip the default, drop the dependency, delete the openai-agents half of
+  `output_text_formatter.py` and `tracer.py`.
 
 **Total: ~2.5 weeks.**
 

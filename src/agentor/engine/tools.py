@@ -6,6 +6,7 @@ a `BaseTool` capability, an openai-agents `FunctionTool`, or a registry name.
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import json
 import re
@@ -135,6 +136,8 @@ class Tool:
     invoke: Callable[..., Any]
     #: parameter that receives the run context instead of model-supplied args
     context_param: Optional[str] = None
+    #: adapter builds its own context wrapper and wants the raw run context
+    wants_context: bool = False
 
     def to_openai(self) -> Dict[str, Any]:
         return {
@@ -150,10 +153,20 @@ class Tool:
         kwargs = dict(args)
         if self.context_param:
             kwargs[self.context_param] = _ContextWrapper(context)
+        if self.wants_context:
+            # adapters that build their own wrapper (FunctionTool) need the run
+            # context too, or tools reading it silently receive None
+            kwargs["__context__"] = context
 
-        result = self.invoke(**kwargs)
-        if inspect.isawaitable(result):
-            result = await result
+        if inspect.iscoroutinefunction(self.invoke):
+            result = await self.invoke(**kwargs)
+        else:
+            # Most BaseTool capabilities are sync and do blocking IO. Calling
+            # them inline would serialize the parallel tool calls the loop
+            # gathers, and stall every other coroutine on the loop with them.
+            result = await asyncio.to_thread(lambda: self.invoke(**kwargs))
+            if inspect.isawaitable(result):
+                result = await result
         return stringify(result)
 
     @classmethod
@@ -213,14 +226,28 @@ def _from_function_tool(ft: Any) -> Tool:
     """
     invoker = ft.on_invoke_tool
 
-    async def invoke(**kwargs: Any) -> Any:
-        return await invoker(_ContextWrapper(None), json.dumps(kwargs))
+    async def invoke(__context__: Any = None, **kwargs: Any) -> Any:
+        # openai-agents reads more than `.context` off this object (tool_name,
+        # run_config, usage), so build its real ToolContext rather than a
+        # duck-type. The import is local to this adapter: it exists only for
+        # openai-agents interop and goes away with it.
+        from agents.tool_context import ToolContext
+
+        arguments = json.dumps(kwargs)
+        context = ToolContext(
+            context=__context__,
+            tool_name=ft.name,
+            tool_call_id=f"call_{ft.name}",
+            tool_arguments=arguments,
+        )
+        return await invoker(context, arguments)
 
     return Tool(
         name=ft.name,
         description=ft.description or "",
         parameters=_strip_titles(dict(ft.params_json_schema or {})),
         invoke=invoke,
+        wants_context=True,
     )
 
 
@@ -245,7 +272,10 @@ def resolve_tools(tools: Optional[List[Any]]) -> List[Tool]:
             for attr_name, method in item.list_capabilities():
                 resolved.append(Tool.from_function(method, name=attr_name))
 
-        elif callable(item) and hasattr(item, "on_invoke_tool"):
+        # checked before `callable`: an openai-agents FunctionTool is a
+        # dataclass, so a `callable(item) and ...` guard never matches it and
+        # @function_tool tools would be rejected outright
+        elif hasattr(item, "on_invoke_tool"):
             resolved.append(_from_function_tool(item))
 
         elif callable(item):
