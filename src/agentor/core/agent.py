@@ -126,9 +126,12 @@ class Agentor:
         skills: Optional[List[str]] = None,
         enable_tracing: bool = False,
         max_turns: int = 20,
+        max_tool_failures: int = 2,
         store: Any = None,
         base_url: Optional[str] = None,
         tracer: Any = None,
+        trace_group_id: Optional[str] = None,
+        trace_metadata: Optional[Dict[str, Any]] = None,
         engine: Optional[Literal["native"]] = None,
     ):
         if engine not in (None, "native"):
@@ -149,11 +152,14 @@ class Agentor:
             api_key=api_key,
             model_settings=model_settings,
             max_turns=max_turns,
+            max_tool_failures=max_tool_failures,
             enable_tracing=enable_tracing,
             store=store,
             output_type=output_type,
             base_url=base_url,
             tracer=tracer,
+            trace_group_id=trace_group_id,
+            trace_metadata=trace_metadata,
         )
 
     def _init_native(
@@ -165,11 +171,14 @@ class Agentor:
         api_key: Optional[str],
         model_settings: Optional[ModelSettings],
         max_turns: int,
+        max_tool_failures: int,
         enable_tracing: bool,
         store: Any = None,
         output_type: Any = None,
         base_url: Optional[str] = None,
         tracer: Any = None,
+        trace_group_id: Optional[str] = None,
+        trace_metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Set up the native engine (see agentor.engine)."""
 
@@ -201,9 +210,12 @@ class Agentor:
             tools=self._tools,
             context=CelestoConfig(),
             max_turns=max_turns,
+            max_tool_failures=max_tool_failures,
             api_key=api_key,
             base_url=base_url,
             tracer=tracer,
+            trace_group_id=trace_group_id,
+            trace_metadata=trace_metadata,
             store=store,
             mcp_servers=mcp_servers,
             output_type=output_type,
