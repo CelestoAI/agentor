@@ -210,24 +210,29 @@ class Agentor:
             **params,
         )
 
-    def _resolve_tracing(self, tracing: Optional[bool]) -> Optional[bool]:
+    def _resolve_tracing(self, tracing: Any) -> Any:
         """Turn a per-run tracing flag into something the loop can act on.
 
-        `tracing=True` on an agent with no tracer is a reasonable request,
-        not an error: build one from CELESTO_API_KEY so a single run can be
+        `tracing=True` on an agent with no tracer is a reasonable request, not
+        an error: one is built from CELESTO_API_KEY so a single run can be
         traced without turning tracing on for the whole agent.
+
+        The tracer is returned for the loop to use for that run, never stored
+        on the agent. Storing it would mean opting one run in quietly enrolled
+        every later run too, which is the exact failure this API exists to
+        prevent.
         """
-        if tracing and self._loop.tracer is None:
-            if not celesto_config.api_key:
-                raise ValueError(
-                    "tracing=True requires a Celesto API key. Set "
-                    "CELESTO_API_KEY, or pass tracer= when building the agent."
-                )
-            self._loop.tracer = setup_celesto_tracing(
-                endpoint=f"{celesto_config.base_url}/traces/ingest",
-                token=celesto_config.api_key.get_secret_value(),
+        if tracing is not True or self._loop.tracer is not None:
+            return tracing
+        if not celesto_config.api_key:
+            raise ValueError(
+                "tracing=True requires a Celesto API key. Set CELESTO_API_KEY, "
+                "or pass tracer= when building the agent."
             )
-        return tracing
+        return setup_celesto_tracing(
+            endpoint=f"{celesto_config.base_url}/traces/ingest",
+            token=celesto_config.api_key.get_secret_value(),
+        )
 
     def _native_tracer(self, enable_tracing: bool):
         """Build a tracer, but only when tracing was asked for.
@@ -376,7 +381,7 @@ class Agentor:
             model_settings=resolved_model_settings,
         )
 
-    def run(self, input: str, tracing: Optional[bool] = None) -> Any:
+    def run(self, input: str, tracing: Any = None) -> Any:
         """Run the agent.
 
         Args:
@@ -393,7 +398,7 @@ class Agentor:
         limit_concurrency: int = 10,
         max_turns: Optional[int] = None,
         fallback_models: Optional[List[str]] = None,
-        tracing: Optional[bool] = None,
+        tracing: Any = None,
     ) -> List[str] | str:
         """
         Run the agent with an input prompt or a batch of prompts.

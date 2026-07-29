@@ -138,8 +138,13 @@ async def test_agentor_stream_chat_can_opt_out():
     assert tracer.exported == []
 
 
-def test_tracing_true_builds_a_tracer_from_the_api_key(monkeypatch):
-    """Opting one run in should work without tracing the whole agent."""
+def test_tracing_true_builds_a_tracer_without_storing_it(monkeypatch):
+    """Opting one run in must not enrol every run after it.
+
+    Storing the on-demand tracer on the agent would mean a single
+    `tracing=True` call quietly turned tracing on for good - the exact leak
+    this API exists to prevent.
+    """
     from agentor import config as config_module
     from agentor.engine.tracing import CelestoTracer
 
@@ -152,8 +157,52 @@ def test_tracing_true_builds_a_tracer_from_the_api_key(monkeypatch):
     agent = native(FakeModel(text("hi")))
     assert agent._loop.tracer is None, "tracing is opt-in"
 
-    agent._resolve_tracing(True)
-    assert isinstance(agent._loop.tracer, CelestoTracer)
+    resolved = agent._resolve_tracing(True)
+    assert isinstance(resolved, CelestoTracer), "the run gets a tracer"
+    assert agent._loop.tracer is None, "but the agent does not keep it"
+
+
+def test_an_opted_in_run_does_not_trace_later_runs(monkeypatch):
+    """End-to-end version of the leak: run one traced, the next must not be."""
+    from agentor import config as config_module
+    from agentor.core import agent as agent_module
+
+    exported = []
+
+    class Cap:
+        def collector(self, workflow_name, **kwargs):
+            return TraceCollector(workflow_name, **kwargs)
+
+        def export(self, collector):
+            exported.append(1)
+
+    class _Secret:
+        def get_secret_value(self):
+            return "cel_test"
+
+    monkeypatch.setattr(config_module.celesto_config, "api_key", _Secret())
+    monkeypatch.setattr(agent_module, "setup_celesto_tracing", lambda **kwargs: Cap())
+
+    agent = native(FakeModel(text("1"), text("2"), text("3")))
+
+    agent.run("trace this one", tracing=True)
+    assert exported == [1]
+
+    agent.run("this one should not be traced")
+    agent.run("nor this one")
+    assert exported == [1], "a one-off opt-in leaked into later runs"
+
+
+@pytest.mark.asyncio
+async def test_a_tracer_object_can_be_passed_for_a_single_run():
+    tracer = RecordingTracer()
+    loop = AgentLoop(model=FakeModel(text("a"), text("b")))
+
+    await loop.arun("traced", tracing=tracer)
+    await loop.arun("not traced")
+
+    assert len(tracer.exported) == 1
+    assert loop.tracer is None, "a per-run tracer must not attach to the loop"
 
 
 def test_tracing_true_without_any_key_explains_itself(monkeypatch):
