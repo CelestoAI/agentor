@@ -554,7 +554,7 @@ class Agentor(AgentorBase):
         if isinstance(input, list):
             if isinstance(input[0], dict):
                 if self.engine == "native":
-                    return await self._loop.arun(input)
+                    return await self._loop.arun(input, max_turns=max_turns)
                 return await Runner.run(self.agent, input, context=CelestoConfig())
 
             futures = []

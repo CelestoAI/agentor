@@ -42,6 +42,17 @@ def _strictify(node: Any) -> Any:
         node["type"] = node.get("type", "object")
         node["additionalProperties"] = False
         node["required"] = list(node["properties"])
+    elif node.get("type") == "object" and isinstance(
+        node.get("additionalProperties"), dict
+    ):
+        # An open map (dict[str, X]) has no fixed properties, and strict mode
+        # requires every object to enumerate them. No normalisation makes this
+        # legal, so fail here rather than on a provider 400 mid-run.
+        raise TypeError(
+            "output_type contains a dict/mapping field, which OpenAI strict "
+            "structured output cannot express. Model the keys explicitly, or "
+            "use a list of key/value objects."
+        )
     return node
 
 
@@ -295,9 +306,24 @@ class AgentLoop:
                     # is worse; the run is still returned to the caller.
                     logger.error("Failed to persist event for run %s: %s", run_id, e)
 
+        # Emitted before MCP setup: a failure there would otherwise leave a log
+        # with no run_start, and so no input to resume from.
+        messages = self._initial_messages(input)
+        start = Event(
+            type="run_start",
+            agent=self.name,
+            model=getattr(self.model, "model", None),
+            started_at=run_started,
+            messages=[dict(m) for m in messages],
+        )
+        record(start)
+        yield start
+
         try:
             async with self._connected_mcp_tools() as tools:
-                async for event in self._astream(input, stream_text, tools, max_turns):
+                async for event in self._astream(
+                    messages, stream_text, tools, max_turns
+                ):
                     record(event)
                     yield event
         except Exception as exc:
@@ -323,30 +349,19 @@ class AgentLoop:
 
     async def _astream(
         self,
-        input: MessageInput,
+        messages: List[Dict[str, Any]],
         stream_text: bool = False,
         tools: Optional[Dict[str, Tool]] = None,
         max_turns: Optional[int] = None,
     ) -> AsyncIterator[Event]:
         tools = self.tools if tools is None else tools
         turn_budget = self.max_turns if max_turns is None else max_turns
-        messages = self._initial_messages(input)
         failures: Dict[str, int] = {}
         disabled: set[str] = set()
         total = Usage()
 
         model_name = getattr(self.model, "model", None)
         run_started = time.time()
-
-        yield Event(
-            type="run_start",
-            agent=self.name,
-            model=model_name,
-            started_at=run_started,
-            # the input is recorded here so a crash before the first model
-            # response still leaves a resumable run
-            messages=[dict(m) for m in messages],
-        )
 
         for turn in range(1, turn_budget + 1):
             schemas = self._schemas(tools, disabled)
@@ -389,6 +404,10 @@ class AgentLoop:
 
             if not response.tool_calls:
                 text = response.content or ""
+                if self.output_type is not None:
+                    # validate before declaring success, or the log and the
+                    # trace record a completed run the caller saw raise
+                    self._parse_output(text)
                 yield Event(type="message", text=text, turn=turn, usage=response.usage)
                 yield Event(
                     type="run_end",

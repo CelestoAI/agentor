@@ -228,9 +228,7 @@ async def test_mcp_transport_is_closed_when_discovery_fails(monkeypatch):
 
     @contextlib.asynccontextmanager
     async def fake_session(read, write):
-        session = type(
-            "S", (), {"initialize": lambda self: asyncio.sleep(0)}
-        )()
+        session = type("S", (), {"initialize": lambda self: asyncio.sleep(0)})()
         try:
             yield session
         finally:
@@ -420,3 +418,122 @@ async def test_function_tool_adapter_receives_the_run_context():
     await loop.arun("go")
 
     assert seen["context"] is sentinel
+
+
+# ============================================ second review round
+
+
+@pytest.mark.asyncio
+async def test_input_is_persisted_when_mcp_setup_fails():
+    """MCP failure happens before the loop starts; the input must survive it."""
+
+    class Unreachable(MCPServer):
+        async def connect(self):
+            raise ConnectionError("mcp server unreachable")
+
+        async def close(self):
+            pass
+
+    store = MemoryStore()
+    loop = AgentLoop(
+        model=FakeModel(text("never runs")),
+        store=store,
+        mcp_servers=[Unreachable("http://example/mcp")],
+    )
+
+    with pytest.raises(ConnectionError):
+        await loop.arun("do not lose this")
+
+    (run_id,) = store.list_runs()
+    events = store.load(run_id)
+    assert [e.type for e in events] == ["run_start", "run_end"]
+    assert replay_messages(events)[-1]["content"] == "do not lose this"
+
+
+@pytest.mark.asyncio
+async def test_run_is_resumable_after_an_mcp_setup_failure():
+    class Unreachable(MCPServer):
+        async def connect(self):
+            raise ConnectionError("down")
+
+        async def close(self):
+            pass
+
+    store = MemoryStore()
+    with pytest.raises(ConnectionError):
+        await AgentLoop(
+            model=FakeModel(),
+            store=store,
+            mcp_servers=[Unreachable("http://example/mcp")],
+        ).arun("question")
+
+    (run_id,) = store.list_runs()
+    recovered = await AgentLoop(model=FakeModel(text("ok")), store=store).aresume(
+        run_id
+    )
+    assert recovered.final_output == "ok"
+
+
+@pytest.mark.asyncio
+async def test_invalid_structured_output_is_recorded_as_a_failed_run():
+    """The caller saw an exception; the log must not claim success."""
+    store = MemoryStore()
+    tracer = RecordingTracer()
+    loop = AgentLoop(
+        model=FakeModel(text("this is not json")),
+        output_type=Optionals,
+        store=store,
+        tracer=tracer,
+    )
+
+    with pytest.raises(ValueError, match="did not match Optionals"):
+        await loop.arun("go")
+
+    (run_id,) = store.list_runs()
+    end = [e for e in store.load(run_id) if e.type == "run_end"]
+    assert [e.status for e in end] == ["failed"]
+
+    (items,) = tracer.exported
+    agent_span = next(i for i in items[1:] if i["span_data"]["type"] == "agent")
+    assert agent_span["span_data"]["status"] == "failed"
+
+
+def test_mapping_output_types_are_rejected_with_an_explanation():
+    """OpenAI strict mode cannot express an open map; fail before the request."""
+    from typing import Dict as TDict
+
+    class HasMap(BaseModel):
+        a: str
+        meta: TDict[str, str] = {}
+
+    with pytest.raises(TypeError, match="dict/mapping field"):
+        AgentLoop(model=FakeModel(text("x")), output_type=HasMap)
+
+
+def test_optional_defaults_are_left_alone():
+    """`default: null` is accepted by the API; stripping it would be churn."""
+    schema = _strictify(Optionals.model_json_schema())
+    assert schema["properties"]["b"]["default"] is None
+
+
+@pytest.mark.asyncio
+async def test_max_turns_is_honoured_for_message_list_input():
+    from agentor import Agentor
+
+    model = FakeModel(*[calls(("weather", '{"city": "X"}')) for _ in range(10)])
+    agent = Agentor(
+        name="T", model=model, tools=[weather], engine="native", api_key="test"
+    )
+    result = await agent.arun([{"role": "user", "content": "go"}], max_turns=2)
+
+    assert result.status == "max_turns"
+    assert len(model.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_connecting_twice_is_refused_rather_than_leaking():
+    server = MCPServer("http://example/mcp", name="dup")
+    server._stack = object()  # pretend a live connection
+
+    with pytest.raises(RuntimeError, match="already connected"):
+        await server.connect()

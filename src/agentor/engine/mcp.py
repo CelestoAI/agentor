@@ -64,6 +64,13 @@ class MCPServer:
         from mcp import ClientSession
         from mcp.client.streamable_http import streamablehttp_client
 
+        if self._stack is not None:
+            # Overwriting _stack would make the first transport unclosable.
+            raise RuntimeError(
+                f"MCP server {self.name!r} is already connected. Call close() "
+                "first, or use a separate MCPServer per connection."
+            )
+
         self._loop = asyncio.get_running_loop()
         stack = AsyncExitStack()
         try:
