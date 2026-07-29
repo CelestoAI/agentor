@@ -198,3 +198,30 @@ class _Secret:
 
     def get_secret_value(self):
         return self.value
+
+
+def test_setup_celesto_tracing_builds_a_tracer():
+    """The public entry point survived the exporter rewrite."""
+    from agentor.tracer import setup_celesto_tracing
+
+    tracer = setup_celesto_tracing(
+        endpoint="https://api.celesto.ai/v1/traces/ingest", token="cel_test"
+    )
+    assert isinstance(tracer, CelestoTracer)
+    assert tracer.endpoint.endswith("/traces/ingest")
+    assert tracer.token == "cel_test"
+
+
+@pytest.mark.asyncio
+async def test_a_tracer_from_setup_is_usable_by_a_loop(monkeypatch):
+    import httpx
+
+    from agentor.tracer import setup_celesto_tracing
+
+    posted = []
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: posted.append(k.get("json")))
+
+    tracer = setup_celesto_tracing(endpoint="http://example/ingest", token="t")
+    await AgentLoop(model=FakeModel(text("hi")), tracer=tracer).arun("go")
+
+    assert posted and posted[0]["data"][0]["object"] == "trace"

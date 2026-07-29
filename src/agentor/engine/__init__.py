@@ -14,7 +14,15 @@ from agentor.engine.models import (
     ToolCall,
     resolve_model,
 )
-from agentor.engine.tools import Tool, build_schema, parse_docstring, resolve_tools
+from agentor.engine.settings import ModelSettings
+from agentor.engine.tools import (
+    RunContext,
+    Tool,
+    build_schema,
+    function_tool,
+    parse_docstring,
+    resolve_tools,
+)
 
 __all__ = [
     "AgentLoop",
@@ -22,12 +30,15 @@ __all__ = [
     "Event",
     "LiteLLMModel",
     "Model",
+    "ModelSettings",
     "ModelResponse",
+    "RunContext",
     "RunResult",
     "Tool",
     "ToolCall",
     "Usage",
     "build_schema",
+    "function_tool",
     "parse_docstring",
     "resolve_model",
     "resolve_tools",

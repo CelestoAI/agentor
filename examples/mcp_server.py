@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+
 from agentor.mcp import MCPAPIRouter
 
 mcp_router = MCPAPIRouter()
@@ -10,17 +11,17 @@ mcp_router = MCPAPIRouter()
 )
 def get_weather(location: str) -> str:
     """Get current weather information
-    
+
     Note: You can access request headers and cookies by adding a Context parameter:
-    
+
     from agentor.mcp import Context, get_context
     from fastapi import Depends
-    
+
     def get_weather(location: str, ctx: Context = Depends(get_context)) -> str:
         user_agent = ctx.headers.get("user-agent")
         session_id = ctx.cookies.get("session_id")
         ...
-    
+
     See examples/mcp_context_example.py for full example.
     """
     return f"The weather in {location} is sunny with a temperature of 72°F!"

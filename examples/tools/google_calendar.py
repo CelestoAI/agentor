@@ -1,9 +1,8 @@
+import json
 import os
 import signal
-import socket
 import subprocess
 import time
-import json
 
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
@@ -108,13 +107,15 @@ def get_calendar_credentials():
     print("Browser opening... Please click 'Allow' to authenticate\n")
     # Kill any existing process on port 8000
     _kill_port_8000()
-    
+
     # Retry loop for port binding (in case OS hasn't fully released it)
     max_retries = 3
     for attempt in range(max_retries):
         try:
             # Request offline access to get refresh_token
-            creds = flow.run_local_server(port=8000, access_type="offline", prompt="consent")
+            creds = flow.run_local_server(
+                port=8000, access_type="offline", prompt="consent"
+            )
             break
         except OSError as e:
             if attempt < max_retries - 1:
@@ -128,15 +129,17 @@ def get_calendar_credentials():
     # Save credentials for future use
     print("\nVerifying credentials...")
     creds_data = json.loads(creds.to_json())
-    
+
     if "refresh_token" not in creds_data or not creds_data.get("refresh_token"):
         print("⚠️  Warning: No refresh token received. This might be because:")
         print("  - You previously granted access to this app")
         print("  - Google didn't include a refresh token in this flow")
         print("\nTrying to get refresh token by requesting re-consent...")
-        print("Please delete credentials.json and run again to complete OAuth with offline access.\n")
+        print(
+            "Please delete credentials.json and run again to complete OAuth with offline access.\n"
+        )
         # Still save what we have
-    
+
     with open(CREDS_FILE, "w") as f:
         f.write(creds.to_json())
 

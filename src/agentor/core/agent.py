@@ -8,7 +8,6 @@ import sys
 import uuid
 from pathlib import Path
 from typing import (
-    TYPE_CHECKING,
     Any,
     AsyncGenerator,
     AsyncIterator,
@@ -24,71 +23,23 @@ import frontmatter
 import openai
 from a2a import types as a2a_types
 from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
-from agents import (
-    Agent,
-    AgentOutputSchemaBase,
-    FunctionTool,
-    ModelSettings,
-    Runner,
-    WebSearchTool,
-    function_tool,
-    set_default_openai_key,
-)
-from agents.mcp import MCPServerStreamableHttp
-from agents.models.default_models import get_default_model_settings
 from fastapi import FastAPI
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from agents.extensions.models.litellm_model import LitellmModel
-
 from agentor.a2a import A2AController, AgentSkill
 from agentor.config import celesto_config
-from agentor.output_text_formatter import AgentOutput, ToolAction, format_stream_events
+from agentor.engine import AgentLoop, function_tool
+from agentor.engine.mcp import MCPServer
+from agentor.engine.settings import ModelSettings
+from agentor.engine.tools import resolve_tools
+from agentor.output_text_formatter import AgentOutput, ToolAction
 from agentor.prompts import THINKING_PROMPT, render_prompt
 from agentor.skills import Skills
-from agentor.tools.base import BaseTool
 from agentor.tools.registry import CelestoConfig, ToolRegistry
 from agentor.tracer import setup_celesto_tracing
 
 logger = logging.getLogger(__name__)
-
-
-def _litellm_model_cls() -> type["LitellmModel"]:
-    """Import LitellmModel on demand.
-
-    litellm costs ~1s to import, so it stays out of `import agentor` and is
-    only paid for by users who select a provider-prefixed model.
-    """
-    from agents.extensions.models.litellm_model import LitellmModel
-
-    return LitellmModel
-
-
-def _adapt_mcp_server(server: MCPServerStreamableHttp):
-    """Wrap an openai-agents MCP server as a native engine MCPServer.
-
-    Only the connection parameters are reused; the native client speaks to the
-    server through the official `mcp` package.
-    """
-    from agentor.engine.mcp import MCPServer
-
-    params = getattr(server, "params", None) or {}
-    url = (
-        params.get("url") if isinstance(params, dict) else getattr(params, "url", None)
-    )
-    if not url:
-        raise ValueError(f"MCP server {server!r} has no url to connect to.")
-
-    headers = params.get("headers") if isinstance(params, dict) else None
-    timeout = (params.get("timeout") if isinstance(params, dict) else None) or 30.0
-    return MCPServer(
-        url=url,
-        headers=headers,
-        timeout=float(timeout),
-        name=getattr(server, "name", None) or url,
-    )
 
 
 def _retryable_errors() -> tuple[type[BaseException], ...]:
@@ -111,26 +62,13 @@ def _is_retryable(exc: BaseException) -> bool:
     return isinstance(exc, _retryable_errors())
 
 
-class ToolFunctionParameters(TypedDict, total=False):
-    type: str
-    properties: Dict[str, Any]
-    required: List[str]
-
-
-class ToolFunction(TypedDict, total=False):
-    name: str
-    description: Optional[str]
-    parameters: ToolFunctionParameters
-
-
-class Tool(TypedDict):
-    type: Literal["function"]
-    function: ToolFunction
-
-
 @function_tool(name_override="get_weather")
 def get_dummy_weather(city: str) -> str:
-    """Returns the dummy weather in the given city."""
+    """Returns the dummy weather in the given city.
+
+    Args:
+        city: The city to look up.
+    """
     return f"The dummy weather in {city} is sunny"
 
 
@@ -144,58 +82,7 @@ class AgentInputType(TypedDict):
     content: str
 
 
-class AgentorBase:
-    def __init__(
-        self,
-        name: str,
-        instructions: Optional[str],
-        model: Optional[str],
-        api_key: Optional[str],
-        enable_tracing: bool = False,
-    ):
-        self.agent = None
-        self.name = name
-        self.instructions = instructions
-        self.model = model
-
-        self.api_key = api_key
-        if isinstance(model, str) and "/" in model:
-            self.model = _litellm_model_cls()(model, api_key=api_key)
-
-        self.enable_tracing = enable_tracing
-        if self.enable_tracing:
-            if not celesto_config.api_key:
-                raise ValueError(
-                    (
-                        "Celesto API key is required to enable tracing.\n",
-                        "Find the API key in the dashboard: https://celesto.ai/dashboard \n",
-                        "and set it in the environment variable CELESTO_API_KEY.",
-                    )
-                )
-            setup_celesto_tracing(
-                endpoint=f"{celesto_config.base_url}/traces/ingest",
-                token=celesto_config.api_key.get_secret_value(),
-            )
-        elif (
-            celesto_config.api_key is not None
-            and not celesto_config.disable_auto_tracing
-        ):
-            try:
-                print(
-                    (
-                        "auto enabled LLM monitoring and tracing. View traces: https://celesto.ai/observe"
-                        "\nTo disable, set CELESTO_DISABLE_AUTO_TRACING=True."
-                    )
-                )
-                setup_celesto_tracing(
-                    endpoint=f"{celesto_config.base_url}/traces/ingest",
-                    token=celesto_config.api_key.get_secret_value(),
-                )
-            except Exception as e:
-                logger.warning(f"Failed to setup Celesto tracing: {e}")
-
-
-class Agentor(AgentorBase):
+class Agentor:
     """
     Build an Agent, connect tools, and serve as an API in just few lines of code.
 
@@ -230,96 +117,43 @@ class Agentor(AgentorBase):
         self,
         name: str,
         instructions: Optional[str] = None,
-        model: Optional[str | LitellmModel] = "gpt-5-nano",
-        tools: Optional[
-            List[
-                Union[
-                    FunctionTool,
-                    str,
-                    MCPServerStreamableHttp,
-                    BaseTool,
-                ]
-            ]
-        ] = None,
-        output_type: type[Any] | AgentOutputSchemaBase | None = None,
+        model: Any = "gpt-5-nano",
+        tools: Optional[List[Any]] = None,
+        output_type: Any = None,
         debug: bool = False,
         api_key: Optional[str] = None,
         model_settings: Optional[ModelSettings] = None,
         skills: Optional[List[str]] = None,
         enable_tracing: bool = False,
-        engine: Literal["agents", "native"] = "agents",
         max_turns: int = 10,
         store: Any = None,
         base_url: Optional[str] = None,
+        tracer: Any = None,
+        engine: Optional[Literal["native"]] = None,
     ):
+        if engine not in (None, "native"):
+            raise ValueError(
+                f"Unknown engine {engine!r}. The openai-agents engine was "
+                "removed in v0.1.0; the native engine is the only one and is "
+                "the default. Drop the engine= argument."
+            )
         if skills is not None:
             available_skills = self._inject_skills(skills)
             instructions = f"{instructions or ''}\n\n{available_skills}"
 
-        self.engine = engine
-        if engine == "native":
-            self._init_native(
-                name=name,
-                instructions=instructions,
-                model=model,
-                tools=tools,
-                api_key=api_key,
-                model_settings=model_settings,
-                max_turns=max_turns,
-                enable_tracing=enable_tracing,
-                store=store,
-                output_type=output_type,
-                base_url=base_url,
-            )
-            return
-
-        if base_url is not None:
-            raise ValueError(
-                "base_url requires engine='native'. The openai-agents engine "
-                "configures endpoints through its own client, so honouring it "
-                "here would silently do nothing."
-            )
-
-        super().__init__(name, instructions, model, api_key, enable_tracing)
-        tools = tools or []
-        resolved_tools: List[FunctionTool] = []
-        mcp_servers: List[MCPServerStreamableHttp] = []
-
-        for tool in tools:
-            if isinstance(tool, str):
-                resolved_tools.append(ToolRegistry.get(tool)["tool"])
-            elif isinstance(tool, FunctionTool):
-                resolved_tools.append(tool)
-            elif isinstance(tool, BaseTool):
-                # Convert all capabilities to individual OpenAI functions
-                resolved_tools.extend(tool.to_openai_function())
-            elif isinstance(tool, MCPServerStreamableHttp):
-                mcp_servers.append(tool)
-            elif isinstance(tool, WebSearchTool):
-                resolved_tools.append(tool)
-            else:
-                raise TypeError(
-                    f"Unsupported tool type '{type(tool).__name__}'. "
-                    "Expected str, FunctionTool, ToolConvertor, BaseTool, or MCPServerStreamableHttp."
-                )
-
-        self.tools = resolved_tools
-        self.mcp_servers = mcp_servers
-
-        if model_settings is None:
-            model_settings = get_default_model_settings()
-
-        if self.api_key:
-            set_default_openai_key(self.api_key)
-
-        self.agent: Agent = Agent(
+        self._init_native(
             name=name,
             instructions=instructions,
-            model=self.model,
-            tools=self.tools,
-            mcp_servers=self.mcp_servers or [],
-            output_type=output_type,
+            model=model,
+            tools=tools,
+            api_key=api_key,
             model_settings=model_settings,
+            max_turns=max_turns,
+            enable_tracing=enable_tracing,
+            store=store,
+            output_type=output_type,
+            base_url=base_url,
+            tracer=tracer,
         )
 
     def _init_native(
@@ -335,24 +169,22 @@ class Agentor(AgentorBase):
         store: Any = None,
         output_type: Any = None,
         base_url: Optional[str] = None,
+        tracer: Any = None,
     ) -> None:
         """Set up the native engine (see agentor.engine)."""
-        from agentor.engine import AgentLoop
-        from agentor.engine.tools import resolve_tools
 
         self.name = name
         self.instructions = instructions
         self.api_key = api_key
-        self.agent = None
+        self.model = model
         self.enable_tracing = enable_tracing
-        tracer = self._native_tracer(enable_tracing)
+        # an explicit tracer wins over the one built from CELESTO_API_KEY
+        tracer = tracer or self._native_tracer(enable_tracing)
 
-        # openai-agents MCP servers are accepted and adapted, so the same
-        # Agentor(...) call works on either engine.
         plain_tools, mcp_servers = [], []
         for tool in tools or []:
-            if isinstance(tool, MCPServerStreamableHttp):
-                mcp_servers.append(_adapt_mcp_server(tool))
+            if isinstance(tool, MCPServer):
+                mcp_servers.append(tool)
             else:
                 plain_tools.append(tool)
 
@@ -361,13 +193,7 @@ class Agentor(AgentorBase):
         self.tools = self._tools
         self.mcp_servers = mcp_servers
 
-        params: Dict[str, Any] = {}
-        for field in ("temperature", "top_p", "max_tokens"):
-            value = getattr(model_settings, field, None)
-            if value is not None:
-                params[field] = value
-
-        self.model = model
+        params = model_settings.to_params() if model_settings else {}
         self._loop = AgentLoop(
             name=name,
             model=model or "gpt-4o-mini",
@@ -385,11 +211,7 @@ class Agentor(AgentorBase):
         )
 
     def _native_tracer(self, enable_tracing: bool):
-        """Build a tracer for the native engine.
-
-        The openai-agents trace processor cannot see native runs at all, so
-        this uses the engine's own event stream instead.
-        """
+        """Build a tracer from CELESTO_API_KEY, if tracing is on."""
         if not enable_tracing and (
             celesto_config.api_key is None or celesto_config.disable_auto_tracing
         ):
@@ -402,10 +224,17 @@ class Agentor(AgentorBase):
                 )
             return None
 
-        from agentor.engine.tracing import CelestoTracer
+        if not enable_tracing:
+            # Auto-enabled from CELESTO_API_KEY. Say so: quietly shipping run
+            # contents to a remote endpoint should never be a surprise.
+            print(
+                "auto enabled LLM monitoring and tracing. "
+                "View traces: https://celesto.ai/observe"
+                "\nTo disable, set CELESTO_DISABLE_AUTO_TRACING=True."
+            )
 
         try:
-            return CelestoTracer(
+            return setup_celesto_tracing(
                 endpoint=f"{celesto_config.base_url}/traces/ingest",
                 token=celesto_config.api_key.get_secret_value(),
             )
@@ -426,18 +255,9 @@ class Agentor(AgentorBase):
         cls,
         md_path: str | Path,
         *,
-        model: Optional[str | LitellmModel] = None,
-        tools: Optional[
-            List[
-                Union[
-                    FunctionTool,
-                    str,
-                    MCPServerStreamableHttp,
-                    BaseTool,
-                ]
-            ]
-        ] = None,
-        output_type: type[Any] | AgentOutputSchemaBase | None = None,
+        model: Any = None,
+        tools: Optional[List[Any]] = None,
+        output_type: Any = None,
         debug: bool = False,
         api_key: Optional[str] = None,
         model_settings: Optional[ModelSettings] = None,
@@ -486,16 +306,7 @@ class Agentor(AgentorBase):
                     "Temperature in markdown frontmatter must be a number."
                 )
 
-        resolved_tools: Optional[
-            List[
-                Union[
-                    FunctionTool,
-                    str,
-                    MCPServerStreamableHttp,
-                    BaseTool,
-                ]
-            ]
-        ]
+        resolved_tools: Optional[List[Any]]
         if tools is not None:
             resolved_tools = tools
         else:
@@ -553,10 +364,8 @@ class Agentor(AgentorBase):
             model_settings=resolved_model_settings,
         )
 
-    def run(self, input: str) -> List[str] | str:
-        if self.engine == "native":
-            return self._loop.run(input)
-        return Runner.run_sync(self.agent, input, context=CelestoConfig())
+    def run(self, input: str) -> Any:
+        return self._loop.run(input)
 
     async def arun(
         self,
@@ -578,9 +387,7 @@ class Agentor(AgentorBase):
         """
         if isinstance(input, list):
             if isinstance(input[0], dict):
-                if self.engine == "native":
-                    return await self._loop.arun(input, max_turns=max_turns)
-                return await Runner.run(self.agent, input, context=CelestoConfig())
+                return await self._loop.arun(input, max_turns=max_turns)
 
             futures = []
             if limit_concurrency > 0:
@@ -608,72 +415,12 @@ class Agentor(AgentorBase):
     async def _run_with_fallback(
         self,
         task: str,
-        max_turns: int,
-        fallback_models: Optional[List[str]] = None,
-    ):
-        """
-        Run a task with optional fallback to alternative models on rate limit errors.
-        """
-        if self.engine == "native":
-            return await self._run_native_with_fallback(
-                task, fallback_models, max_turns
-            )
-
-        retryable = _retryable_errors()
-        try:
-            return await Runner.run(
-                self.agent,
-                task,
-                context=CelestoConfig(),
-                max_turns=max_turns,
-            )
-        except retryable as e:
-            if not fallback_models:
-                raise
-
-            logger.warning(
-                f"Primary model failed with {type(e).__name__}: {e}. "
-                f"Trying fallback models: {fallback_models}"
-            )
-
-            for fallback_model in fallback_models:
-                try:
-                    # Create a temporary agent with the fallback model
-                    fallback_agent = Agent(
-                        name=self.agent.name,
-                        instructions=self.agent.instructions,
-                        model=_litellm_model_cls()(fallback_model)
-                        if "/" in fallback_model
-                        else fallback_model,
-                        tools=self.tools,
-                        mcp_servers=self.mcp_servers or [],
-                        output_type=self.agent.output_type,
-                        model_settings=self.agent.model_settings,
-                    )
-                    return await Runner.run(
-                        fallback_agent,
-                        task,
-                        context=CelestoConfig(),
-                        max_turns=max_turns,
-                    )
-                except retryable as fallback_error:
-                    logger.warning(
-                        f"Fallback model '{fallback_model}' also failed: {fallback_error}"
-                    )
-                    continue
-
-            # All fallback models failed, raise the original error
-            raise
-
-    async def _run_native_with_fallback(
-        self,
-        task: str,
-        fallback_models: Optional[List[str]] = None,
         max_turns: Optional[int] = None,
+        fallback_models: Optional[List[str]] = None,
     ):
-        """Native-engine equivalent of _run_with_fallback.
+        """Run a task, falling back to other models on rate limits.
 
-        Swapping the model is a copy of the loop rather than a rebuilt agent,
+        Swapping the model copies the loop rather than rebuilding the agent,
         because the model is not baked into the agent here.
         """
         try:
@@ -687,8 +434,12 @@ class Agentor(AgentorBase):
             )
             for fallback_model in fallback_models:
                 try:
+                    # carry the configured parameters across: a fallback that
+                    # silently drops temperature/max_tokens answers differently
                     return await self._loop.with_model(
-                        fallback_model, api_key=self.api_key
+                        fallback_model,
+                        api_key=self.api_key,
+                        **getattr(self._loop.model, "params", {}),
                     ).arun(task, max_turns=max_turns)
                 except Exception as fallback_error:
                     if not _is_retryable(fallback_error):
@@ -700,21 +451,11 @@ class Agentor(AgentorBase):
             raise
 
     def resume(self, run_id: str):
-        """Continue a persisted run. Requires engine="native" and a store."""
-        if self.engine != "native":
-            raise NotImplementedError(
-                "resume() requires engine='native'; the openai-agents engine "
-                "does not persist runs through Agentor."
-            )
+        """Continue a persisted run. Requires a store."""
         return self._loop.resume(run_id)
 
     async def aresume(self, run_id: str):
         """Async variant of resume()."""
-        if self.engine != "native":
-            raise NotImplementedError(
-                "aresume() requires engine='native'; the openai-agents engine "
-                "does not persist runs through Agentor."
-            )
         return await self._loop.aresume(run_id)
 
     def think(self, query: str) -> List[str] | str:
@@ -722,10 +463,7 @@ class Agentor(AgentorBase):
             THINKING_PROMPT,
             query=query,
         )
-        if self.engine == "native":
-            return self._loop.run(prompt).final_output
-        result = Runner.run_sync(self.agent, prompt, context=CelestoConfig())
-        return result.final_output
+        return self._loop.run(prompt).final_output
 
     async def chat(
         self,
@@ -735,28 +473,14 @@ class Agentor(AgentorBase):
     ):
         if stream:
             return self.stream_chat(input, serialize=serialize)
-        elif self.engine == "native":
-            return await self._loop.arun(input)
-        else:
-            return await Runner.run(self.agent, input=input, context=CelestoConfig())
+        return await self._loop.arun(input)
 
     async def stream_chat(
         self,
         input: str,
         serialize: bool = True,
     ) -> AsyncIterator[Union[str, AgentOutput]]:
-        if self.engine == "native":
-            stream = self._native_stream()(input)
-        else:
-            result = Runner.run_streamed(
-                self.agent, input=input, context=CelestoConfig()
-            )
-            stream = format_stream_events(
-                result.stream_events(),
-                allowed_events=["run_item_stream_event"],
-            )
-
-        async for agent_output in stream:
+        async for agent_output in self._native_stream()(input):
             if serialize:
                 yield agent_output.serialize(dump_json=True)
             else:
@@ -965,6 +689,8 @@ class Agentor(AgentorBase):
 
 
 class CelestoMCPHub:
+    """The Celesto-hosted MCP server, as an async context manager."""
+
     def __init__(
         self,
         timeout: int = 10,
@@ -972,23 +698,23 @@ class CelestoMCPHub:
         cache_tools_list: bool = True,
         api_key: Optional[str] = None,
     ) -> None:
-        api_key = api_key or celesto_config.api_key.get_secret_value()
+        api_key = api_key or (
+            celesto_config.api_key.get_secret_value()
+            if celesto_config.api_key
+            else None
+        )
         if api_key is None:
             raise ValueError("API key is required to use the Celesto MCP Hub.")
-        self.mcp_server = MCPServerStreamableHttp(
+        self.mcp_server = MCPServer(
+            url=f"{celesto_config.base_url}/mcp",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=timeout,
             name="Celesto AI MCP Server",
-            params={
-                "url": f"{celesto_config.base_url}/mcp",
-                "headers": {"Authorization": f"Bearer {api_key}"},
-                "timeout": timeout,
-                "cache_tools_list": cache_tools_list,
-                "max_retry_attempts": max_retry_attempts,
-            },
         )
 
-    async def __aenter__(self) -> MCPServerStreamableHttp:
+    async def __aenter__(self) -> MCPServer:
         await self.mcp_server.connect()
         return self.mcp_server
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
-        await self.mcp_server.cleanup()
+        await self.mcp_server.close()

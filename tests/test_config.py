@@ -98,9 +98,7 @@ class TestCelestoConfigFieldAliases:
 
     def test_disable_auto_tracing_alias(self):
         """Test CELESTO_DISABLE_AUTO_TRACING environment variable alias."""
-        with patch.dict(
-            os.environ, {"CELESTO_DISABLE_AUTO_TRACING": "1"}, clear=False
-        ):
+        with patch.dict(os.environ, {"CELESTO_DISABLE_AUTO_TRACING": "1"}, clear=False):
             config = CelestoConfig()
             assert config.disable_auto_tracing is True
 

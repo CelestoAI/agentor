@@ -345,9 +345,7 @@ async def test_agentor_arun_passes_max_turns_to_the_native_engine():
     from agentor import Agentor
 
     model = FakeModel(*[calls(("weather", '{"city": "X"}')) for _ in range(10)])
-    agent = Agentor(
-        name="T", model=model, tools=[weather], engine="native", api_key="test"
-    )
+    agent = Agentor(name="T", model=model, tools=[weather], api_key="test")
     result = await agent.arun("go", max_turns=3)
 
     assert result.status == "max_turns"
@@ -393,31 +391,6 @@ async def test_resume_of_a_completed_run_returns_the_parsed_output_type():
 
 
 # ------------------------------------------------ P2: FunctionTool context
-
-
-@pytest.mark.asyncio
-async def test_function_tool_adapter_receives_the_run_context():
-    """A FunctionTool reading ctx.context lost its credentials under native."""
-    from agents import RunContextWrapper, function_tool
-
-    seen = {}
-
-    @function_tool
-    async def needs_ctx(wrapper: RunContextWrapper, q: str) -> str:
-        """Doc.
-
-        Args:
-            q: query.
-        """
-        seen["context"] = wrapper.context
-        return "ok"
-
-    sentinel = object()
-    model = FakeModel(calls(("needs_ctx", '{"q": "x"}')), text("done"))
-    loop = AgentLoop(model=model, tools=[needs_ctx], context=sentinel)
-    await loop.arun("go")
-
-    assert seen["context"] is sentinel
 
 
 # ============================================ second review round
@@ -521,9 +494,7 @@ async def test_max_turns_is_honoured_for_message_list_input():
     from agentor import Agentor
 
     model = FakeModel(*[calls(("weather", '{"city": "X"}')) for _ in range(10)])
-    agent = Agentor(
-        name="T", model=model, tools=[weather], engine="native", api_key="test"
-    )
+    agent = Agentor(name="T", model=model, tools=[weather], api_key="test")
     result = await agent.arun([{"role": "user", "content": "go"}], max_turns=2)
 
     assert result.status == "max_turns"
@@ -678,7 +649,6 @@ def test_base_url_routes_to_the_chat_completions_adapter():
         model="openrouter/auto",
         base_url="https://openrouter.ai/api/v1",
         api_key="test",
-        engine="native",
     )
     assert isinstance(agent._loop.model, ChatCompletionsModel)
     assert agent._loop.model.model == "openrouter/auto"
@@ -688,18 +658,8 @@ def test_provider_prefixed_model_still_routes_to_litellm_without_base_url():
     from agentor import Agentor
     from agentor.engine.models import LiteLLMModel
 
-    agent = Agentor(
-        name="T", model="gemini/gemini-2.0-flash", api_key="test", engine="native"
-    )
+    agent = Agentor(name="T", model="gemini/gemini-2.0-flash", api_key="test")
     assert isinstance(agent._loop.model, LiteLLMModel)
-
-
-def test_base_url_on_the_agents_engine_is_refused_not_ignored():
-    """Silently dropping it would look like the endpoint was honoured."""
-    from agentor import Agentor
-
-    with pytest.raises(ValueError, match="base_url requires engine='native'"):
-        Agentor(name="T", model="gpt-4o", base_url="https://example/v1", api_key="k")
 
 
 def test_model_settings_reach_the_native_model():
@@ -716,17 +676,27 @@ def test_model_settings_reach_the_native_model():
     assert agent._loop.model.params["max_tokens"] == 400
 
 
-# ============================================ provider-hosted tools
+# ============================================ unrunnable tool objects
+
+
+class HostedTool:
+    """Shaped like a provider-hosted tool: a name, nothing to invoke."""
+
+    name = "web_search"
+
+
+class LocalRunnerTool:
+    """An SDK tool executed by its own runner - the same shape, run locally."""
+
+    name = "local_shell"
 
 
 def test_unrunnable_tools_fail_with_an_actionable_message():
     """A generic 'unsupported type' hides why a documented tool stopped working."""
-    from agents import WebSearchTool
-
     from agentor.engine.tools import resolve_tools
 
     with pytest.raises(TypeError, match="no callable to invoke") as exc:
-        resolve_tools([WebSearchTool()])
+        resolve_tools([HostedTool()])
 
     message = str(exc.value)
     assert "web_search" in message
@@ -734,17 +704,15 @@ def test_unrunnable_tools_fail_with_an_actionable_message():
 
 
 def test_the_message_does_not_assert_the_wrong_execution_model():
-    """LocalShellTool and friends run locally, not on the provider.
+    """Locally executed SDK tools share the shape of provider-hosted ones.
 
-    They share the shape of a hosted tool, so a message blaming the Responses
-    API would send the reader looking in entirely the wrong place.
+    A message blaming OpenAI's Responses API would send the reader looking in
+    entirely the wrong place for a tool that runs on their own machine.
     """
-    from agents import LocalShellTool
-
     from agentor.engine.tools import resolve_tools
 
     with pytest.raises(TypeError) as exc:
-        resolve_tools([LocalShellTool(executor=lambda *a, **k: "")])
+        resolve_tools([LocalRunnerTool()])
 
     message = str(exc.value)
     assert "local_shell" in message
@@ -752,26 +720,141 @@ def test_the_message_does_not_assert_the_wrong_execution_model():
 
 
 def test_agentor_surfaces_the_unrunnable_tool_message():
-    from agents import WebSearchTool
-
     from agentor import Agentor
 
     with pytest.raises(TypeError, match="no callable to invoke"):
-        Agentor(
-            name="T",
-            model="gpt-4o-mini",
-            tools=[WebSearchTool()],
-            engine="native",
-            api_key="test",
-        )
+        Agentor(name="T", model="gpt-4o-mini", tools=[HostedTool()], api_key="test")
 
 
-def test_hosted_tools_still_work_on_the_agents_engine():
-    from agents import WebSearchTool
+# ============================================ openai-agents removal review
+
+
+def test_default_model_is_unchanged_by_the_removal():
+    """Changing the default silently alters quality and billing."""
+    import inspect
 
     from agentor import Agentor
 
-    agent = Agentor(
-        name="T", model="gpt-4o-mini", tools=[WebSearchTool()], api_key="test"
+    assert inspect.signature(Agentor.__init__).parameters["model"].default == (
+        "gpt-5-nano"
     )
-    assert any(getattr(t, "name", None) == "web_search" for t in agent.tools)
+
+
+def test_from_md_default_matches_the_constructor_default(tmp_path):
+    from agentor import Agentor
+
+    md = tmp_path / "a.md"
+    md.write_text("---\nname: Bot\n---\nYou are helpful.")
+    agent = Agentor.from_md(md, api_key="test")
+    assert agent._loop.model.model == "gpt-5-nano"
+
+
+@pytest.mark.asyncio
+async def test_fallback_keeps_the_configured_model_parameters():
+    """A fallback that drops temperature answers differently to the primary."""
+    import httpx
+    import openai
+
+    from agentor import Agentor, ModelSettings
+
+    response = httpx.Response(
+        429, request=httpx.Request("POST", "https://api.openai.com/v1/chat")
+    )
+    captured = {}
+
+    agent = Agentor(
+        name="T",
+        model="gpt-4o-mini",
+        api_key="test",
+        model_settings=ModelSettings(temperature=0.2, max_tokens=64),
+    )
+
+    async def boom(*a, **k):
+        raise openai.RateLimitError("rate limited", response=response, body=None)
+
+    agent._loop.model.complete = boom
+
+    original_with_model = agent._loop.with_model
+
+    def spy(model, **kwargs):
+        captured.update(kwargs)
+        clone = original_with_model(model, **kwargs)
+        clone.model = FakeModel(text("from fallback"))
+        return clone
+
+    agent._loop.with_model = spy
+    result = await agent.arun("go", fallback_models=["gpt-4o"])
+
+    assert result.final_output == "from fallback"
+    assert captured["temperature"] == 0.2
+    assert captured["max_tokens"] == 64
+
+
+def test_model_settings_accepts_previously_exported_fields():
+    """Rejecting them would break settings written against the old type."""
+    from agentor import ModelSettings
+
+    settings = ModelSettings(
+        temperature=0.5,
+        tool_choice="auto",
+        parallel_tool_calls=True,
+        verbosity="low",
+        some_provider_flag=1,
+    )
+    params = settings.to_params()
+    assert params["tool_choice"] == "auto"
+    assert params["parallel_tool_calls"] is True
+    assert params["some_provider_flag"] == 1, "unknown keys should pass through"
+
+
+def test_model_settings_drops_parameters_with_no_equivalent(caplog):
+    from agentor import ModelSettings
+
+    with caplog.at_level("WARNING"):
+        params = ModelSettings(temperature=0.1, truncation="auto").to_params()
+
+    assert "truncation" not in params, "forwarding it would earn a provider 400"
+    assert "truncation" in caplog.text
+
+
+def test_function_tool_accepts_legacy_decorator_options():
+    """@function_tool(strict_mode=False) must not fail at import time."""
+    from agentor import function_tool
+
+    @function_tool(strict_mode=False, use_docstring_info=True)
+    def greet(name: str) -> str:
+        """Greet.
+
+        Args:
+            name: who.
+        """
+        return name
+
+    assert greet.name == "greet"
+
+
+def test_run_context_is_subscriptable():
+    """Tools were commonly annotated RunContextWrapper[Config]."""
+    from agentor.engine.tools import RunContext, build_schema
+
+    def fn(ctx: RunContext[dict], q: str) -> str:
+        """Doc.
+
+        Args:
+            q: query.
+        """
+        return q
+
+    _, schema, context_param = build_schema(fn)
+    assert context_param == "ctx"
+    assert list(schema["properties"]) == ["q"]
+
+
+def test_agentor_accepts_an_explicit_tracer():
+    """setup_celesto_tracing documents handing its result to Agentor."""
+    from agentor import Agentor
+    from agentor.tracer import setup_celesto_tracing
+
+    tracer = setup_celesto_tracing(endpoint="http://example/ingest", token="t")
+    agent = Agentor(name="T", model="gpt-4o-mini", api_key="test", tracer=tracer)
+    assert agent._loop.tracer is tracer

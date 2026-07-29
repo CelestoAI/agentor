@@ -4,10 +4,10 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
-from tests.test_engine import FakeModel, calls, text, weather
 
 from agentor.engine import AgentLoop
 from agentor.engine.mcp import MCPServer, _content_to_text
+from tests.test_engine import FakeModel, calls, text, weather
 
 
 def remote_tool(name, description="", schema=None):
@@ -16,6 +16,23 @@ def remote_tool(name, description="", schema=None):
         description=description,
         inputSchema=schema or {"type": "object", "properties": {}},
     )
+
+
+class PagedSession:
+    """A session that returns its tools across two pages."""
+
+    def __init__(self, pages):
+        self.pages = pages
+        self.cursors_seen = []
+
+    async def list_tools(self, cursor=None):
+        self.cursors_seen.append(cursor)
+        index = 0 if cursor is None else int(cursor)
+        is_last = index == len(self.pages) - 1
+        return SimpleNamespace(
+            tools=self.pages[index],
+            nextCursor=None if is_last else str(index + 1),
+        )
 
 
 class FakeSession:
@@ -27,8 +44,9 @@ class FakeSession:
         self._is_error = is_error
         self.calls = []
 
-    async def list_tools(self):
-        return SimpleNamespace(tools=self._tools)
+    async def list_tools(self, cursor=None):
+        # single page; nextCursor absent means "no more"
+        return SimpleNamespace(tools=self._tools, nextCursor=None)
 
     async def call_tool(self, name, arguments):
         self.calls.append((name, arguments))
@@ -111,7 +129,9 @@ async def test_calling_a_remote_tool_forwards_arguments():
 
 @pytest.mark.asyncio
 async def test_remote_error_raises_so_the_failure_budget_applies():
-    session = FakeSession([remote_tool("bad")], results={"bad": "upstream down"}, is_error=True)
+    session = FakeSession(
+        [remote_tool("bad")], results={"bad": "upstream down"}, is_error=True
+    )
     server = connected(session)
 
     (tool,) = await server.list_tools()
@@ -124,7 +144,9 @@ async def test_remote_error_raises_so_the_failure_budget_applies():
 
 @pytest.mark.asyncio
 async def test_remote_tools_are_available_during_a_run_and_removed_after():
-    session = FakeSession([remote_tool("remote_search")], results={"remote_search": "hit"})
+    session = FakeSession(
+        [remote_tool("remote_search")], results={"remote_search": "hit"}
+    )
 
     class Server(MCPServer):
         closed = False
@@ -218,3 +240,16 @@ def test_closing_from_a_different_event_loop_explains_itself():
 
     with pytest.raises(RuntimeError, match="different event loop"):
         asyncio.run(close())
+
+
+@pytest.mark.asyncio
+async def test_list_tools_follows_pagination():
+    """Stopping at page one silently hides every tool after it."""
+    session = PagedSession(
+        [[remote_tool("alpha"), remote_tool("beta")], [remote_tool("gamma")]]
+    )
+    server = connected(session)
+
+    tools = await server.list_tools()
+    assert [t.name for t in tools] == ["alpha", "beta", "gamma"]
+    assert session.cursors_seen == [None, "1"]

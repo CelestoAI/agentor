@@ -3,8 +3,8 @@ from functools import cache
 from types import FunctionType
 from typing import Any, Callable, List, Optional, Tuple, overload
 
-from agents import FunctionTool, function_tool
-
+from agentor.engine.tools import Tool as FunctionTool
+from agentor.engine.tools import function_tool
 from agentor.mcp.server import LiteMCP
 from agentor.types import ToolType
 
@@ -51,7 +51,7 @@ class BaseTool(ABC):
         for attr_name in dir(self):
             attr = getattr(self, attr_name)
             if getattr(attr, "_is_capability", False) is True:
-                tools.append(function_tool(attr, strict_mode=False))
+                tools.append(function_tool(attr))
 
         return tools
 
@@ -65,7 +65,7 @@ class BaseTool(ABC):
                 "type": "function",
                 "name": self.name,
                 "description": self.description,
-                "parameters": func_tool.params_json_schema,
+                "parameters": func_tool.parameters,
             }
             result.append(item)
         return result
