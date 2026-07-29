@@ -12,7 +12,7 @@ feature meant to keep a run alive was ending it.
 """
 
 from collections import Counter
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import pytest
 
@@ -71,11 +71,23 @@ def assert_well_formed(messages: Sequence[Message]) -> None:
 
 
 async def sequence_sent_to_model(
-    specs: Sequence[ToolSpec], budget: int, turns: int
+    specs: Sequence[ToolSpec],
+    budget: int,
+    turns: int,
+    tools: Optional[Sequence[Callable[..., str]]] = None,
 ) -> List[Message]:
-    """Run the loop and return the message list from the final request."""
+    """Run the loop and return the message list from the final request.
+
+    `tools` defaults to the two defined above; pass it when a spec names
+    something else, or the call silently becomes an unknown-tool call and
+    exercises a different path than the test intends.
+    """
     model = FakeModel(*([calls(*specs)] * turns), text("done"))
-    loop = AgentLoop(model=model, tools=[broken, working], max_tool_failures=budget)
+    loop = AgentLoop(
+        model=model,
+        tools=list(tools if tools is not None else (broken, working)),
+        max_tool_failures=budget,
+    )
     await loop.arun("go")
     return model.calls[-1]["messages"]
 
@@ -181,3 +193,20 @@ async def test_the_run_completes_rather_than_raising():
 
     assert result.status == "completed"
     assert result.final_output == "answered without the broken tool"
+
+
+@pytest.mark.asyncio
+async def test_a_hallucinated_tool_name_is_bounded_by_the_budget():
+    """An unknown name used to bypass the budget and burn every turn."""
+    model = FakeModel(*[calls(("ghost", "{}")) for _ in range(10)])
+    loop = AgentLoop(model=model, tools=[working], max_turns=10, max_tool_failures=2)
+    result = await loop.arun("go")
+
+    errors = [e.error for e in result.events if e.type == "tool_result"]
+    assert errors.count("unknown tool") == 2, (
+        f"the budget did not engage; errors were {errors}"
+    )
+    assert any(
+        m["role"] == "user" and "'ghost'" in m["content"]
+        for m in model.calls[-1]["messages"]
+    ), "the model was never told to stop calling it"
