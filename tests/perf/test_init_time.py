@@ -54,9 +54,13 @@ def _time_import(statement: str) -> float:
 
 
 def test_cli_time() -> None:
-    if shutil.which("celesto") is None:
+    # Run the path `which` resolved rather than looking the name up a second
+    # time: the two lookups can disagree, and the timing then belongs to a
+    # different executable than the one the skip check cleared.
+    celesto = shutil.which("celesto")
+    if celesto is None:
         pytest.skip("celesto CLI is provided by the separate celesto package.")
     t0 = time.perf_counter()
-    subprocess.check_call(["celesto", "--help"])  # raises on failure; see above
+    subprocess.check_call([celesto, "--help"])  # raises on failure; see above
     t1 = time.perf_counter()
     assert t1 - t0 < 5, f"CLI must be superfast but took {t1 - t0:.4f} seconds"
