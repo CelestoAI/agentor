@@ -17,7 +17,7 @@ Since v0.1.0 it runs on its own agent engine; the `openai-agents` dependency is 
 
 ## Repository Structure
 
-```
+```text
 agentor/
 ├── src/agentor/           # Main package source code
 │   ├── core/              # Agentor, the user-facing agent class
@@ -241,7 +241,7 @@ is not consent to ship prompts and tool results to a remote endpoint.
 
 - Standard agent communication specifications
 - Automatic agent card generation at `/.well-known/agent-card.json`
-- JSON-RPC based messaging
+- JSON-RPC-based messaging
 - Support for streaming and non-streaming responses
 
 ### 7. Tool Registry

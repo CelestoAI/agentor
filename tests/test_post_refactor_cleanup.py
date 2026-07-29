@@ -12,7 +12,7 @@ import pytest
 from agentor import tool
 
 
-def test_importing_agentor_does_not_silence_the_host_applications_warnings():
+def test_importing_agentor_does_not_silence_the_host_applications_warnings() -> None:
     """`import agentor` used to install a process-wide DeprecationWarning ignore.
 
     A library has no business mutating global warning state, and this one
@@ -48,7 +48,7 @@ print("SHOWN" if shown else "SWALLOWED")
     )
 
 
-def test_agentor_own_deprecation_warnings_reach_the_user():
+def test_agentor_own_deprecation_warnings_reach_the_user() -> None:
     """The MCPServerStreamableHttp shim exists to warn; the warning must arrive.
 
     Captured by swapping `showwarning` rather than through `catch_warnings`,
@@ -72,7 +72,7 @@ print(";".join(shown))
     )
 
 
-def test_tool_accepts_a_description_without_a_name():
+def test_tool_accepts_a_description_without_a_name() -> None:
     """`@tool(description=...)` raised AttributeError on the None func."""
 
     @tool(description="Looks up the weather")
@@ -85,7 +85,7 @@ def test_tool_accepts_a_description_without_a_name():
     assert get_weather.description == "Looks up the weather"
 
 
-def test_tool_keeps_deriving_both_from_the_function():
+def test_tool_keeps_deriving_both_from_the_function() -> None:
     @tool
     def plain(x: str) -> str:
         """Docstring description."""
@@ -95,7 +95,7 @@ def test_tool_keeps_deriving_both_from_the_function():
     assert plain.description == "Docstring description."
 
 
-def test_tool_still_honours_an_explicit_name():
+def test_tool_still_honours_an_explicit_name() -> None:
     @tool(name="weather_lookup", description="Fetches weather data")
     def get_weather(city: str) -> str:
         return f"sunny in {city}"
@@ -105,7 +105,7 @@ def test_tool_still_honours_an_explicit_name():
 
 
 @pytest.mark.parametrize("attribute", ["_extract_tool_name", "_stringify_output"])
-def test_the_openai_agents_item_probes_are_gone(attribute):
+def test_the_openai_agents_item_probes_are_gone(attribute: str) -> None:
     """Both existed only to guess at opaque openai-agents stream items."""
     import agentor.output_text_formatter as formatter
 
