@@ -4,7 +4,7 @@ from agentor.embeddings import Embeddings
 
 
 @patch(
-    "agentor.embeddings.embedding",
+    "litellm.embedding",
     return_value=MagicMock(data=[{"embedding": [0.1, 0.2, 0.3]}]),
 )
 def test_embeddings(mock_embedding):
@@ -18,7 +18,7 @@ def test_embeddings(mock_embedding):
 
 
 @patch(
-    "agentor.embeddings.embedding",
+    "litellm.embedding",
     return_value=MagicMock(
         data=[{"embedding": [0.1, 0.2, 0.3]}, {"embedding": [0.4, 0.5, 0.6]}]
     ),

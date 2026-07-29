@@ -6,8 +6,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Literal, Optional
 
-import litellm
-
 logger = logging.getLogger(__name__)
 
 
@@ -306,32 +304,7 @@ class DurableAgent:
         return messages
 
     def _call_llm(self, messages: List[Dict[str, Any]]) -> Any:
-        # Convert tools to schema
-        # Assuming generic function schema generation or user provided valid schema tools?
-        # The design says: tools: dict[str, callable].
-        # We need to convert these callables to OpenAI tool schemas.
-        # For this v1, let's assume we can use a helper or just bare basics.
-        # Since I see 'src/agentor/core/tool.py' in the file list earlier,
-        # I might use that if available, but for now I'll use litellm's auto-generation or expect the user to have simpler tools.
-        # Actually, `litellm` can't automatically convert raw callables to schemas unless we use a helper.
-        # BUT the design code commented: # tools=..., # define schema for your scrape_wiki, etc.
-        # For this implementation, I should probably try to inspect the functions.
-        # However, to keep it simple and robust (matches design "dict[str, callable]"),
-        # I will use a simple utility to generate schemas if possible, or just pass them if litellm supports it (it partially does with specific helper).
-        # Let's check imports. I have `litellm`.
-
-        # NOTE: Using `litellm.completion` with `tools` requires the tools argument to be a list of schemas.
-        # The `DurableAgent` receives `Dict[str, Callable]`.
-        # I need to generate schemas.
-        # For now, I will add a basic schema generator or check if I can reuse `agentor.utils` or similar.
-        # I saw `src/agentor/tool_search.py` and `src/agentor/core/tool.py`.
-        # I'll optimistically skip complex schema generation for this specific file write
-        # and assume the user takes care of it OR I'll add a minimal introspection.
-
-        # Let's use `openai_agents` or similar if it was in requirements?
-        # `agentor` seems to have its own things.
-        # I'll implement a VERY basic schema generator here to match `dict[str, callable]` contract
-        # so it actually works for simple functions.
+        import litellm
 
         response = litellm.completion(
             model=self.model,

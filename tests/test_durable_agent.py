@@ -11,8 +11,8 @@ from agentor.tools.base import BaseTool, capability
 
 # Mock litellm to avoid real API calls
 @pytest.fixture
-def mock_litellm():
-    with patch("agentor.durable.durable_agent.litellm") as mock:
+def mock_completion():
+    with patch("litellm.completion") as mock:
         yield mock
 
 
@@ -26,7 +26,7 @@ def clean_runs_dir():
         shutil.rmtree(runs_dir)
 
 
-def test_new_run(mock_litellm, clean_runs_dir):
+def test_new_run(mock_completion, clean_runs_dir):
     # Setup mock response
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
@@ -36,7 +36,7 @@ def test_new_run(mock_litellm, clean_runs_dir):
     mock_response.model_dump.return_value = {
         "choices": [{"message": {"content": "Hello there!"}}]
     }
-    mock_litellm.completion.return_value = mock_response
+    mock_completion.return_value = mock_response
 
     # Need to pass list or dict. testing dict here
     agent = DurableAgent(model="gpt-4-mini", tools={}, runs_dir=str(clean_runs_dir))
@@ -51,7 +51,7 @@ def test_new_run(mock_litellm, clean_runs_dir):
     assert run_file.exists()
 
 
-def test_resume_run(mock_litellm, clean_runs_dir):
+def test_resume_run(mock_completion, clean_runs_dir):
     run_id = "test_resume"
     runs_dir = clean_runs_dir
     runs_dir.mkdir(parents=True, exist_ok=True)
@@ -78,7 +78,7 @@ def test_resume_run(mock_litellm, clean_runs_dir):
     mock_response.model_dump.return_value = {
         "choices": [{"message": {"content": "Resumed Hello!"}}]
     }
-    mock_litellm.completion.return_value = mock_response
+    mock_completion.return_value = mock_response
 
     agent = DurableAgent(model="gpt-4-mini", tools={}, runs_dir=str(clean_runs_dir))
 
@@ -88,7 +88,7 @@ def test_resume_run(mock_litellm, clean_runs_dir):
     assert result.final_answer == "Resumed Hello!"
 
 
-def test_basetool_support(mock_litellm, clean_runs_dir):
+def test_basetool_support(mock_completion, clean_runs_dir):
     class MyTool(BaseTool):
         name = "my_tool"
         description = "A test tool"
@@ -142,7 +142,7 @@ def test_basetool_support(mock_litellm, clean_runs_dir):
     resp2.choices = [MagicMock(message=msg2)]
     resp2.model_dump.return_value = {"choices": [{"message": {"content": "HELLO!"}}]}
 
-    mock_litellm.completion.side_effect = [resp1, resp2]
+    mock_completion.side_effect = [resp1, resp2]
 
     # Pass generic list with BaseTool
     agent = DurableAgent(

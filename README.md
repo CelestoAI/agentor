@@ -50,6 +50,16 @@ The recommended method of installing `agentor` is with pip from PyPI.
 pip install agentor
 ```
 
+Tools with heavy or vendor-specific dependencies ship as extras, so the base
+install stays small:
+
+```bash
+pip install "agentor[google]"   # GmailTool, CalendarTool
+pip install "agentor[all]"      # every optional tool
+```
+
+Available extras: `google`, `exa`, `git`, `github`, `slack`, `postgres`, `scrapegraph`, `all`.
+
 <details>
   <summary>More ways...</summary>
 

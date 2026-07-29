@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 import json
 import logging
+import sys
 import uuid
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncGenerator,
     AsyncIterator,
@@ -17,9 +21,7 @@ from typing import (
 )
 
 import frontmatter
-import litellm
 import openai
-import uvicorn
 from a2a import types as a2a_types
 from a2a.types import JSONRPCResponse, Task, TaskState, TaskStatus
 from agents import (
@@ -32,12 +34,14 @@ from agents import (
     function_tool,
     set_default_openai_key,
 )
-from agents.extensions.models.litellm_model import LitellmModel
 from agents.mcp import MCPServerStreamableHttp
 from agents.models.default_models import get_default_model_settings
 from fastapi import FastAPI
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from agents.extensions.models.litellm_model import LitellmModel
 
 from agentor.a2a import A2AController, AgentSkill
 from agentor.config import celesto_config
@@ -49,6 +53,32 @@ from agentor.tools.registry import CelestoConfig, ToolRegistry
 from agentor.tracer import setup_celesto_tracing
 
 logger = logging.getLogger(__name__)
+
+
+def _litellm_model_cls() -> type["LitellmModel"]:
+    """Import LitellmModel on demand.
+
+    litellm costs ~1s to import, so it stays out of `import agentor` and is
+    only paid for by users who select a provider-prefixed model.
+    """
+    from agents.extensions.models.litellm_model import LitellmModel
+
+    return LitellmModel
+
+
+def _retryable_errors() -> tuple[type[BaseException], ...]:
+    """Error types worth retrying on a fallback model.
+
+    litellm's errors are only included when litellm is already loaded. That is
+    sufficient: the only way an agent can raise them is via LitellmModel, which
+    imports litellm itself. Probing `sys.modules` avoids forcing the import on
+    the OpenAI-only path.
+    """
+    errors: list[type[BaseException]] = [openai.RateLimitError, openai.APIError]
+    litellm = sys.modules.get("litellm")
+    if litellm is not None:
+        errors.extend([litellm.RateLimitError, litellm.APIError])
+    return tuple(errors)
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -100,7 +130,7 @@ class AgentorBase:
 
         self.api_key = api_key
         if isinstance(model, str) and "/" in model:
-            self.model = LitellmModel(model, api_key=api_key)
+            self.model = _litellm_model_cls()(model, api_key=api_key)
 
         self.enable_tracing = enable_tracing
         if self.enable_tracing:
@@ -421,6 +451,7 @@ class Agentor(AgentorBase):
         """
         Run a task with optional fallback to alternative models on rate limit errors.
         """
+        retryable = _retryable_errors()
         try:
             return await Runner.run(
                 self.agent,
@@ -428,12 +459,7 @@ class Agentor(AgentorBase):
                 context=CelestoConfig(),
                 max_turns=max_turns,
             )
-        except (
-            openai.RateLimitError,
-            litellm.RateLimitError,
-            openai.APIError,
-            litellm.APIError,
-        ) as e:
+        except retryable as e:
             if not fallback_models:
                 raise
 
@@ -448,7 +474,7 @@ class Agentor(AgentorBase):
                     fallback_agent = Agent(
                         name=self.agent.name,
                         instructions=self.agent.instructions,
-                        model=LitellmModel(fallback_model)
+                        model=_litellm_model_cls()(fallback_model)
                         if "/" in fallback_model
                         else fallback_model,
                         tools=self.tools,
@@ -462,12 +488,7 @@ class Agentor(AgentorBase):
                         context=CelestoConfig(),
                         max_turns=max_turns,
                     )
-                except (
-                    openai.RateLimitError,
-                    litellm.RateLimitError,
-                    openai.APIError,
-                    litellm.APIError,
-                ) as fallback_error:
+                except retryable as fallback_error:
                     logger.warning(
                         f"Fallback model '{fallback_model}' also failed: {fallback_error}"
                     )
@@ -517,6 +538,8 @@ class Agentor(AgentorBase):
         log_level: Literal["debug", "info", "warning", "error"] = "info",
         access_log: bool = True,
     ):
+        import uvicorn
+
         if host not in ("0.0.0.0", "127.0.0.1", "localhost"):
             raise ValueError(
                 f"Invalid host: {host}. Must be 0.0.0.0, 127.0.0.1, or localhost."
