@@ -488,6 +488,7 @@ class AgentLoop:
                 *(self._run_tool(call, tools, disabled) for call in response.tool_calls)
             )
 
+            newly_disabled: List[str] = []
             for event in results:
                 event.turn = turn
                 yield event
@@ -511,17 +512,23 @@ class AgentLoop:
                     # Retrying a tool that keeps failing just burns turns. Drop
                     # it and let the model finish with what is left.
                     disabled.add(event.name)
-                    messages.append(
-                        {
-                            "role": "user",
-                            "content": (
-                                f"The tool '{event.name}' failed "
-                                f"{failures[event.name]} times and is now "
-                                "unavailable. Answer without it, or explain "
-                                "what you cannot do."
-                            ),
-                        }
-                    )
+                    newly_disabled.append(event.name)
+
+            # Deferred until every tool result for this turn is in. Appending a
+            # notice mid-loop splits the run of `tool` messages answering one
+            # assistant turn, and providers reject that outright - so the budget
+            # meant to keep a run alive was ending it instead.
+            for name in newly_disabled:
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            f"The tool '{name}' failed {failures[name]} times "
+                            "and is now unavailable. Answer without it, or "
+                            "explain what you cannot do."
+                        ),
+                    }
+                )
 
         yield Event(
             type="run_end",
