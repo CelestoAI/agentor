@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-__version__ = "0.1.0a2"
+__version__ = "0.1.0rc1"
 
 __all__ = [
     "Agentor",
