@@ -719,26 +719,44 @@ def test_model_settings_reach_the_native_model():
 # ============================================ provider-hosted tools
 
 
-def test_hosted_tools_fail_with_an_actionable_message():
+def test_unrunnable_tools_fail_with_an_actionable_message():
     """A generic 'unsupported type' hides why a documented tool stopped working."""
     from agents import WebSearchTool
 
     from agentor.engine.tools import resolve_tools
 
-    with pytest.raises(TypeError, match="provider-hosted tool") as exc:
+    with pytest.raises(TypeError, match="no callable to invoke") as exc:
         resolve_tools([WebSearchTool()])
 
     message = str(exc.value)
     assert "web_search" in message
-    assert "engine='agents'" in message
+    assert "function tool" in message
 
 
-def test_agentor_surfaces_the_hosted_tool_message():
+def test_the_message_does_not_assert_the_wrong_execution_model():
+    """LocalShellTool and friends run locally, not on the provider.
+
+    They share the shape of a hosted tool, so a message blaming the Responses
+    API would send the reader looking in entirely the wrong place.
+    """
+    from agents import LocalShellTool
+
+    from agentor.engine.tools import resolve_tools
+
+    with pytest.raises(TypeError) as exc:
+        resolve_tools([LocalShellTool(executor=lambda *a, **k: "")])
+
+    message = str(exc.value)
+    assert "local_shell" in message
+    assert "Responses API" not in message
+
+
+def test_agentor_surfaces_the_unrunnable_tool_message():
     from agents import WebSearchTool
 
     from agentor import Agentor
 
-    with pytest.raises(TypeError, match="provider-hosted tool"):
+    with pytest.raises(TypeError, match="no callable to invoke"):
         Agentor(
             name="T",
             model="gpt-4o-mini",
