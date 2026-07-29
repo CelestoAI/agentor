@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-__version__ = "0.1.0.dev0"
+__version__ = "0.1.0.dev1"
 
 __all__ = [
     "Agentor",
@@ -16,6 +16,9 @@ __all__ = [
     "CelestoMCPHub",
     "ModelSettings",
     "LitellmModel",
+    "LiteLLMModel",
+    "AgentLoop",
+    "Tool",
     "LLM",
 ]
 
@@ -24,13 +27,12 @@ __all__ = [
 # Users of agentor.tools, or of the CLI, should not pay for either.
 # TYPE_CHECKING keeps type checkers and IDE completion working as before.
 if TYPE_CHECKING:
-    from agents import function_tool
-    from agents.extensions.models.litellm_model import LitellmModel
-    from agents.model_settings import ModelSettings
-
     from agentor.core.agent import Agentor, CelestoMCPHub
     from agentor.core.llm import LLM
     from agentor.core.tool import tool
+    from agentor.engine.models import LiteLLMModel as LitellmModel
+    from agentor.engine.settings import ModelSettings
+    from agentor.engine.tools import function_tool
     from agentor.tool_search import ToolSearch
 
     from .output_text_formatter import pydantic_to_xml
@@ -40,12 +42,16 @@ if TYPE_CHECKING:
 _LAZY_ATTRS = {
     "Agentor": ("agentor.core.agent", "Agentor"),
     "CelestoMCPHub": ("agentor.core.agent", "CelestoMCPHub"),
-    "ModelSettings": ("agentor.core.agent", "ModelSettings"),
+    "ModelSettings": ("agentor.engine.settings", "ModelSettings"),
     "LLM": ("agentor.core.llm", "LLM"),
     "tool": ("agentor.core.tool", "tool"),
     "ToolSearch": ("agentor.tool_search", "ToolSearch"),
-    "function_tool": ("agents", "function_tool"),
-    "LitellmModel": ("agents.extensions.models.litellm_model", "LitellmModel"),
+    "function_tool": ("agentor.engine.tools", "function_tool"),
+    # kept under the old name; LiteLLMModel is the native adapter
+    "LitellmModel": ("agentor.engine.models", "LiteLLMModel"),
+    "LiteLLMModel": ("agentor.engine.models", "LiteLLMModel"),
+    "AgentLoop": ("agentor.engine.loop", "AgentLoop"),
+    "Tool": ("agentor.engine.tools", "Tool"),
     "pydantic_to_xml": ("agentor.output_text_formatter", "pydantic_to_xml"),
     "AppContext": ("agentor.utils", "AppContext"),
 }

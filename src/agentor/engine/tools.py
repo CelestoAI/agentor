@@ -77,12 +77,13 @@ def _strip_titles(schema: Any) -> Any:
 
 
 def _is_context_param(annotation: Any) -> bool:
-    """True for openai-agents' RunContextWrapper, matched by name.
+    """True for a parameter that receives the run context, matched by name.
 
-    Matching the name rather than importing keeps this module free of an
-    openai-agents dependency, so the engine survives that package's removal.
+    `RunContextWrapper` is openai-agents' spelling and is still accepted, so
+    tools written against the old engine keep working without an edit.
     """
-    return "RunContextWrapper" in str(annotation)
+    text = str(annotation)
+    return "RunContext" in text or "RunContextWrapper" in text
 
 
 def build_schema(
@@ -136,8 +137,6 @@ class Tool:
     invoke: Callable[..., Any]
     #: parameter that receives the run context instead of model-supplied args
     context_param: Optional[str] = None
-    #: adapter builds its own context wrapper and wants the raw run context
-    wants_context: bool = False
 
     def to_openai(self) -> Dict[str, Any]:
         return {
@@ -153,11 +152,6 @@ class Tool:
         kwargs = dict(args)
         if self.context_param:
             kwargs[self.context_param] = _ContextWrapper(context)
-        if self.wants_context:
-            # adapters that build their own wrapper (FunctionTool) need the run
-            # context too, or tools reading it silently receive None
-            kwargs["__context__"] = context
-
         if inspect.iscoroutinefunction(self.invoke):
             result = await self.invoke(**kwargs)
         else:
@@ -186,18 +180,51 @@ class Tool:
         )
 
 
-class _ContextWrapper:
-    """Minimal stand-in for openai-agents' RunContextWrapper.
+def function_tool(
+    func: Optional[Callable] = None,
+    *,
+    name_override: Optional[str] = None,
+    description_override: Optional[str] = None,
+) -> Any:
+    """Turn a function into a `Tool`.
 
-    Legacy tools declare `wrapper: RunContextWrapper[CelestoConfig]` and read
-    `wrapper.context`; supporting that attribute is the whole compatibility
-    surface. Phase 2 removes the need for this.
+    Compatible with the decorator agentor exported previously, including
+    `name_override`, so existing tool definitions need no change.
+
+    Example::
+
+        @function_tool
+        def get_weather(city: str) -> str:
+            "Return the weather for a city."
+            return f"{city}: sunny"
+    """
+
+    def decorator(fn: Callable) -> Tool:
+        return Tool.from_function(
+            fn, name=name_override, description=description_override
+        )
+
+    if func is not None:
+        return decorator(func)
+    return decorator
+
+
+class RunContext:
+    """Wrapper handed to a tool parameter annotated as the run context.
+
+    A tool declares `ctx: RunContext` and reads `ctx.context` to reach whatever
+    the agent was constructed with. openai-agents' `RunContextWrapper`
+    annotation is still recognised, so existing tools need no change.
     """
 
     __slots__ = ("context",)
 
     def __init__(self, context: Any = None):
         self.context = context
+
+
+#: previous name, kept so old annotations and imports keep resolving
+_ContextWrapper = RunContext
 
 
 def stringify(value: Any) -> str:
@@ -216,39 +243,6 @@ def stringify(value: Any) -> str:
         except Exception:
             pass
     return str(value)
-
-
-def _from_function_tool(ft: Any) -> Tool:
-    """Adapt an openai-agents FunctionTool.
-
-    Its `on_invoke_tool(ctx, args_json)` takes a JSON string, so arguments are
-    re-serialized on the way in.
-    """
-    invoker = ft.on_invoke_tool
-
-    async def invoke(__context__: Any = None, **kwargs: Any) -> Any:
-        # openai-agents reads more than `.context` off this object (tool_name,
-        # run_config, usage), so build its real ToolContext rather than a
-        # duck-type. The import is local to this adapter: it exists only for
-        # openai-agents interop and goes away with it.
-        from agents.tool_context import ToolContext
-
-        arguments = json.dumps(kwargs)
-        context = ToolContext(
-            context=__context__,
-            tool_name=ft.name,
-            tool_call_id=f"call_{ft.name}",
-            tool_arguments=arguments,
-        )
-        return await invoker(context, arguments)
-
-    return Tool(
-        name=ft.name,
-        description=ft.description or "",
-        parameters=_strip_titles(dict(ft.params_json_schema or {})),
-        invoke=invoke,
-        wants_context=True,
-    )
 
 
 def resolve_tools(tools: Optional[List[Any]]) -> List[Tool]:
@@ -272,12 +266,6 @@ def resolve_tools(tools: Optional[List[Any]]) -> List[Tool]:
             for attr_name, method in item.list_capabilities():
                 resolved.append(Tool.from_function(method, name=attr_name))
 
-        # checked before `callable`: an openai-agents FunctionTool is a
-        # dataclass, so a `callable(item) and ...` guard never matches it and
-        # @function_tool tools would be rejected outright
-        elif hasattr(item, "on_invoke_tool"):
-            resolved.append(_from_function_tool(item))
-
         elif callable(item):
             resolved.append(Tool.from_function(item))
 
@@ -287,9 +275,9 @@ def resolve_tools(tools: Optional[List[Any]]) -> List[Tool]:
             # to /chat/completions, which has no equivalent.
             raise TypeError(
                 f"{type(item).__name__} is a provider-hosted tool "
-                f"({item.name!r}), which engine='native' cannot run: hosted "
-                "tools are executed by the provider through OpenAI's Responses "
-                "API. Use engine='agents' for it, or replace it with a regular "
+                f"({item.name!r}). Agentor does not run hosted tools: they are "
+                "executed by the provider through OpenAI's Responses API, "
+                "which the engine does not speak. Replace it with a regular "
                 "function tool."
             )
 

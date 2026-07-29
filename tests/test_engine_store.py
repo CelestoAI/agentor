@@ -270,14 +270,6 @@ def test_agentor_native_resume(tmp_path):
     assert agent.resume(result.run_id).final_output == "hello"
 
 
-def test_agentor_agents_engine_rejects_resume():
-    from agentor import Agentor
-
-    agent = Agentor(name="T", model="gpt-4o-mini", api_key="test")
-    with pytest.raises(NotImplementedError, match="engine='native'"):
-        agent.resume("r1")
-
-
 def test_durable_agent_import_gives_a_migration_message():
     import agentor.durable as durable
 

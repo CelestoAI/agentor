@@ -1,11 +1,11 @@
 from unittest.mock import patch
 
 import litellm
-from agents import FunctionTool
 
 from agentor import Agentor, tool
 from agentor.core.llm import LLM, ToolType
 from agentor.core.tool import BaseTool
+from agentor.engine.tools import Tool as FunctionTool
 
 
 @tool

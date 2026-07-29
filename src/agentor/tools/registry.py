@@ -1,11 +1,12 @@
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from functools import wraps
 from typing import Callable, List, Union
 
-from agents import FunctionTool, RunContextWrapper, function_tool
 from dotenv import load_dotenv
+
+from agentor.engine.tools import RunContext, function_tool
+from agentor.engine.tools import Tool as FunctionTool
 
 from .weather import GetWeatherTool
 
@@ -20,7 +21,6 @@ class CelestoConfig:
 _GLOBAL_TOOLS: dict[str, Union[FunctionTool, Callable]] = {}
 
 
-@wraps(function_tool)
 def register_global_tool(func):
     llm_fn = function_tool(func)
     _GLOBAL_TOOLS[func.__name__] = {
@@ -31,8 +31,12 @@ def register_global_tool(func):
 
 
 @register_global_tool
-def get_weather(wrapper: RunContextWrapper[CelestoConfig], city: str) -> str:
-    """Returns the weather in the given city."""
+def get_weather(wrapper: RunContext, city: str) -> str:
+    """Returns the weather in the given city.
+
+    Args:
+        city: The city to look up.
+    """
     try:
         weather_tool = GetWeatherTool(api_key=wrapper.context.weather_api_key)
         return weather_tool.get_current_weather(city)
@@ -41,7 +45,7 @@ def get_weather(wrapper: RunContextWrapper[CelestoConfig], city: str) -> str:
 
 
 @register_global_tool
-def current_datetime(wrapper: RunContextWrapper[CelestoConfig]) -> str:
+def current_datetime(wrapper: RunContext) -> str:
     """Returns the current date and time."""
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 

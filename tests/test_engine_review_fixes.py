@@ -345,9 +345,7 @@ async def test_agentor_arun_passes_max_turns_to_the_native_engine():
     from agentor import Agentor
 
     model = FakeModel(*[calls(("weather", '{"city": "X"}')) for _ in range(10)])
-    agent = Agentor(
-        name="T", model=model, tools=[weather], engine="native", api_key="test"
-    )
+    agent = Agentor(name="T", model=model, tools=[weather], api_key="test")
     result = await agent.arun("go", max_turns=3)
 
     assert result.status == "max_turns"
@@ -393,31 +391,6 @@ async def test_resume_of_a_completed_run_returns_the_parsed_output_type():
 
 
 # ------------------------------------------------ P2: FunctionTool context
-
-
-@pytest.mark.asyncio
-async def test_function_tool_adapter_receives_the_run_context():
-    """A FunctionTool reading ctx.context lost its credentials under native."""
-    from agents import RunContextWrapper, function_tool
-
-    seen = {}
-
-    @function_tool
-    async def needs_ctx(wrapper: RunContextWrapper, q: str) -> str:
-        """Doc.
-
-        Args:
-            q: query.
-        """
-        seen["context"] = wrapper.context
-        return "ok"
-
-    sentinel = object()
-    model = FakeModel(calls(("needs_ctx", '{"q": "x"}')), text("done"))
-    loop = AgentLoop(model=model, tools=[needs_ctx], context=sentinel)
-    await loop.arun("go")
-
-    assert seen["context"] is sentinel
 
 
 # ============================================ second review round
@@ -521,9 +494,7 @@ async def test_max_turns_is_honoured_for_message_list_input():
     from agentor import Agentor
 
     model = FakeModel(*[calls(("weather", '{"city": "X"}')) for _ in range(10)])
-    agent = Agentor(
-        name="T", model=model, tools=[weather], engine="native", api_key="test"
-    )
+    agent = Agentor(name="T", model=model, tools=[weather], api_key="test")
     result = await agent.arun([{"role": "user", "content": "go"}], max_turns=2)
 
     assert result.status == "max_turns"
@@ -678,7 +649,6 @@ def test_base_url_routes_to_the_chat_completions_adapter():
         model="openrouter/auto",
         base_url="https://openrouter.ai/api/v1",
         api_key="test",
-        engine="native",
     )
     assert isinstance(agent._loop.model, ChatCompletionsModel)
     assert agent._loop.model.model == "openrouter/auto"
@@ -688,18 +658,8 @@ def test_provider_prefixed_model_still_routes_to_litellm_without_base_url():
     from agentor import Agentor
     from agentor.engine.models import LiteLLMModel
 
-    agent = Agentor(
-        name="T", model="gemini/gemini-2.0-flash", api_key="test", engine="native"
-    )
+    agent = Agentor(name="T", model="gemini/gemini-2.0-flash", api_key="test")
     assert isinstance(agent._loop.model, LiteLLMModel)
-
-
-def test_base_url_on_the_agents_engine_is_refused_not_ignored():
-    """Silently dropping it would look like the endpoint was honoured."""
-    from agentor import Agentor
-
-    with pytest.raises(ValueError, match="base_url requires engine='native'"):
-        Agentor(name="T", model="gpt-4o", base_url="https://example/v1", api_key="k")
 
 
 def test_model_settings_reach_the_native_model():
@@ -719,41 +679,26 @@ def test_model_settings_reach_the_native_model():
 # ============================================ provider-hosted tools
 
 
+class HostedTool:
+    """Shaped like a provider-hosted tool: a name, nothing to invoke."""
+
+    name = "web_search"
+
+
 def test_hosted_tools_fail_with_an_actionable_message():
     """A generic 'unsupported type' hides why a documented tool stopped working."""
-    from agents import WebSearchTool
-
     from agentor.engine.tools import resolve_tools
 
     with pytest.raises(TypeError, match="provider-hosted tool") as exc:
-        resolve_tools([WebSearchTool()])
+        resolve_tools([HostedTool()])
 
     message = str(exc.value)
     assert "web_search" in message
-    assert "engine='agents'" in message
+    assert "function tool" in message
 
 
 def test_agentor_surfaces_the_hosted_tool_message():
-    from agents import WebSearchTool
-
     from agentor import Agentor
 
     with pytest.raises(TypeError, match="provider-hosted tool"):
-        Agentor(
-            name="T",
-            model="gpt-4o-mini",
-            tools=[WebSearchTool()],
-            engine="native",
-            api_key="test",
-        )
-
-
-def test_hosted_tools_still_work_on_the_agents_engine():
-    from agents import WebSearchTool
-
-    from agentor import Agentor
-
-    agent = Agentor(
-        name="T", model="gpt-4o-mini", tools=[WebSearchTool()], api_key="test"
-    )
-    assert any(getattr(t, "name", None) == "web_search" for t in agent.tools)
+        Agentor(name="T", model="gpt-4o-mini", tools=[HostedTool()], api_key="test")

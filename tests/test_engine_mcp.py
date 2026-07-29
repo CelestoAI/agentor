@@ -4,10 +4,10 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
-from tests.test_engine import FakeModel, calls, text, weather
 
 from agentor.engine import AgentLoop
 from agentor.engine.mcp import MCPServer, _content_to_text
+from tests.test_engine import FakeModel, calls, text, weather
 
 
 def remote_tool(name, description="", schema=None):
@@ -111,7 +111,9 @@ async def test_calling_a_remote_tool_forwards_arguments():
 
 @pytest.mark.asyncio
 async def test_remote_error_raises_so_the_failure_budget_applies():
-    session = FakeSession([remote_tool("bad")], results={"bad": "upstream down"}, is_error=True)
+    session = FakeSession(
+        [remote_tool("bad")], results={"bad": "upstream down"}, is_error=True
+    )
     server = connected(session)
 
     (tool,) = await server.list_tools()
@@ -124,7 +126,9 @@ async def test_remote_error_raises_so_the_failure_budget_applies():
 
 @pytest.mark.asyncio
 async def test_remote_tools_are_available_during_a_run_and_removed_after():
-    session = FakeSession([remote_tool("remote_search")], results={"remote_search": "hit"})
+    session = FakeSession(
+        [remote_tool("remote_search")], results={"remote_search": "hit"}
+    )
 
     class Server(MCPServer):
         closed = False

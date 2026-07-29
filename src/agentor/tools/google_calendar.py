@@ -87,7 +87,9 @@ class CalendarTool(BaseTool):
             calendar = self.service.calendarList().get(calendarId=calendar_id).execute()
             return calendar.get("timeZone", "UTC")
         except Exception:
-            logger.debug(f"Failed to fetch timezone for {calendar_id}, defaulting to UTC")
+            logger.debug(
+                f"Failed to fetch timezone for {calendar_id}, defaulting to UTC"
+            )
             return "UTC"
 
     @staticmethod

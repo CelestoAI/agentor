@@ -491,15 +491,22 @@ async def test_no_output_type_sends_no_response_format():
 def native(model, **kwargs):
     from agentor import Agentor
 
-    return Agentor(name="T", model=model, engine="native", api_key="test", **kwargs)
+    return Agentor(name="T", model=model, api_key="test", **kwargs)
 
 
-def test_agentor_defaults_to_the_agents_engine():
+def test_agentor_uses_the_native_engine_by_default():
     from agentor import Agentor
 
     agent = Agentor(name="T", model="gpt-4o-mini", api_key="test")
-    assert agent.engine == "agents"
-    assert agent.agent is not None
+    assert agent._loop is not None
+
+
+def test_agentor_rejects_the_removed_engine_argument():
+    """engine="agents" must fail loudly, not be silently ignored."""
+    from agentor import Agentor
+
+    with pytest.raises(ValueError, match="openai-agents engine was"):
+        Agentor(name="T", model="gpt-4o-mini", api_key="test", engine="agents")
 
 
 def test_agentor_native_run():
@@ -536,20 +543,14 @@ async def test_agentor_native_chat_non_streaming():
     assert result.final_output == "answer"
 
 
-def test_agentor_native_adapts_mcp_servers():
-    """An openai-agents MCP server must work unchanged on the native engine."""
-    from agentor.engine.mcp import MCPServer
-    from agentor.mcp import MCPServerStreamableHttp
+def test_agentor_accepts_mcp_servers():
+    from agentor.mcp import MCPServer
 
-    server = MCPServerStreamableHttp(
-        name="m", params={"url": "http://example/mcp", "headers": {"A": "b"}}
-    )
+    server = MCPServer(url="http://example/mcp", headers={"A": "b"}, name="m")
     agent = native(FakeModel(text("x")), tools=[server])
 
-    (adapted,) = agent._loop.mcp_servers
-    assert isinstance(adapted, MCPServer)
-    assert adapted.url == "http://example/mcp"
-    assert adapted.headers == {"A": "b"}
+    (attached,) = agent._loop.mcp_servers
+    assert attached is server
     # an MCP server is not a local tool
     assert agent.tools == []
 

@@ -361,64 +361,57 @@ Passing it with `engine="agents"` raises rather than being silently ignored, sin
 configures endpoints through its own client and would quietly disregard it. Without `base_url`, a
 `provider/model` string still routes to litellm exactly as before.
 
-### Phase 5b — Flip the default and remove openai-agents (not started)
+### Phase 5b — openai-agents removed ✅ *shipped*
 
-Remaining before the flip:
+The dependency is gone. `engine` is no longer a switch: there is one engine, it is the default,
+and `engine="agents"` raises with an explanation rather than being ignored.
 
-- `WebSearchTool` and other OpenAI hosted tools need a Responses API adapter, or to be documented
-  as `engine="agents"` only. This is now the last real blocker.
-- Then: flip the default, drop the dependency, delete the openai-agents half of
-  `output_text_formatter.py` and `tracer.py`.
+Hosted tools were **dropped** rather than ported. Two cheaper routes were probed and ruled out
+first: `web_search_options` on chat/completions works only on `-search-preview` models (rejected
+by `gpt-4o-mini`, and by `gpt-5-mini` which our own example used), and a Responses adapter would
+have meant a second message format inside the engine for ~250–300 LOC. `WebSearchTool` and the
+rest now raise naming the tool and the reason.
 
-Note that CI never ran on the v0.1.0 stack until it was about to merge: `test.yml` only triggered
-on `main`, so five PRs sat green on nothing but AI reviewers. Fixed in `e84fd3e`.
+Native replacements for everything openai-agents used to supply:
 
-**Total: ~2.5 weeks.**
-
-### Net LOC
-
-| | Before | After | Δ |
-|---|---|---|---|
-| New core (5 files) | 0 | ~810 | +810 |
-| `core/agent.py` | 704 | ~350 | −354 |
-| `durable/durable_agent.py` | 439 | 0 | −439 |
-| `output_text_formatter.py` | 280 | ~80 | −200 |
-| `tracer.py` | 313 | ~150 | −163 |
-| tool plumbing | ~250 | ~120 | −130 |
-| **Net** | | | **≈ −475** |
-
-Less code, one engine instead of two, durability and native tracing gained.
-
----
-
-## 6. Explicitly NOT building
-
-Guarding against the over-engineering the brief warns about:
-
-- ❌ Graph / DAG DSL — the loop is a `while`
-- ❌ Handoffs as a primitive — a sub-agent is a tool that calls another agent (~10 lines)
-- ❌ Guardrails framework — a callback
-- ❌ 100-provider abstraction — `base_url` covers it; litellm is the optional escape hatch
-- ❌ Workflow engine / Temporal-style determinism — an append-only event log is enough
-- ❌ Voice, realtime, computer-use
-- ❌ Prompt templating DSL — `jinja2` is already there
-- ❌ Custom retry/backoff framework — `backoff` is already a dep
-
----
-
-## 7. Risks
-
-| Risk | Mitigation |
+| was | now |
 |---|---|
-| **OpenAI hosted tools** (`WebSearchTool`, file search) don't exist on chat-completions | Keep `ResponsesModel` adapter; `WebSearchTool` stays OpenAI-only, as it already is |
-| Provider quirks (tool-call format drift, Gemini's strict-schema rejections) | Adapter layer per provider; the spike's `_json_type` already handles union/optional/literal |
-| Streaming edge cases across providers | Highest-risk item — budget real time in Phase 1; chat-completions SSE deltas are well-trodden |
-| Silent behaviour change for existing users | Dual-engine gate through Phases 1–4; same test suite runs against both |
-| Losing free upstream work (guardrails, sandboxes, realtime) | Accepted — Agentor uses none of it today |
+| `agents.function_tool` | `agentor.engine.tools.function_tool` |
+| `agents.ModelSettings` | `agentor.engine.settings.ModelSettings` (+ `extra` passthrough) |
+| `agents.FunctionTool` | `agentor.engine.tools.Tool` |
+| `agents.mcp.MCPServerStreamableHttp` | `agentor.mcp.MCPServer` |
+| `LitellmModel` | `agentor.engine.models.LiteLLMModel` (old name still exported) |
+| openai-agents tracing | `agentor.engine.tracing`, via `setup_celesto_tracing` |
+
+`tracer.py` went from 313 lines of `hasattr` introspection into another vendor's spans to a
+45-line entry point. `output_text_formatter.py` went from 280 lines to 93.
+
+**Measured, in a venv where openai-agents is not installed at all:**
+
+| | before the migration | now |
+|---|---|---|
+| `import agentor` | 2.65s | **0.003s** |
+| `from agentor import Agentor` | 2.65s | **0.51s** |
+| clean core install | 311 MB | **207 MB** |
+
+243 tests pass with the package absent. All four live suites re-run: engine 22/22, MCP 9/9,
+OpenRouter 12/12, cross-process resume recovers.
 
 ---
 
-## 8. If you only do one thing
+## 9. Outcome
 
-**Phase 0.** It is one day, carries no architectural risk, is correct under every option including
-"change nothing," and takes `import agentor` from 2.65s to ~0.4s.
+Every goal in section 1 is met:
+
+- One engine, not two. `DurableAgent` is gone; durability is a property of the loop.
+- The trace format is native. No adapter, no `hasattr` chains, and it covers every run.
+- The model is not bound to the agent, so a fallback is a copy rather than a rebuild.
+- One tool abstraction, with no SDK type in user signatures.
+- `import agentor` is ~900x cheaper; the engine path ~5x.
+
+Not done, deliberately:
+
+- **HITL interrupt/approval.** The store makes it easy; nothing needs it yet.
+- **Hosted tools.** Dropped, with an explicit error.
+- **Concurrent resume of one unfinished run.** Documented rather than half-locked; a correct fix
+  needs an atomic lease the bundled single-process stores cannot provide.

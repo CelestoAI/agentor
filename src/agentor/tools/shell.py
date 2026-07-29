@@ -67,4 +67,5 @@ def _shell_executor(request: ShellCommandRequest) -> str:
     except Exception as e:
         return f"Error executing command: {str(e)}"
 
+
 LocalShellTool = ShellTool

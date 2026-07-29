@@ -14,7 +14,6 @@ def main():
         name="Weather Agent",
         model="gpt-5-mini",
         tools=[GetWeatherTool()],
-        engine="native",
         store=FileStore("runs"),
     )
 
