@@ -8,6 +8,7 @@ is emitted as an `Event`, and `arun`/`run` are projections of `astream`.
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import logging
 import time
@@ -373,7 +374,7 @@ class AgentLoop:
         try:
             async with self._connected_mcp_tools() as tools:
                 async for event in self._astream(
-                    messages, stream_text, tools, max_turns
+                    messages, stream_text, tools, max_turns, run_started
                 ):
                     await record(event)
                     yield event
@@ -404,6 +405,7 @@ class AgentLoop:
         stream_text: bool = False,
         tools: Optional[Dict[str, Tool]] = None,
         max_turns: Optional[int] = None,
+        run_started: Optional[float] = None,
     ) -> AsyncIterator[Event]:
         tools = self.tools if tools is None else tools
         turn_budget = self.max_turns if max_turns is None else max_turns
@@ -412,13 +414,16 @@ class AgentLoop:
         total = Usage()
 
         model_name = getattr(self.model, "model", None)
-        run_started = time.time()
+        # taken from the caller so run_start and run_end bound the same instant
+        run_started = time.time() if run_started is None else run_started
 
         for turn in range(1, turn_budget + 1):
             schemas = self._schemas(tools, disabled)
             # snapshot before the call: `messages` is appended to below, and a
-            # trace needs the request as it was actually sent
-            request_messages = [dict(m) for m in messages]
+            # trace needs the request as it was actually sent. Deep, because a
+            # shallow copy shares the nested tool_calls list, so a later
+            # in-place edit would rewrite an already-emitted trace.
+            request_messages = copy.deepcopy(messages)
             call_started = time.time()
 
             if stream_text:
@@ -488,6 +493,7 @@ class AgentLoop:
                 *(self._run_tool(call, tools, disabled) for call in response.tool_calls)
             )
 
+            newly_disabled: List[str] = []
             for event in results:
                 event.turn = turn
                 yield event
@@ -499,11 +505,10 @@ class AgentLoop:
                     }
                 )
 
-                if (
-                    event.error is None
-                    or event.name not in tools
-                    or event.name in disabled
-                ):
+                # An unknown name is counted too: a model that keeps inventing
+                # one otherwise burns every turn, which is the failure this
+                # budget exists to stop.
+                if event.error is None or event.name in disabled:
                     continue
 
                 failures[event.name] = failures.get(event.name, 0) + 1
@@ -511,12 +516,25 @@ class AgentLoop:
                     # Retrying a tool that keeps failing just burns turns. Drop
                     # it and let the model finish with what is left.
                     disabled.add(event.name)
+                    newly_disabled.append(event.name)
+
+            # Deferred until every tool result for this turn is in. Appending a
+            # notice mid-loop splits the run of `tool` messages answering one
+            # assistant turn, and providers reject that outright - so the budget
+            # meant to keep a run alive was ending it instead.
+            #
+            # Skipped on the last turn: no model call follows to read it, and no
+            # generation would snapshot it, so it would only sit in the log
+            # looking like context a resumed run had.
+            if turn < turn_budget:
+                for name in newly_disabled:
+                    count = failures[name]
                     messages.append(
                         {
                             "role": "user",
                             "content": (
-                                f"The tool '{event.name}' failed "
-                                f"{failures[event.name]} times and is now "
+                                f"The tool '{name}' failed {count} "
+                                f"time{'s' if count != 1 else ''} and is now "
                                 "unavailable. Answer without it, or explain "
                                 "what you cannot do."
                             ),
