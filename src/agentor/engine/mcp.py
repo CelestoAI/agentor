@@ -135,8 +135,8 @@ class MCPServer:
             # anyio binds the session's cancel scope to the task that opened it.
             # Closing from elsewhere raises "Attempted to exit cancel scope in a
             # different task", which says nothing about the actual mistake.
-            self._stack = None
-            self._session = None
+            # State is left intact so the caller can still close it correctly
+            # from the original loop; clearing it here would strand the session.
             raise RuntimeError(
                 f"MCP server {self.name!r} was connected on a different event "
                 "loop than the one closing it. Connect and close within the "

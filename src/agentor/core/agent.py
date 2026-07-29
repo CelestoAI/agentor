@@ -94,16 +94,21 @@ def _adapt_mcp_server(server: MCPServerStreamableHttp):
 def _retryable_errors() -> tuple[type[BaseException], ...]:
     """Error types worth retrying on a fallback model.
 
-    litellm's errors are only included when litellm is already loaded. That is
-    sufficient: the only way an agent can raise them is via LitellmModel, which
-    imports litellm itself. Probing `sys.modules` avoids forcing the import on
-    the OpenAI-only path.
+    litellm's errors are only included when litellm is already loaded, which
+    avoids forcing a ~1s import on the OpenAI-only path. Call this when an
+    error is in hand, never up front: litellm is imported lazily on its first
+    request, so a tuple built before that call would omit its errors and the
+    very first rate limit would skip the fallbacks entirely.
     """
     errors: list[type[BaseException]] = [openai.RateLimitError, openai.APIError]
     litellm = sys.modules.get("litellm")
     if litellm is not None:
         errors.extend([litellm.RateLimitError, litellm.APIError])
     return tuple(errors)
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    return isinstance(exc, _retryable_errors())
 
 
 class ToolFunctionParameters(TypedDict, total=False):
@@ -651,11 +656,10 @@ class Agentor(AgentorBase):
         Swapping the model is a copy of the loop rather than a rebuilt agent,
         because the model is not baked into the agent here.
         """
-        retryable = _retryable_errors()
         try:
             return await self._loop.arun(task, max_turns=max_turns)
-        except retryable as e:
-            if not fallback_models:
+        except Exception as e:
+            if not _is_retryable(e) or not fallback_models:
                 raise
             logger.warning(
                 f"Primary model failed with {type(e).__name__}: {e}. "
@@ -666,7 +670,9 @@ class Agentor(AgentorBase):
                     return await self._loop.with_model(
                         fallback_model, api_key=self.api_key
                     ).arun(task, max_turns=max_turns)
-                except retryable as fallback_error:
+                except Exception as fallback_error:
+                    if not _is_retryable(fallback_error):
+                        raise
                     logger.warning(
                         f"Fallback model '{fallback_model}' also failed: {fallback_error}"
                     )

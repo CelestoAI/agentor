@@ -6,6 +6,7 @@ a `BaseTool` capability, an openai-agents `FunctionTool`, or a registry name.
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import json
 import re
@@ -157,9 +158,15 @@ class Tool:
             # context too, or tools reading it silently receive None
             kwargs["__context__"] = context
 
-        result = self.invoke(**kwargs)
-        if inspect.isawaitable(result):
-            result = await result
+        if inspect.iscoroutinefunction(self.invoke):
+            result = await self.invoke(**kwargs)
+        else:
+            # Most BaseTool capabilities are sync and do blocking IO. Calling
+            # them inline would serialize the parallel tool calls the loop
+            # gathers, and stall every other coroutine on the loop with them.
+            result = await asyncio.to_thread(lambda: self.invoke(**kwargs))
+            if inspect.isawaitable(result):
+                result = await result
         return stringify(result)
 
     @classmethod

@@ -14,7 +14,7 @@ from agentor.engine import AgentLoop
 from agentor.engine.events import Event
 from agentor.engine.loop import _strictify
 from agentor.engine.mcp import MCPServer
-from agentor.engine.store import MemoryStore, replay_messages
+from agentor.engine.store import MemoryStore, replay_messages, total_usage
 from tests.test_engine import FakeModel, calls, text, weather
 from tests.test_engine_mcp import FakeSession, remote_tool
 
@@ -537,3 +537,129 @@ async def test_connecting_twice_is_refused_rather_than_leaking():
 
     with pytest.raises(RuntimeError, match="already connected"):
         await server.connect()
+
+
+# ============================================ third review round
+
+
+@pytest.mark.asyncio
+async def test_sync_tools_run_in_parallel():
+    """Sync tools called inline serialize every gather and stall the loop."""
+    import time as _time
+
+    def slow(x: str) -> str:
+        """Slow.
+
+        Args:
+            x: anything.
+        """
+        _time.sleep(0.2)
+        return "done"
+
+    model = FakeModel(
+        calls(("slow", '{"x": "1"}'), ("slow", '{"x": "2"}'), ("slow", '{"x": "3"}')),
+        text("ok"),
+    )
+    loop = AgentLoop(model=model, tools=[slow])
+
+    started = _time.perf_counter()
+    await loop.arun("go")
+    elapsed = _time.perf_counter() - started
+
+    assert elapsed < 0.45, f"3x0.2s sync tools took {elapsed:.2f}s - serialized"
+
+
+@pytest.mark.asyncio
+async def test_the_event_loop_stays_responsive_during_a_sync_tool():
+    ticks = []
+
+    def blocking(x: str) -> str:
+        """Blocks.
+
+        Args:
+            x: anything.
+        """
+        import time as _time
+
+        _time.sleep(0.3)
+        return "done"
+
+    async def ticker():
+        for _ in range(10):
+            await asyncio.sleep(0.02)
+            ticks.append(1)
+
+    loop = AgentLoop(
+        model=FakeModel(calls(("blocking", '{"x": "1"}')), text("ok")),
+        tools=[blocking],
+    )
+    await asyncio.gather(loop.arun("go"), ticker())
+
+    assert len(ticks) == 10, "the event loop was blocked by a sync tool"
+
+
+def test_litellm_errors_are_resolved_when_the_error_is_raised():
+    """Building the tuple up front misses litellm's lazily imported errors."""
+    import sys
+
+    from agentor.core.agent import _is_retryable
+
+    litellm = sys.modules.get("litellm")
+    if litellm is None:  # pragma: no cover - depends on import order
+        import litellm  # noqa: F811
+
+    assert _is_retryable(litellm.RateLimitError("rate limited", "m", "p")), (
+        "a litellm rate limit must trigger the configured fallbacks"
+    )
+
+
+def test_usage_spans_resumed_segments():
+    """A resumed run has one run_end per segment; the last one is partial."""
+    from agentor.engine.events import Usage
+
+    events = [
+        Event(type="generation", usage=Usage(10, 20, 30)),
+        Event(type="run_end", status="max_turns", usage=Usage(10, 20, 30)),
+        Event(type="generation", usage=Usage(1, 2, 3)),
+        Event(type="run_end", status="completed", usage=Usage(1, 2, 3)),
+    ]
+    assert total_usage(events) == Usage(11, 22, 33)
+
+
+@pytest.mark.asyncio
+async def test_resumed_result_reports_total_usage():
+    store = MemoryStore()
+    first = await AgentLoop(
+        model=FakeModel(calls(("weather", '{"city": "X"}'))),
+        tools=[weather],
+        store=store,
+        max_turns=1,
+    ).arun("go")
+
+    await AgentLoop(
+        model=FakeModel(text("done")), tools=[weather], store=store
+    ).aresume(first.run_id)
+    resumed = await AgentLoop(model=FakeModel(), store=store).aresume(first.run_id)
+
+    assert resumed.usage.total_tokens == 6, "usage before the resume was dropped"
+
+
+def test_cross_loop_close_leaves_the_connection_recoverable():
+    """Clearing state before raising would strand the live transport."""
+    server = MCPServer("http://example/mcp", name="x")
+    stack = object()
+
+    async def pretend_connected():
+        server._loop = asyncio.get_running_loop()
+        server._stack = stack
+        server._session = object()
+
+    asyncio.run(pretend_connected())
+
+    async def close_from_another_loop():
+        with pytest.raises(RuntimeError, match="different event loop"):
+            await server.close()
+
+    asyncio.run(close_from_another_loop())
+    assert server._stack is stack, "state must survive so cleanup can be retried"
+    assert server._session is not None

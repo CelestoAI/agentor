@@ -160,9 +160,12 @@ def final_event(events: List[Event]) -> Optional[Event]:
 
 
 def total_usage(events: List[Event]) -> Usage:
-    end = final_event(events)
-    if end is not None and end.usage is not None:
-        return end.usage
+    """Sum every generation in the log.
+
+    Deliberately not the terminal event's usage: a resumed run has one
+    `run_end` per segment, and the last one counts only the continuation, so
+    reading it would silently drop everything spent before the resume.
+    """
     total = Usage()
     for event in events:
         if event.type == "generation" and event.usage:

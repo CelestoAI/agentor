@@ -292,7 +292,7 @@ class AgentLoop:
         collector = self.tracer.collector(self.name) if self.tracer else None
         run_started = time.time()
 
-        def record(event: Event) -> None:
+        async def record(event: Event) -> None:
             if collector is not None:
                 try:
                     collector.handle(event)
@@ -300,7 +300,10 @@ class AgentLoop:
                     logger.warning("Trace collection failed: %s", e)
             if self.store is not None and run_id is not None:
                 try:
-                    self.store.append(run_id, event)
+                    # FileStore fsyncs every event. Awaiting it on a worker
+                    # keeps ordering while leaving the event loop free for
+                    # other runs and streams.
+                    await asyncio.to_thread(self.store.append, run_id, event)
                 except Exception as e:
                     # Losing durability is bad, but killing a live run over it
                     # is worse; the run is still returned to the caller.
@@ -316,7 +319,7 @@ class AgentLoop:
             started_at=run_started,
             messages=[dict(m) for m in messages],
         )
-        record(start)
+        await record(start)
         yield start
 
         try:
@@ -324,7 +327,7 @@ class AgentLoop:
                 async for event in self._astream(
                     messages, stream_text, tools, max_turns
                 ):
-                    record(event)
+                    await record(event)
                     yield event
         except Exception as exc:
             # A failed run is exactly the one worth tracing, and a durable log
@@ -337,7 +340,7 @@ class AgentLoop:
                 started_at=run_started,
                 ended_at=time.time(),
             )
-            record(failure)
+            await record(failure)
             yield failure
             raise
         finally:
@@ -531,6 +534,12 @@ class AgentLoop:
 
         A completed run is returned as-is rather than re-executed, so calling
         this after a crash is safe whether or not the run had finished.
+
+        Not safe against concurrent resumes of the *same unfinished* run: two
+        callers can both see it as incomplete and continue it, re-running
+        side-effecting tools. The bundled stores are single-process and carry
+        no lease or lock; coordinate externally if several workers can recover
+        the same run.
         """
         if self.store is None:
             raise ValueError("resume() requires a store; pass store= to AgentLoop.")
