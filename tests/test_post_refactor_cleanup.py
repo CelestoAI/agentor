@@ -1,7 +1,9 @@
-"""Regression tests for two bugs found auditing what the refactor left behind.
+"""Regression tests for what the engine refactor and the Celesto retirement left.
 
-Both were invisible: one silenced the warning that announced it, the other
-lived in the half of a decorator's signature nothing exercised.
+The bugs here were all invisible from inside: one silenced the warning that
+announced it, one lived in the half of a decorator's signature nothing
+exercised, and one re-exported a name its dependency had already dropped. The
+rest guard deletions - code that should stay gone.
 """
 
 import importlib
@@ -156,8 +158,12 @@ def test_nothing_in_the_package_imports_the_celesto_distribution() -> None:
     root = pathlib.Path(agentor.__file__).parent
     offenders = [
         f"{path.relative_to(root)}:{number}"
+        # Explicit utf-8: read_text() defaults to the locale encoding, which is
+        # cp1252 on Windows, and several sources carry curly quotes and degree
+        # signs. That decoded fine on Linux and macOS and only broke the Windows
+        # matrix legs.
         for path in root.rglob("*.py")
-        for number, line in enumerate(path.read_text().splitlines(), 1)
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
         if line.lstrip().startswith(("import celesto", "from celesto"))
     ]
     assert not offenders, f"agentor imports the celesto package at {offenders}"
