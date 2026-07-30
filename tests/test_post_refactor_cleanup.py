@@ -4,6 +4,7 @@ Both were invisible: one silenced the warning that announced it, the other
 lived in the half of a decorator's signature nothing exercised.
 """
 
+import importlib
 import subprocess
 import sys
 
@@ -110,3 +111,49 @@ def test_the_openai_agents_item_probes_are_gone(attribute: str) -> None:
     import agentor.output_text_formatter as formatter
 
     assert not hasattr(formatter, attribute), f"{attribute} came back; nothing calls it"
+
+
+# ------------------------------------------------ retired Celesto platform
+
+
+def test_celesto_sdk_fails_with_an_explanation_not_an_import_error() -> None:
+    """It re-exported a class the current `celesto` package no longer defines.
+
+    agentor requires `celesto>=0.0.2`, so a fresh install resolved 0.0.10, where
+    `celesto.sdk.client.CelestoSDK` is gone. The old handler caught only
+    ModuleNotFoundError - the module still imports - so users got a bare
+    ImportError from inside a dependency rather than an explanation.
+    """
+    import agentor
+
+    with pytest.raises(AttributeError) as caught:
+        agentor.CelestoSDK
+
+    message = str(caught.value)
+    assert "has been removed" in message
+    assert "serve()" in message, "the message should say what still works"
+
+
+def test_celesto_sdk_is_no_longer_advertised() -> None:
+    import agentor
+
+    assert "CelestoSDK" not in agentor.__all__
+    assert "CelestoSDK" not in dir(agentor)
+
+
+def test_the_create_proxy_cli_module_is_gone() -> None:
+    """`agentor.mcp.proxy` implemented the retired `create-proxy` command.
+
+    No console script ever pointed at it, `agentor.mcp` never exported it, and
+    nothing called it.
+    """
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("agentor.mcp.proxy")
+
+
+def test_the_mcp_package_still_exports_what_callers_use() -> None:
+    """Deleting proxy.py must not disturb the rest of agentor.mcp."""
+    import agentor.mcp as mcp
+
+    for name in ("MCPAPIRouter", "LiteMCP", "Context", "get_context", "MCPServer"):
+        assert hasattr(mcp, name), f"{name} disappeared with proxy.py"

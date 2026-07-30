@@ -35,7 +35,6 @@
 |---------------------------|------------------------------------------|-----------------------|
 |   🚀 MCP & tool security  | The only **full FastAPI compatible** MCP Server with decorator API | [Link](https://docs.celesto.ai/agentor/tools/LiteMCP)
 |   🦾 Agent-to-agent       | Multi-agent communication                | [Link](https://docs.celesto.ai/agentor/agent-to-agent)
-|   ☁️ Deployment           | Fast serverless deployment               | [Link](https://celesto.ai)
 |   📊 Observability        | Agent tracing and monitoring             | [Link](https://celesto.ai)
 |   🔍 Tool Search API      | Reduced tool context bloat               | [Link](https://docs.celesto.ai/agentor/tools/tool-search)
 
@@ -78,7 +77,7 @@ pip install git+https://github.com/celestoai/agentor@main
 
 </details>
 
-## Build and Deploy an Agent
+## Build and Serve an Agent
 
 Build an Agent, connect external tools or MCP Server and serve as an API in just a few lines of code:
 
@@ -125,20 +124,8 @@ curl -X 'POST' \
 }'
 ```
 
-Celesto AI provides a developer-first platform for deployment of Agents, MCP Servers, any LLM application.
-The `celesto` CLI is installed automatically with `agentor`.
-
-To deploy using Celesto, run:
-
-```bash
-celesto deploy
-```
-
-Once deployed, your agent will be accessible via a REST endpoint, for example:
-
-```bash
-https://api.celesto.ai/deploy/apps/<app-name>
-```
+`agent.serve()` gives you an ordinary ASGI app, so host it wherever you already
+run Python services.
 
 ## Tracing
 

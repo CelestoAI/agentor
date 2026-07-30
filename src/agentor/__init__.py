@@ -6,7 +6,6 @@ __all__ = [
     "Agentor",
     "pydantic_to_xml",
     "AppContext",
-    "CelestoSDK",
     "function_tool",
     "ToolSearch",
     "tool",
@@ -62,15 +61,17 @@ def __getattr__(name):
         globals()[name] = value  # cache so later lookups skip __getattr__
         return value
     if name == "CelestoSDK":
-        try:
-            from celesto.sdk.client import CelestoSDK as _CelestoSDK
-        except ModuleNotFoundError as exc:
-            raise ModuleNotFoundError(
-                "CelestoSDK is now provided by the separate 'celesto' package. "
-                "Install it with `pip install celesto`."
-            ) from exc
-        globals()["CelestoSDK"] = _CelestoSDK
-        return _CelestoSDK
+        # Re-exported `celesto.sdk.client.CelestoSDK` until the hosted platform
+        # it spoke to was retired along with `celesto deploy`. celesto >= 0.0.10
+        # no longer defines it, and since agentor requires `celesto>=0.0.2`, a
+        # fresh install resolved the newer one and this raised a bare ImportError
+        # - the handler here only caught ModuleNotFoundError, so it never fired.
+        raise AttributeError(
+            "agentor.CelestoSDK has been removed. It re-exported the Celesto "
+            "platform SDK, which was retired with the hosted deployment "
+            "feature. Agent serving is unaffected: agent.serve() returns a "
+            "plain ASGI app you can host anywhere."
+        )
     if name == "core":
         import importlib
 
