@@ -170,12 +170,14 @@ pip install -e .
 
 ### CLI Commands
 
-This package ships no console script. The `celesto` CLI is a separate package
-(`pip install celesto`); `tests/test_cli.py` skips when it is absent.
+This package ships no console script. A `celesto` command comes along today only
+because `celesto` is still a core dependency, and it now covers sandboxes and
+computer-use agents rather than agent deployment - `celesto deploy` and
+`celesto ls` were retired with the hosted platform. Nothing under `src/` imports
+the `celesto` package any more, so that dependency is a candidate for removal.
 
-```bash
-celesto --help
-```
+`tests/test_cli.py` and `tests/perf/test_init_time.py::test_cli_time` exercise
+that CLI and skip when it is absent.
 
 ### Serving Agents
 

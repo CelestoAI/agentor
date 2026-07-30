@@ -6,7 +6,6 @@ __all__ = [
     "Agentor",
     "pydantic_to_xml",
     "AppContext",
-    "CelestoSDK",
     "function_tool",
     "ToolSearch",
     "tool",
@@ -61,16 +60,6 @@ def __getattr__(name):
         value = getattr(importlib.import_module(module_name), attr)
         globals()[name] = value  # cache so later lookups skip __getattr__
         return value
-    if name == "CelestoSDK":
-        try:
-            from celesto.sdk.client import CelestoSDK as _CelestoSDK
-        except ModuleNotFoundError as exc:
-            raise ModuleNotFoundError(
-                "CelestoSDK is now provided by the separate 'celesto' package. "
-                "Install it with `pip install celesto`."
-            ) from exc
-        globals()["CelestoSDK"] = _CelestoSDK
-        return _CelestoSDK
     if name == "core":
         import importlib
 

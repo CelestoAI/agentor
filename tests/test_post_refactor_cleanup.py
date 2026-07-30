@@ -1,9 +1,12 @@
-"""Regression tests for two bugs found auditing what the refactor left behind.
+"""Regression tests for what the engine refactor and the Celesto retirement left.
 
-Both were invisible: one silenced the warning that announced it, the other
-lived in the half of a decorator's signature nothing exercised.
+The bugs here were all invisible from inside: one silenced the warning that
+announced it, one lived in the half of a decorator's signature nothing
+exercised, and one re-exported a name its dependency had already dropped. The
+rest guard deletions - code that should stay gone.
 """
 
+import importlib
 import subprocess
 import sys
 
@@ -110,3 +113,75 @@ def test_the_openai_agents_item_probes_are_gone(attribute: str) -> None:
     import agentor.output_text_formatter as formatter
 
     assert not hasattr(formatter, attribute), f"{attribute} came back; nothing calls it"
+
+
+# ------------------------------------------------ retired Celesto platform
+
+
+def test_celesto_sdk_is_gone_and_fails_like_any_missing_attribute() -> None:
+    """It re-exported a class the current `celesto` package no longer defines.
+
+    agentor requires `celesto>=0.0.2`, so a fresh install resolves 0.0.10, where
+    `celesto.sdk.client.CelestoSDK` is gone. The re-export caught only
+    ModuleNotFoundError - the module still imports - so users got a bare
+    ImportError raised from inside a dependency.
+
+    The assertion that matters is the exception *type*: anyone reinstating a
+    re-export of a name the dependency dropped brings the ImportError back.
+    """
+    import agentor
+
+    with pytest.raises(AttributeError) as caught:
+        agentor.CelestoSDK
+
+    assert "CelestoSDK" in str(caught.value)
+
+
+def test_celesto_sdk_is_no_longer_advertised() -> None:
+    import agentor
+
+    assert "CelestoSDK" not in agentor.__all__
+    assert "CelestoSDK" not in dir(agentor)
+
+
+def test_nothing_in_the_package_imports_the_celesto_distribution() -> None:
+    """CelestoSDK was its only importer, so the coupling should be gone.
+
+    Guards the claim rather than the dependency: `celesto` remains installed as
+    a transitive convenience, so importing it would still succeed here and pass
+    by accident. Grep the sources instead.
+    """
+    import pathlib
+
+    import agentor
+
+    root = pathlib.Path(agentor.__file__).parent
+    offenders = [
+        f"{path.relative_to(root)}:{number}"
+        # Explicit utf-8: read_text() defaults to the locale encoding, which is
+        # cp1252 on Windows, and several sources carry curly quotes and degree
+        # signs. That decoded fine on Linux and macOS and only broke the Windows
+        # matrix legs.
+        for path in root.rglob("*.py")
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if line.lstrip().startswith(("import celesto", "from celesto"))
+    ]
+    assert not offenders, f"agentor imports the celesto package at {offenders}"
+
+
+def test_the_create_proxy_cli_module_is_gone() -> None:
+    """`agentor.mcp.proxy` implemented the retired `create-proxy` command.
+
+    No console script ever pointed at it, `agentor.mcp` never exported it, and
+    nothing called it.
+    """
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("agentor.mcp.proxy")
+
+
+def test_the_mcp_package_still_exports_what_callers_use() -> None:
+    """Deleting proxy.py must not disturb the rest of agentor.mcp."""
+    import agentor.mcp as mcp
+
+    for name in ("MCPAPIRouter", "LiteMCP", "Context", "get_context", "MCPServer"):
+        assert hasattr(mcp, name), f"{name} disappeared with proxy.py"
