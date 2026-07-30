@@ -12,7 +12,7 @@ We’ll integrate Agentor with the built-in weather tool (set `WEATHER_API_KEY` 
 
 ## Example
 
-Here’s an example of serving an Agentor instance with a simple weather tool in just three lines of code.
+Here’s an example of serving an Agentor instance with a simple weather tool in just a few lines of code.
 
 ```python
 from agentor import Agentor

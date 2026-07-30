@@ -9,6 +9,10 @@ response = requests.post(
     json={"input": "how are you?", "stream": True},
     headers={"Content-Type": "application/json"},
     stream=True,
+    # (connect, read). On a stream the read timeout applies between chunks, not
+    # to the whole response, so this bounds a silent stall without cutting off a
+    # long run that is still producing output.
+    timeout=(5, 60),
 )
 for line in response.iter_lines(decode_unicode=True):
     if line:

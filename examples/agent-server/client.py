@@ -8,5 +8,8 @@ response = requests.post(
     URL,
     json={"input": "how are you?"},
     headers={"Content-Type": "application/json"},
+    # (connect, read). Without a timeout requests waits forever, and an agent
+    # turn that stalls on a model or a tool would hang the client with it.
+    timeout=(5, 120),
 )
 print(response.content.decode("utf-8"))

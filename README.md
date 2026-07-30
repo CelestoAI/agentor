@@ -24,10 +24,6 @@
   <a href="https://github.com/CelestoAI/agentor/tree/main/examples">Examples</a>
 </p>
 
-<p align="center">
-  JavaScript/TypeScript SDK: <a href="https://docs.celesto.ai/celesto-sdk/gatekeeper">Gatekeeper SDK docs</a>
-</p>
-
 
 ## Features
 

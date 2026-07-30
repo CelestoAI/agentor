@@ -60,18 +60,6 @@ def __getattr__(name):
         value = getattr(importlib.import_module(module_name), attr)
         globals()[name] = value  # cache so later lookups skip __getattr__
         return value
-    if name == "CelestoSDK":
-        # Re-exported `celesto.sdk.client.CelestoSDK` until the hosted platform
-        # it spoke to was retired along with `celesto deploy`. celesto >= 0.0.10
-        # no longer defines it, and since agentor requires `celesto>=0.0.2`, a
-        # fresh install resolved the newer one and this raised a bare ImportError
-        # - the handler here only caught ModuleNotFoundError, so it never fired.
-        raise AttributeError(
-            "agentor.CelestoSDK has been removed. It re-exported the Celesto "
-            "platform SDK, which was retired with the hosted deployment "
-            "feature. Agent serving is unaffected: agent.serve() returns a "
-            "plain ASGI app you can host anywhere."
-        )
     if name == "core":
         import importlib
 
