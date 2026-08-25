@@ -452,6 +452,7 @@ class AgentLoop:
                 model=model_name,
                 messages=request_messages,
                 text=response.content,
+                reasoning=response.reasoning,
                 calls=assistant.get("tool_calls"),
                 usage=response.usage,
                 started_at=call_started,
@@ -607,7 +608,31 @@ class AgentLoop:
             self.arun(input, run_id=run_id, max_turns=max_turns, tracing=tracing)
         )
 
-    async def aresume(self, run_id: str) -> RunResult:
+    def _completed_result(self, run_id: str, events: List[Event]) -> RunResult:
+        """Terminal state of an already-finished log, without re-executing it."""
+        from agentor.engine.store import final_event, replay_messages, total_usage
+
+        end = final_event(events)
+        output = end.text if end else None
+        if self.output_type is not None:
+            # otherwise a finished run returns a str and one that had to be
+            # continued returns a parsed model
+            output = self._parse_output(output)
+        return RunResult(
+            run_id=run_id,
+            final_output=output,
+            status="completed",
+            events=events,
+            usage=total_usage(events),
+            messages=replay_messages(events),
+        )
+
+    async def aresume(
+        self,
+        run_id: str,
+        max_turns: Optional[int] = None,
+        tracing: Any = None,
+    ) -> RunResult:
         """Continue a persisted run from where it stopped.
 
         A completed run is returned as-is rather than re-executed, so calling
@@ -622,31 +647,14 @@ class AgentLoop:
         if self.store is None:
             raise ValueError("resume() requires a store; pass store= to AgentLoop.")
 
-        from agentor.engine.store import (
-            final_event,
-            is_complete,
-            replay_messages,
-            total_usage,
-        )
+        from agentor.engine.store import is_complete, replay_messages, total_usage
 
-        events = self.store.load(run_id)
+        events = await asyncio.to_thread(self.store.load, run_id)
         if not events:
             raise KeyError(f"No persisted run with id {run_id!r}.")
 
         if is_complete(events):
-            end = final_event(events)
-            output = end.text if end else None
-            if self.output_type is not None:
-                # otherwise resume() returns a str for a finished run and a
-                # parsed model for one it had to continue
-                output = self._parse_output(output)
-            return RunResult(
-                run_id=run_id,
-                final_output=output,
-                status="completed",
-                events=events,
-                usage=total_usage(events),
-            )
+            return self._completed_result(run_id, events)
 
         messages = replay_messages(events)
         if not messages:
@@ -654,7 +662,9 @@ class AgentLoop:
                 f"Run {run_id!r} has no recoverable messages; start a new run."
             )
 
-        result = await self.arun(messages, run_id=run_id)
+        result = await self.arun(
+            messages, run_id=run_id, max_turns=max_turns, tracing=tracing
+        )
         # the caller cares about the whole run, not just this continuation
         result.events = events + result.events
         # ...including what it cost. The continuation's run_end only counts its
@@ -663,8 +673,119 @@ class AgentLoop:
         result.usage = total_usage(result.events)
         return result
 
-    def resume(self, run_id: str) -> RunResult:
-        return self._sync(self.aresume(run_id))
+    def resume(
+        self,
+        run_id: str,
+        max_turns: Optional[int] = None,
+        tracing: Any = None,
+    ) -> RunResult:
+        return self._sync(self.aresume(run_id, max_turns=max_turns, tracing=tracing))
+
+    async def afork(
+        self,
+        run_id: str,
+        input: Optional[MessageInput] = None,
+        *,
+        fork_id: Optional[str] = None,
+        max_turns: Optional[int] = None,
+        tracing: Any = None,
+    ) -> RunResult:
+        """Copy a persisted run to a new id and continue it from there.
+
+        The fork keeps the parent's entire event log - every generation with
+        its request snapshot and reasoning, every tool call and result - and
+        then lives its own life: nothing appended to the fork ever touches the
+        parent run, and vice versa.
+
+        With `input`, the conversation continues from the fork point with that
+        message, even when the parent had already completed - which is the
+        case `aresume` deliberately refuses to re-execute. Without `input`, an
+        unfinished parent is completed on the fork, and a finished one is
+        returned as-is - a snapshot; branching past its end means forking it
+        again with input.
+
+        When the parent log carries a system message the fork keeps it, even
+        under an agent with different instructions - the same behaviour as
+        `aresume`; a parent that ran without one picks up this agent's
+        instructions. And like `aresume`, this takes no lock: forking a run
+        that is concurrently in flight copies whatever prefix of its log has
+        been persisted so far.
+        """
+        if self.store is None:
+            raise ValueError("fork() requires a store; pass store= to AgentLoop.")
+        if input is not None and not isinstance(input, str) and not input:
+            # an empty list is almost certainly a bug, and would re-execute
+            # the conversation with no new message at all
+            raise ValueError("input is an empty list; pass None to fork without input.")
+
+        from agentor.engine.store import (
+            fork_run,
+            is_complete,
+            replay_messages,
+            total_usage,
+        )
+
+        # on a worker thread for the same reason record() puts append there:
+        # copying a long log through FileStore means bulk file I/O plus an
+        # fsync, and blocking here stalls every other run on the event loop
+        fork_id = await asyncio.to_thread(fork_run, self.store, run_id, fork_id)
+        events = await asyncio.to_thread(self.store.load, fork_id)
+
+        if input is None:
+            if not is_complete(events):
+                try:
+                    return await self.aresume(
+                        fork_id, max_turns=max_turns, tracing=tracing
+                    )
+                except Exception as exc:
+                    # same affordance as the input path below: the copy is
+                    # already persisted, so a failure must say which id to
+                    # resume or the fork is stranded anonymously
+                    exc.add_note(
+                        f"Forked run persisted as {fork_id!r}; resume it to retry."
+                    )
+                    raise
+            return self._completed_result(fork_id, events)
+
+        messages = replay_messages(events)
+        if not messages:
+            raise ValueError(
+                f"Run {run_id!r} has no recoverable messages; start a new run."
+            )
+        if isinstance(input, str):
+            messages.append({"role": "user", "content": input})
+        else:
+            messages.extend(input)
+
+        try:
+            result = await self.arun(
+                messages, run_id=fork_id, max_turns=max_turns, tracing=tracing
+            )
+        except Exception as exc:
+            # the copy is already persisted; without its id a failed
+            # continuation would strand a resumable fork nobody can name
+            exc.add_note(f"Forked run persisted as {fork_id!r}; resume it to retry.")
+            raise
+        # as in aresume: the caller cares about the whole forked history plus
+        # the continuation, and what all of it cost together
+        result.events = events + result.events
+        result.usage = total_usage(result.events)
+        return result
+
+    def fork(
+        self,
+        run_id: str,
+        input: Optional[MessageInput] = None,
+        *,
+        fork_id: Optional[str] = None,
+        max_turns: Optional[int] = None,
+        tracing: Any = None,
+    ) -> RunResult:
+        return self._sync(
+            self.afork(
+                run_id, input, fork_id=fork_id, max_turns=max_turns, tracing=tracing
+            )
+        )
 
     @staticmethod
     def _sync(coro):

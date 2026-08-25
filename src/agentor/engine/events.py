@@ -20,6 +20,7 @@ EventType = Literal[
     "tool_result",
     "run_end",
     "error",
+    "fork",
 ]
 
 RunStatus = Literal["completed", "max_turns", "failed"]
@@ -44,6 +45,9 @@ class Event:
     type: EventType
     #: assistant text: the full message for `message`, one chunk for `text_delta`
     text: Optional[str] = None
+    #: the model's reasoning/thinking text, on `generation`, when the provider
+    #: returns it; part of the persisted log so a fork keeps the full trace
+    reasoning: Optional[str] = None
     #: tool name for `tool_call` / `tool_result`
     name: Optional[str] = None
     #: parsed tool arguments
@@ -68,6 +72,8 @@ class Event:
     #: epoch seconds bounding the work this event describes; spans need both
     started_at: Optional[float] = None
     ended_at: Optional[float] = None
+    #: parent run id, on the `fork` marker a forked run starts its own life with
+    forked_from: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if v is not None}
@@ -80,7 +86,13 @@ class Event:
         data = dict(data)
         usage = data.get("usage")
         if isinstance(usage, dict):
-            data["usage"] = Usage(**usage)
+            # filtered like the event fields below: an unknown usage key from a
+            # newer writer would otherwise raise TypeError, which load() treats
+            # as an unreadable line - silently deleting the whole generation
+            known_usage = {f.name for f in fields(Usage)}
+            data["usage"] = Usage(
+                **{k: v for k, v in usage.items() if k in known_usage}
+            )
         # tolerate fields added by a newer version writing the same log
         known = {f.name for f in fields(cls)}
         return cls(**{k: v for k, v in data.items() if k in known})

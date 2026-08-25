@@ -863,28 +863,27 @@ def test_agentor_accepts_an_explicit_tracer():
 # ============================================ whole-line review
 
 
-def test_version_is_a_valid_prerelease():
-    """The 0.1.0 line ships as a prerelease on purpose.
+def test_version_is_a_valid_stable_release():
+    """The 0.1.0 line is stable as of 0.1.0 - a deliberate decision.
 
-    pip excludes prereleases by default, which is exactly what is wanted: this
-    release drops a dependency, removes DurableAgent and drops hosted tools, so
-    `pip install --upgrade agentor` must not sweep 0.0.x users into it. They
-    opt in with --pre or an explicit pin.
-
-    The phase may advance a -> b -> rc without touching this test; going stable
-    is a deliberate decision that should have to change it.
+    This test previously pinned the line to prereleases so that a plain
+    `pip install --upgrade agentor` could not sweep 0.0.x users into the
+    breaking 0.1.0 changes (DurableAgent removed, hosted tools dropped).
+    Going stable was chosen explicitly for 0.1.0 (2026-08-25), after two rcs,
+    with the migration guidance raising explicit errors. From here the guard
+    inverts: the published line must not slide back to a prerelease, which
+    would silently hide released features from default pip installs.
     """
     from packaging.version import Version
 
     import agentor
 
     version = Version(agentor.__version__)
-    assert version.is_prerelease, (
-        f"{agentor.__version__} is stable; upgrading 0.0.x users into a "
-        "breaking release should be an explicit choice"
+    assert not version.is_prerelease, (
+        f"{agentor.__version__} is a prerelease; the 0.1.0 line went stable "
+        "and must not regress behind pip's default prerelease filter"
     )
-    assert version.base_version == "0.1.0"
-    assert version.pre[0] in ("a", "b", "rc"), agentor.__version__
+    assert version >= Version("0.1.0")
 
 
 def test_the_previous_mcp_import_still_works():
