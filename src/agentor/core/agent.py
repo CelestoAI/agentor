@@ -29,7 +29,7 @@ from pydantic import BaseModel
 
 from agentor.a2a import A2AController, AgentSkill
 from agentor.config import celesto_config
-from agentor.engine import AgentLoop, function_tool
+from agentor.engine import AgentLoop, RunResult, function_tool
 from agentor.engine.mcp import MCPServer
 from agentor.engine.settings import ModelSettings
 from agentor.engine.tools import resolve_tools
@@ -507,6 +507,25 @@ class Agentor:
     async def aresume(self, run_id: str):
         """Async variant of resume()."""
         return await self._loop.aresume(run_id)
+
+    def fork(
+        self, run_id: str, input: Optional[str] = None, *, fork_id: Optional[str] = None
+    ) -> RunResult:
+        """Fork a persisted run into a new, independent run. Requires a store.
+
+        The fork retains the parent's full trace - every generation with its
+        request snapshot and reasoning, every tool call and result - under a
+        new run id, and acts independently from there: continuing the fork
+        never touches the parent run. Pass `input` to continue the forked
+        conversation immediately, even when the parent had already completed.
+        """
+        return self._loop.fork(run_id, input, fork_id=fork_id)
+
+    async def afork(
+        self, run_id: str, input: Optional[str] = None, *, fork_id: Optional[str] = None
+    ) -> RunResult:
+        """Async variant of fork()."""
+        return await self._loop.afork(run_id, input, fork_id=fork_id)
 
     def think(self, query: str) -> List[str] | str:
         prompt = render_prompt(

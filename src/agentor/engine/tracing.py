@@ -72,25 +72,25 @@ class TraceCollector:
             self._agent_model = event.model
 
         elif event.type == "generation":
-            self.items.append(
-                self._span(
-                    {
-                        "type": "generation",
-                        "model": event.model,
-                        "input": event.messages,
-                        "output": event.text,
-                        "tool_calls": event.calls,
-                        "usage": {
-                            "input_tokens": event.usage.input_tokens,
-                            "output_tokens": event.usage.output_tokens,
-                            "total_tokens": event.usage.total_tokens,
-                        }
-                        if event.usage
-                        else None,
-                    },
-                    event,
-                )
-            )
+            span_data = {
+                "type": "generation",
+                "model": event.model,
+                "input": event.messages,
+                "output": event.text,
+                "tool_calls": event.calls,
+                "usage": {
+                    "input_tokens": event.usage.input_tokens,
+                    "output_tokens": event.usage.output_tokens,
+                    "total_tokens": event.usage.total_tokens,
+                }
+                if event.usage
+                else None,
+            }
+            # only when the provider returned any, so existing payloads keep
+            # their shape
+            if event.reasoning:
+                span_data["reasoning"] = event.reasoning
+            self.items.append(self._span(span_data, event))
 
         elif event.type == "tool_result":
             span = self._span(

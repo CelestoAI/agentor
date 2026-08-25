@@ -221,6 +221,11 @@ the conversation. `FileStore` survives process death; `MemoryStore` is for tests
 Concurrent resume of one unfinished run is not safe - the bundled stores carry no
 lease.
 
+`fork_run` copies a log to a new id (full trace, reasoning included, plus a
+`fork` marker naming the parent); `Agentor.fork` / `AgentLoop.afork` build on it
+to branch a conversation - even a completed one, which `resume` refuses to
+re-execute - into an independent run.
+
 ### 4. Tracing
 
 **Location:** `src/agentor/engine/tracing.py`
@@ -228,6 +233,11 @@ lease.
 A projection of the event stream onto Celesto's trace format. Opt-in: pass
 `enable_tracing=True`, or `tracing=` on a single run. Holding `CELESTO_API_KEY`
 is not consent to ship prompts and tool results to a remote endpoint.
+
+The model's reasoning text, when a provider returns it, is persisted in run
+logs and included in generation spans - even though streaming never surfaces
+it to the client. Treat run logs and traces as holding everything the model
+produced, not just what the caller saw.
 
 ### 5. Model Context Protocol (MCP)
 

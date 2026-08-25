@@ -28,6 +28,8 @@ class ModelResponse:
     content: Optional[str] = None
     tool_calls: List[ToolCall] = field(default_factory=list)
     usage: Usage = field(default_factory=Usage)
+    #: the model's reasoning/thinking text, when the provider returns it
+    reasoning: Optional[str] = None
     #: provider payload, for tracing
     raw: Any = None
 
@@ -55,6 +57,20 @@ class Model(Protocol):
         tools: Optional[List[Dict]] = None,
         response_format: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[StreamChunk]: ...
+
+
+def _reasoning(message: Any) -> Optional[str]:
+    """Read the reasoning text off a message or streamed delta.
+
+    Not part of the OpenAI spec, so the field name varies by provider:
+    `reasoning_content` (DeepSeek, vLLM, and most compatible servers) or
+    `reasoning` (OpenRouter). Absent on true OpenAI responses.
+    """
+    for attr in ("reasoning_content", "reasoning"):
+        value = getattr(message, attr, None)
+        if isinstance(value, str) and value:
+            return value
+    return None
 
 
 def _usage(raw: Any) -> Usage:
@@ -130,6 +146,7 @@ class ChatCompletionsModel:
                 for tc in (message.tool_calls or [])
             ],
             usage=_usage(raw),
+            reasoning=_reasoning(message),
             raw=raw,
         )
 
@@ -144,6 +161,7 @@ class ChatCompletionsModel:
         request["stream_options"] = {"include_usage": True}
 
         content: List[str] = []
+        reasoning: List[str] = []
         # Tool calls arrive fragmented and out of order; `index` is the only
         # reliable key, and id/name may appear in a later chunk than the first
         # for that index.
@@ -171,6 +189,12 @@ class ChatCompletionsModel:
                 content.append(delta.content)
                 yield StreamChunk(delta=delta.content)
 
+            # accumulated but not yielded as deltas: StreamChunk carries answer
+            # text, and reasoning belongs to the trace via the final response
+            chunk_reasoning = _reasoning(delta)
+            if chunk_reasoning:
+                reasoning.append(chunk_reasoning)
+
             for tc in delta.tool_calls or []:
                 slot = partial.setdefault(
                     tc.index, {"id": "", "name": "", "arguments": ""}
@@ -190,6 +214,7 @@ class ChatCompletionsModel:
                     for _, s in sorted(partial.items())
                 ],
                 usage=usage,
+                reasoning="".join(reasoning) or None,
             )
         )
 
@@ -233,6 +258,7 @@ class LiteLLMModel:
                 for tc in (getattr(message, "tool_calls", None) or [])
             ],
             usage=_usage(raw),
+            reasoning=_reasoning(message),
             raw=raw,
         )
 
