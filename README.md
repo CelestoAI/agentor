@@ -32,6 +32,7 @@
 |   🚀 MCP & tool security  | The only **full FastAPI compatible** MCP Server with decorator API | [Link](https://docs.celesto.ai/agentor/tools/LiteMCP)
 |   🦾 Agent-to-agent       | Multi-agent communication                | [Link](https://docs.celesto.ai/agentor/agent-to-agent)
 |   📊 Observability        | Agent tracing and monitoring             | [Link](https://celesto.ai)
+|   💾 Durable runs         | Persist, resume, and fork agent runs     | [Link](https://docs.celesto.ai/agentor)
 |   🔍 Tool Search API      | Reduced tool context bloat               | [Link](https://docs.celesto.ai/agentor/tools/tool-search)
 
 
@@ -45,12 +46,8 @@ The recommended method of installing `agentor` is with pip from PyPI.
 pip install agentor
 ```
 
-The v0.1.0 line, with the new agent engine, is currently in alpha and is not installed by
-default. To try it:
-
-```bash
-pip install --pre agentor
-```
+This installs the v0.1.0 line, built on Agentor's own agent engine — durable,
+forkable runs included.
 
 Tools with heavy or vendor-specific dependencies ship as extras, so the base
 install stays small:
@@ -122,6 +119,27 @@ curl -X 'POST' \
 
 `agent.serve()` gives you an ordinary ASGI app, so host it wherever you already
 run Python services.
+
+## Durable Runs
+
+Give the agent a store and every run becomes an append-only event log that
+survives process death. Resume an interrupted run, or fork any persisted run —
+even a completed one — into a new, independent run that keeps the full trace,
+the model's reasoning included:
+
+```python
+from agentor import Agentor
+from agentor.engine.store import FileStore
+
+agent = Agentor(name="Assistant", model="gpt-5-mini", store=FileStore("runs"))
+
+result = agent.run("Draft a launch plan")   # persisted under result.run_id
+# Interrupted mid-run? agent.resume(run_id) picks up where it left off.
+
+fork = agent.fork(result.run_id, "Make it punchier")  # new run id, parent untouched
+```
+
+`fork` and `resume` have async twins, `afork` and `aresume`.
 
 ## Tracing
 
