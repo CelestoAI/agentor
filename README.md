@@ -125,7 +125,7 @@ run Python services.
 Give the agent a store and every run becomes an append-only event log that
 survives process death. Resume an interrupted run, or fork any persisted run —
 even a completed one — into a new, independent run that keeps the full trace,
-the model's reasoning included:
+the model's reasoning included when the provider returns it:
 
 ```python
 from agentor import Agentor
@@ -134,17 +134,18 @@ from agentor.engine.store import FileStore
 agent = Agentor(name="Assistant", model="gpt-5-mini", store=FileStore("runs"))
 
 result = agent.run("Draft a launch plan")   # persisted under result.run_id
-# Interrupted mid-run? agent.resume(run_id) picks up where it left off.
+# Interrupted mid-run? agent.resume(result.run_id) picks up where it left off.
 
-fork = agent.fork(result.run_id, "Make it punchier")  # new run id, parent untouched
+fork = agent.fork(result.run_id, "Make it punchier")  # fork.run_id is a new run; parent untouched
 ```
 
 `fork` and `resume` have async twins, `afork` and `aresume`.
 
 ## Tracing
 
-Tracing is **off unless you ask for it**. A trace carries prompts, tool arguments and tool
-results, so nothing leaves your process by default.
+Tracing is **off unless you ask for it**. A trace carries prompts, tool arguments, tool
+results, and the model's reasoning when a provider returns it — so nothing leaves your
+process by default.
 
 Turn it on for an agent:
 

@@ -235,9 +235,10 @@ A projection of the event stream onto Celesto's trace format. Opt-in: pass
 is not consent to ship prompts and tool results to a remote endpoint.
 
 The model's reasoning text, when a provider returns it, is persisted in run
-logs and included in generation spans - even though streaming never surfaces
-it to the client. Treat run logs and traces as holding everything the model
-produced, not just what the caller saw.
+logs, carried on `generation` events, and included in generation spans - it is
+never streamed as `text_delta` chunks, only delivered whole. Treat run logs
+and traces as holding everything the model produced, not just what the caller
+saw.
 
 ### 5. Model Context Protocol (MCP)
 
