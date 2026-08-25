@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-__version__ = "0.1.0rc2"
+__version__ = "0.1.0"
 
 __all__ = [
     "Agentor",
