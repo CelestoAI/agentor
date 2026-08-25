@@ -32,7 +32,7 @@
 |   🚀 MCP & tool security  | The only **full FastAPI compatible** MCP Server with decorator API | [Link](https://docs.celesto.ai/agentor/tools/LiteMCP)
 |   🦾 Agent-to-agent       | Multi-agent communication                | [Link](https://docs.celesto.ai/agentor/agent-to-agent)
 |   📊 Observability        | Agent tracing and monitoring             | [Link](https://celesto.ai)
-|   💾 Durable runs         | Persist, resume, and fork agent runs     | [Link](https://docs.celesto.ai/agentor)
+|   💾 Durable runs         | Persist, resume, and fork agent runs     | [Durable runs docs](https://docs.celesto.ai/agentor)
 |   🔍 Tool Search API      | Reduced tool context bloat               | [Link](https://docs.celesto.ai/agentor/tools/tool-search)
 
 

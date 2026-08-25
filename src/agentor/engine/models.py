@@ -28,10 +28,12 @@ class ModelResponse:
     content: Optional[str] = None
     tool_calls: List[ToolCall] = field(default_factory=list)
     usage: Usage = field(default_factory=Usage)
-    #: the model's reasoning/thinking text, when the provider returns it
-    reasoning: Optional[str] = None
     #: provider payload, for tracing
     raw: Any = None
+    #: the model's reasoning/thinking text, when the provider returns it;
+    #: declared last so the positional order of the released fields
+    #: (content, tool_calls, usage, raw) stays what it always was
+    reasoning: Optional[str] = None
 
 
 @dataclass
