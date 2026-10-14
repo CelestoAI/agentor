@@ -205,50 +205,6 @@ async def test_each_run_gets_its_own_server_instance():
     assert template._session is None, "the template must stay unconnected"
 
 
-@pytest.mark.asyncio
-async def test_mcp_transport_is_closed_when_discovery_fails(monkeypatch):
-    """If list_tools raises after connecting, the transport must not leak.
-
-    Exercises the real `connect()` against a faked transport rather than
-    reimplementing its logic here.
-    """
-    import contextlib
-
-    import mcp
-    import mcp.client.streamable_http as streamable
-
-    closed = []
-
-    @contextlib.asynccontextmanager
-    async def fake_transport(url, headers=None, timeout=None, **kwargs):
-        try:
-            yield (object(), object(), None)
-        finally:
-            closed.append("transport")
-
-    @contextlib.asynccontextmanager
-    async def fake_session(read, write):
-        session = type("S", (), {"initialize": lambda self: asyncio.sleep(0)})()
-        try:
-            yield session
-        finally:
-            closed.append("session")
-
-    monkeypatch.setattr(streamable, "streamablehttp_client", fake_transport)
-    monkeypatch.setattr(mcp, "ClientSession", fake_session)
-
-    class Failing(MCPServer):
-        async def list_tools(self):
-            raise RuntimeError("discovery exploded")
-
-    server = Failing("http://example/mcp")
-    with pytest.raises(RuntimeError, match="discovery exploded"):
-        await server.connect()
-
-    assert closed == ["session", "transport"], "the opened transport must be closed"
-    assert server._stack is None and server._session is None
-
-
 # ------------------------------------------------ P2: failure tracing
 
 

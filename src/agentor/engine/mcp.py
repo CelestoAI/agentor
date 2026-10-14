@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import logging
 from contextlib import AsyncExitStack
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
+
+import httpx2
 
 from agentor.engine.tools import Tool
 
@@ -26,10 +28,12 @@ def _content_to_text(result: Any) -> str:
             continue
         # non-text content (images, resources) still needs to reach the model
         # as something; its own repr is better than dropping it silently
-        parts.append(str(getattr(item, "model_dump", lambda: item)()))
+        parts.append(
+            str(item.model_dump(by_alias=True) if hasattr(item, "model_dump") else item)
+        )
 
-    if not parts and getattr(result, "structuredContent", None) is not None:
-        return str(result.structuredContent)
+    if not parts and getattr(result, "structured_content", None) is not None:
+        return str(result.structured_content)
     return "\n".join(parts)
 
 
@@ -47,6 +51,7 @@ class MCPServer:
         timeout: float = 30.0,
         name: Optional[str] = None,
         tool_prefix: Optional[str] = None,
+        http_client_factory: Optional[Callable[..., httpx2.AsyncClient]] = None,
     ):
         self.url = url
         self.headers = headers
@@ -54,6 +59,8 @@ class MCPServer:
         self.name = name or url
         #: guards against two servers exposing the same tool name
         self.tool_prefix = tool_prefix
+        # Hosts can enforce endpoint/redirect policies without copying connect().
+        self.http_client_factory = http_client_factory or httpx2.AsyncClient
         self._stack: Optional[AsyncExitStack] = None
         self._session: Any = None
         self._loop: Any = None
@@ -62,7 +69,7 @@ class MCPServer:
         import asyncio
 
         from mcp import ClientSession
-        from mcp.client.streamable_http import streamablehttp_client
+        from mcp.client.streamable_http import streamable_http_client
 
         if self._stack is not None:
             # Overwriting _stack would make the first transport unclosable.
@@ -74,10 +81,14 @@ class MCPServer:
         self._loop = asyncio.get_running_loop()
         stack = AsyncExitStack()
         try:
-            read, write, _ = await stack.enter_async_context(
-                streamablehttp_client(
-                    self.url, headers=self.headers, timeout=self.timeout
+            http_client = await stack.enter_async_context(
+                self.http_client_factory(
+                    headers=self.headers,
+                    timeout=httpx2.Timeout(self.timeout, read=300.0),
                 )
+            )
+            read, write = await stack.enter_async_context(
+                streamable_http_client(self.url, http_client=http_client)
             )
             session = await stack.enter_async_context(ClientSession(read, write))
             await session.initialize()
@@ -94,17 +105,21 @@ class MCPServer:
             raise
 
     async def list_tools(self) -> List[Tool]:
+        from mcp.types import PaginatedRequestParams
+
         if self._session is None:
             raise RuntimeError(f"MCP server {self.name!r} is not connected.")
 
         remote_tools = []
         cursor = None
         while True:
-            listed = await self._session.list_tools(cursor)
+            listed = await self._session.list_tools(
+                params=PaginatedRequestParams(cursor=cursor) if cursor else None
+            )
             remote_tools.extend(listed.tools)
             # a paginated server returns the rest behind nextCursor; stopping at
             # the first page would silently hide every tool after it
-            cursor = getattr(listed, "nextCursor", None)
+            cursor = listed.next_cursor
             if not cursor:
                 break
 
@@ -117,7 +132,7 @@ class MCPServer:
                 Tool(
                     name=name,
                     description=remote.description or "",
-                    parameters=remote.inputSchema
+                    parameters=remote.input_schema
                     or {"type": "object", "properties": {}},
                     invoke=self._invoker(remote.name),
                 )
@@ -128,7 +143,7 @@ class MCPServer:
         async def invoke(**kwargs: Any) -> str:
             result = await self._session.call_tool(remote_name, kwargs)
             text = _content_to_text(result)
-            if getattr(result, "isError", False):
+            if result.is_error:
                 # raise so the loop's failure budget applies to remote tools too
                 raise RuntimeError(text or "MCP tool reported an error")
             return text

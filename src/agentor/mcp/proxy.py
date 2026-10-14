@@ -16,6 +16,8 @@ def create_proxy(remote_url: str, name: str | None = None):
 
     Returns:
         FastMCP: The proxy server.
+
+    Requires the optional ``agentor[proxy]`` dependency.
     """
     try:
         from fastmcp import FastMCP

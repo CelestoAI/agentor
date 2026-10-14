@@ -371,25 +371,25 @@ class MCPAPIRouter:
         async def default_initialize(body: dict):
             params = body.get("params", {})
             result = InitializeResult(
-                protocolVersion=params.get("protocolVersion"),
+                protocol_version=params.get("protocolVersion"),
                 capabilities=ServerCapabilities(
-                    tools=ToolsCapability(listChanged=True) if self.tools else None,
-                    resources=ResourcesCapability(listChanged=True)
+                    tools=ToolsCapability(list_changed=True) if self.tools else None,
+                    resources=ResourcesCapability(list_changed=True)
                     if self.resources
                     else None,
-                    prompts=PromptsCapability(listChanged=True)
+                    prompts=PromptsCapability(list_changed=True)
                     if self.prompts
                     else None,
                 ),
-                serverInfo=Implementation(
+                server_info=Implementation(
                     name=self.name,
                     version=self.version,
-                    websiteUrl=self.website_url,
+                    website_url=self.website_url,
                     icons=self.icons,
                 ),
                 instructions=self.instructions,
             )
-            return result.model_dump(exclude_none=True)
+            return result.model_dump(exclude_none=True, by_alias=True)
 
         @self.method("notifications/initialized")
         async def default_initialized_notification(body: dict):
