@@ -121,8 +121,8 @@ def test_the_openai_agents_item_probes_are_gone(attribute: str) -> None:
 def test_celesto_sdk_is_gone_and_fails_like_any_missing_attribute() -> None:
     """It re-exported a class the current `celesto` package no longer defines.
 
-    agentor requires `celesto>=0.0.2`, so a fresh install resolves 0.0.10, where
-    `celesto.sdk.client.CelestoSDK` is gone. The re-export caught only
+    The former `celesto>=0.0.2` dependency allowed versions where
+    `celesto.sdk.client.CelestoSDK` was gone. The re-export caught only
     ModuleNotFoundError - the module still imports - so users got a bare
     ImportError raised from inside a dependency.
 
@@ -147,9 +147,9 @@ def test_celesto_sdk_is_no_longer_advertised() -> None:
 def test_nothing_in_the_package_imports_the_celesto_distribution() -> None:
     """CelestoSDK was its only importer, so the coupling should be gone.
 
-    Guards the claim rather than the dependency: `celesto` remains installed as
-    a transitive convenience, so importing it would still succeed here and pass
-    by accident. Grep the sources instead.
+    Guards the claim even when `celesto` is installed separately: importing it
+    could still succeed in that environment and pass by accident. Grep the
+    sources instead.
     """
     import pathlib
 
