@@ -294,7 +294,7 @@ web search and page extraction without a Parallel API key. It also includes a
 tools-only mode that runs without model credentials:
 
 ```bash
-uv run --with 'mcp>=1.16,<2' python examples/parallel_search.py --tools-only "Agentor durable agent runs"
+uv run python examples/parallel_search.py --tools-only "Agentor durable agent runs"
 ```
 
 ## Agent-to-Agent (A2A) Protocol

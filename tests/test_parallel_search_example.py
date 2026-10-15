@@ -85,7 +85,7 @@ async def test_tools_only_reuses_session_and_closes_on_tool_error(
 
     async def fail(name, arguments):
         return SimpleNamespace(
-            content=[SimpleNamespace(text="Rate limit reached")], isError=True
+            content=[SimpleNamespace(text="Rate limit reached")], is_error=True
         )
 
     session.call_tool = fail
