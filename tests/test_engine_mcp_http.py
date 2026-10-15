@@ -6,6 +6,7 @@ credential forwarding and leaked clients after failed discovery or close.
 The client-factory hook also serves Celesto's outbound endpoint guards.
 """
 
+import asyncio
 import json
 
 import httpx2
@@ -28,6 +29,7 @@ async def test_mcp_client_discovers_pages_calls_tools_and_closes_http(tmp_path):
     exchanges = []
     clients = []
     fail_discovery = False
+    next_cursors = {None: "page2", "page2": None}
 
     async def list_tools(ctx, params):
         if fail_discovery:
@@ -47,7 +49,7 @@ async def test_mcp_client_discovers_pages_calls_tools_and_closes_http(tmp_path):
                 )
                 for name in names
             ],
-            next_cursor="page2" if cursor is None else None,
+            next_cursor=next_cursors[cursor],
         )
 
     async def call_tool(ctx, params):
@@ -116,6 +118,17 @@ async def test_mcp_client_discovers_pages_calls_tools_and_closes_http(tmp_path):
         assert clients[1].is_closed
         assert remote._session is None
         assert remote._stack is None
+
+        fail_discovery = False
+        for next_cursors in (
+            {None: "page2", "page2": "page2"},
+            {None: "page2", "page2": "page3", "page3": "page2"},
+        ):
+            with pytest.raises(RuntimeError, match="pagination cursor"):
+                await asyncio.wait_for(remote.connect(), timeout=5)
+            assert clients[-1].is_closed
+            assert remote._session is None
+            assert remote._stack is None
 
     (tmp_path / "agentor-sdk2-http.json").write_text(
         json.dumps({"calls": calls, "http_exchanges": exchanges}, indent=2)

@@ -112,6 +112,7 @@ class MCPServer:
 
         remote_tools = []
         cursor = None
+        seen_cursors: set[str] = set()
         while True:
             listed = await self._session.list_tools(
                 params=PaginatedRequestParams(cursor=cursor) if cursor else None
@@ -122,6 +123,11 @@ class MCPServer:
             cursor = listed.next_cursor
             if not cursor:
                 break
+            if cursor in seen_cursors:
+                raise RuntimeError(
+                    f"MCP server {self.name!r} repeated a pagination cursor."
+                )
+            seen_cursors.add(cursor)
 
         tools: List[Tool] = []
         for remote in remote_tools:
