@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
     "rich>=14.0.0",
     "python-dotenv>=1.0.0",
+    "pydantic-settings>=2.0.0,<3",
     "python-frontmatter>=1.1.0",
     "openai>=1.97.0",
     "backoff>=2.2.1",
