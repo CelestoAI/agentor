@@ -10,24 +10,20 @@ and uses a 30-second HTTP timeout.
 From the repository root, run a search without an LLM or any API keys:
 
 ```bash
-uv run --with 'mcp>=1.16,<2' python examples/parallel_search.py --tools-only "Agentor durable agent runs"
+uv run python examples/parallel_search.py --tools-only "Agentor durable agent runs"
 ```
 
 To also fetch a specific page:
 
 ```bash
-uv run --with 'mcp>=1.16,<2' python examples/parallel_search.py --tools-only "Agentor durable agent runs" --fetch-url https://github.com/CelestoAI/agentor
+uv run python examples/parallel_search.py --tools-only "Agentor durable agent runs" --fetch-url https://github.com/CelestoAI/agentor
 ```
-
-The MCP 1.x constraint is needed because Agentor's current client uses the
-`streamablehttp_client` API, which MCP 2.x removed. It applies to these example
-commands without changing the project's dependencies.
 
 For an agent that chooses searches and produces an answer with source URLs,
 set `OPENAI_API_KEY` in your environment and run:
 
 ```bash
-uv run --with 'mcp>=1.16,<2' python examples/parallel_search.py "What does Agentor support for durable runs?"
+uv run python examples/parallel_search.py "What does Agentor support for durable runs?"
 ```
 
 This mode selects `gpt-5-nano`, Agentor's current default; model inference is billed by
