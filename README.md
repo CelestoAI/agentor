@@ -286,6 +286,17 @@ Hosts that supply their own HTTP transport can pass `http_client_factory` to
 must return a new `httpx2.AsyncClient`. Agentor owns that client's lifecycle,
 closing it when connection setup fails or the MCP connection closes.
 
+
+### Search the web through MCP
+
+The [Parallel Search example](examples/parallel_search.md) connects an agent to
+web search and page extraction without a Parallel API key. It also includes a
+tools-only mode that runs without model credentials:
+
+```bash
+uv run --with 'mcp>=1.16,<2' python examples/parallel_search.py --tools-only "Agentor durable agent runs"
+```
+
 ## Agent-to-Agent (A2A) Protocol
 
 The A2A Protocol defines standard specifications for agent communication and message formatting, enabling seamless interoperability between different AI agents.
