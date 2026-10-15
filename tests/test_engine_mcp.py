@@ -14,7 +14,7 @@ def remote_tool(name, description="", schema=None):
     return SimpleNamespace(
         name=name,
         description=description,
-        inputSchema=schema or {"type": "object", "properties": {}},
+        input_schema=schema or {"type": "object", "properties": {}},
     )
 
 
@@ -25,13 +25,14 @@ class PagedSession:
         self.pages = pages
         self.cursors_seen = []
 
-    async def list_tools(self, cursor=None):
+    async def list_tools(self, *, params=None):
+        cursor = params.cursor if params else None
         self.cursors_seen.append(cursor)
         index = 0 if cursor is None else int(cursor)
         is_last = index == len(self.pages) - 1
         return SimpleNamespace(
             tools=self.pages[index],
-            nextCursor=None if is_last else str(index + 1),
+            next_cursor=None if is_last else str(index + 1),
         )
 
 
@@ -44,16 +45,16 @@ class FakeSession:
         self._is_error = is_error
         self.calls = []
 
-    async def list_tools(self, cursor=None):
-        # single page; nextCursor absent means "no more"
-        return SimpleNamespace(tools=self._tools, nextCursor=None)
+    async def list_tools(self, *, params=None):
+        # single page; next_cursor absent means "no more"
+        return SimpleNamespace(tools=self._tools, next_cursor=None)
 
     async def call_tool(self, name, arguments):
         self.calls.append((name, arguments))
         return SimpleNamespace(
             content=[SimpleNamespace(text=self._results.get(name, "ok"))],
-            structuredContent=None,
-            isError=self._is_error,
+            structured_content=None,
+            is_error=self._is_error,
         )
 
 
@@ -70,20 +71,20 @@ def connected(session) -> MCPServer:
 def test_content_to_text_joins_text_parts():
     result = SimpleNamespace(
         content=[SimpleNamespace(text="a"), SimpleNamespace(text="b")],
-        structuredContent=None,
+        structured_content=None,
     )
     assert _content_to_text(result) == "a\nb"
 
 
 def test_content_to_text_falls_back_to_structured_content():
-    result = SimpleNamespace(content=[], structuredContent={"k": 1})
+    result = SimpleNamespace(content=[], structured_content={"k": 1})
     assert _content_to_text(result) == "{'k': 1}"
 
 
 def test_content_to_text_keeps_non_text_content():
     """Images and resources must reach the model as something, not vanish."""
-    blob = SimpleNamespace(text=None, model_dump=lambda: {"type": "image"})
-    result = SimpleNamespace(content=[blob], structuredContent=None)
+    blob = SimpleNamespace(text=None, model_dump=lambda **kwargs: {"type": "image"})
+    result = SimpleNamespace(content=[blob], structured_content=None)
     assert "image" in _content_to_text(result)
 
 

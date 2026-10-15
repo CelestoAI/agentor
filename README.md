@@ -229,6 +229,9 @@ result = agent.run("Weather in Paris?")
 
 Agentor enables you to build a custom [MCP Server](https://modelcontextprotocol.io) using LiteMCP. You can run it inside a FastAPI application or as a standalone MCP server.
 
+Agentor uses the official MCP Python SDK 2.3 or newer within the 2.x line.
+FastMCP is not an Agentor dependency; the LiteMCP decorator API is unchanged.
+
 ```python
 from agentor.mcp import LiteMCP, get_token
 
@@ -260,6 +263,39 @@ mcp.serve()
 | With Existing Backend | ✅ Easy | ⚠️ Complex |
 
 📖 [Learn more](https://docs.celesto.ai/agentor/tools/LiteMCP)
+
+## Connect an Agent to an MCP Server
+
+Use `MCPServer` for a remote server that supports Streamable HTTP. Agentor
+discovers its tools, including paginated results, and closes the connection
+after the run:
+
+```python
+from agentor import Agentor
+from agentor.mcp import MCPServer
+
+agent = Agentor(
+    name="Assistant",
+    model="gpt-5-mini",
+    tools=[MCPServer(url="https://your-server.example/mcp")],
+)
+```
+
+Hosts that supply their own HTTP transport can pass `http_client_factory` to
+`MCPServer`. The factory receives `headers` and `timeout` keyword arguments and
+must return a new `httpx2.AsyncClient`. Agentor owns that client's lifecycle,
+closing it when connection setup fails or the MCP connection closes.
+
+
+### Search the web through MCP
+
+The [Parallel Search example](examples/parallel_search.md) connects an agent to
+web search and page extraction without a Parallel API key. It also includes a
+tools-only mode that runs without model credentials:
+
+```bash
+uv run python examples/parallel_search.py --tools-only "Agentor durable agent runs"
+```
 
 ## Agent-to-Agent (A2A) Protocol
 
