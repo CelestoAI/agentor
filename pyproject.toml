@@ -45,7 +45,7 @@ issues = "https://github.com/CelestoAI/agentor/issues"
 
 
 [project.optional-dependencies]
-exa = ["exa-py>=1.0.0"]
+exa = ["exa-py>=1.0.0,<2"]
 git = ["gitpython>=3.1.0"]
 postgres = ["psycopg2-binary>=2.9.0"]
 github = ["PyGithub>=2.0.0"]
@@ -64,7 +64,7 @@ google = [
     "googleapis-common-protos>=1.70.0",
 ]
 all = [
-    "exa-py>=1.0.0",
+    "exa-py>=1.0.0,<2",
     "gitpython>=3.1.0",
     "psycopg2-binary>=2.9.0",
     "PyGithub>=2.0.0",
@@ -107,13 +107,13 @@ extend-select = ["I"]  # Enable import sorting (isort) in addition to default ru
 [dependency-groups]
 dev = [
     "coverage>=7.10.2",
-    "isort>=7.0.0",
+    "isort>=7.0.0,<8",
     "jupyterlab>=4.4.9",
     "nb-clean>=4.0.1",
     "pre-commit>=4.2.0",
     "pytest>=8.4.1",
     "pytest-asyncio>=0.21.0",
-    "ruff>=0.12.4",
+    "ruff>=0.13.2,<0.14",
 ]
 tools = [
     "e2b-code-interpreter>=2.4.1",
