@@ -297,6 +297,16 @@ tools-only mode that runs without model credentials:
 uv run python examples/parallel_search.py --tools-only "Agentor durable agent runs"
 ```
 
+### Publish a page through MCP
+
+The [deed.page example](examples/deed_page.md) connects an agent to a keyless
+MCP server that publishes HTML to a public URL. Its tools-only mode publishes a
+sample page that expires after an hour, without model credentials:
+
+```bash
+uv run python examples/deed_page.py --tools-only
+```
+
 ## Agent-to-Agent (A2A) Protocol
 
 The A2A Protocol defines standard specifications for agent communication and message formatting, enabling seamless interoperability between different AI agents.
