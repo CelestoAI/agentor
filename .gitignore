@@ -194,6 +194,8 @@ cython_debug/
 .cursorindexingignore
 .DS_Store
 token*.json
+deed-page-owner*.json
+.*deed-page-owner*.json.*
 credentials*.json
 .zendata/
 .idea/
