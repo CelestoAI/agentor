@@ -58,6 +58,7 @@ async def test_tools_only_publishes_with_ttl_and_closes(example_connection):
     result = await deed_page.publish_without_model("<h1>Hi</h1>", 600)
 
     assert result["url"] == "https://quiet-river-a1b2.deed.page/"
+    assert result["token"] == "deed_tok_example"
     assert session.calls == [
         ("publish_site", {"files": {"index.html": "<h1>Hi</h1>"}, "ttl_seconds": 600})
     ]
@@ -89,11 +90,27 @@ async def test_tools_only_raises_on_failed_result_and_tool_error(example_connect
     assert closed == [True, True]
 
 
+def _bind_session(server, session, closed):
+    async def connect():
+        server._session = session
+        return await server.list_tools()
+
+    async def close():
+        closed.append(True)
+        server._session = None
+
+    server.connect = connect
+    server.close = close
+    return server
+
+
 @pytest.mark.asyncio
 async def test_publish_tool_reaches_agent_and_result_reaches_model(
     example_connection,
 ):
-    server, session, closed = example_connection
+    _server, session, closed = example_connection
+    captured = []
+    server = _bind_session(deed_page.create_agent_server(captured), session, closed)
     model = FakeModel(
         calls(
             (
@@ -115,7 +132,11 @@ async def test_publish_tool_reaches_agent_and_result_reaches_model(
         "deed_page_delete_site",
     }
     tool_messages = [m for m in model.calls[-1]["messages"] if m["role"] == "tool"]
-    assert [m["content"] for m in tool_messages] == [PUBLISHED]
+    content = tool_messages[0]["content"]
+    assert "quiet-river-a1b2.deed.page" in content
+    assert "deed_tok_example" not in content
+    assert "token" not in json.loads(content)
+    assert captured == [PUBLISHED]
     assert closed == [True]
 
 
@@ -208,6 +229,25 @@ def test_failed_save_removes_the_temporary_file(tmp_path, monkeypatch):
     assert list(tmp_path.iterdir()) == []
 
 
+def test_redact_publish_result_removes_token_like_fields():
+    raw = json.dumps(
+        {
+            "ok": True,
+            "url": "https://quiet-river-a1b2.deed.page/",
+            "token": "deed_tok_example",
+            "token_note": "Shown once.",
+            "owner_token": "deed_tok_owner",
+            "nested": {"api_key": "secret-key", "slug": "quiet-river-a1b2"},
+        }
+    )
+    redacted = json.loads(deed_page.redact_publish_result(raw))
+    assert redacted["url"] == "https://quiet-river-a1b2.deed.page/"
+    assert redacted["token_note"] == "Shown once."
+    assert redacted["nested"] == {"slug": "quiet-river-a1b2"}
+    assert "deed_tok" not in deed_page.redact_publish_result(raw)
+    assert "secret-key" not in deed_page.redact_publish_result(raw)
+
+
 def test_owner_token_filename_stays_in_the_directory(tmp_path):
     path = deed_page.owner_token_path(
         tmp_path, {"slug": "../secret", "url": "https://x.deed.page/"}
@@ -255,7 +295,9 @@ async def test_missing_or_failed_publish_does_not_invent_a_token(capsys):
 async def test_token_is_saved_before_a_later_model_failure(
     example_connection, tmp_path
 ):
-    server, _session, _closed = example_connection
+    _server, session, closed = example_connection
+    captured = []
+    server = _bind_session(deed_page.create_agent_server(captured), session, closed)
     model = FakeModel(
         calls(
             (
@@ -274,7 +316,7 @@ async def test_token_is_saved_before_a_later_model_failure(
     model.complete = fail_after_publish
     agent = Agentor(name="Publisher", model=model, tools=[server])
     with pytest.raises(RuntimeError, match="model down"):
-        await deed_page.follow_publish(agent, "Publish a report", tmp_path)
+        await deed_page.follow_publish(agent, "Publish a report", tmp_path, captured)
 
     saved = json.loads((tmp_path / "deed-page-owner-quiet-river-a1b2.json").read_text())
     assert saved["token"] == "deed_tok_example"

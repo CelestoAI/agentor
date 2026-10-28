@@ -19,15 +19,84 @@ SAMPLE_PAGE = (
 )
 
 
+def _server_kwargs() -> dict:
+    return {
+        "url": "https://deed.page/mcp",
+        "name": "deed.page",
+        "headers": {"User-Agent": f"agentor/{__version__} (deed.page example)"},
+        "tool_prefix": "deed_page_",
+        "timeout": 30,
+    }
+
+
 def create_server() -> MCPServer:
     """Create a keyless deed.page connection with namespaced tools."""
-    return MCPServer(
-        url="https://deed.page/mcp",
-        name="deed.page",
-        headers={"User-Agent": f"agentor/{__version__} (deed.page example)"},
-        tool_prefix="deed_page_",
-        timeout=30,
+    return MCPServer(**_server_kwargs())
+
+
+def _token_field(key: str) -> bool:
+    """True for an owner token or another credential field name."""
+    if not isinstance(key, str):
+        return False
+    lowered = key.lower().replace("-", "_")
+    return (
+        lowered == "token"
+        or lowered.endswith("_token")
+        or lowered
+        in {
+            "secret",
+            "password",
+            "api_key",
+            "apikey",
+        }
     )
+
+
+def _without_token_fields(value):
+    if isinstance(value, dict):
+        return {
+            key: _without_token_fields(item)
+            for key, item in value.items()
+            if not _token_field(key)
+        }
+    if isinstance(value, list):
+        return [_without_token_fields(item) for item in value]
+    return value
+
+
+def redact_publish_result(text: str) -> str:
+    """Drop owner-token fields from a publish result before it reaches a model."""
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return text
+    return json.dumps(_without_token_fields(payload))
+
+
+class _RedactingServer(MCPServer):
+    """Same connection, but publish results given to the model omit the token."""
+
+    def __init__(self, captured: list):
+        super().__init__(**_server_kwargs())
+        self._captured = captured
+
+    def _invoker(self, remote_name: str):
+        invoke = super()._invoker(remote_name)
+        if remote_name != "publish_site":
+            return invoke
+        captured = self._captured
+
+        async def invoke_and_redact(**kwargs):
+            text = await invoke(**kwargs)
+            captured.append(text)
+            return redact_publish_result(text)
+
+        return invoke_and_redact
+
+
+def create_agent_server(captured: list) -> MCPServer:
+    """Connection for agent mode. The full publish result is appended to captured."""
+    return _RedactingServer(captured)
 
 
 async def publish_without_model(html: str, ttl_seconds: int) -> dict:
@@ -112,13 +181,37 @@ def print_published_payload(published: dict, directory: Path | None = None) -> N
     print(f"Saved {path}. The owner token is shown once.")
 
 
-def handle_stream_event(event, directory: Path | None = None) -> bool:
+def _stashed_result(event, captured: list | None, used: set[int]) -> str | None:
+    """Full publish text stashed before the model received the redacted copy."""
+    if not captured:
+        return None
+    action = getattr(event, "tool_action", None)
+    if (
+        action is None
+        or action.type != "tool_output"
+        or action.name != "deed_page_publish_site"
+    ):
+        return None
+    message = getattr(event, "message", None)
+    for index, raw in enumerate(captured):
+        if index in used:
+            continue
+        if redact_publish_result(raw) == message:
+            used.add(index)
+            return raw
+    return None
+
+
+def handle_stream_event(
+    event, directory: Path | None = None, raw_result: str | None = None
+) -> bool:
     """Print one stream_chat event. Return True when it published a page.
 
     ``serialize=False`` yields ``AgentOutput``. A publish is
-    ``tool_action.type == "tool_output"`` for ``deed_page_publish_site``, with
-    the tool text on ``message``. An ordinary message has no tool action and
-    is the model's answer.
+    ``tool_action.type == "tool_output"`` for ``deed_page_publish_site``.
+    The text on ``message`` is what the model sees, which has no owner token.
+    ``raw_result`` is the stashed original, used for printing and saving.
+    An ordinary message has no tool action and is the model's answer.
     """
     action = getattr(event, "tool_action", None)
     if (
@@ -126,7 +219,10 @@ def handle_stream_event(event, directory: Path | None = None) -> bool:
         and action.type == "tool_output"
         and action.name == "deed_page_publish_site"
     ):
-        payload = publish_payload(getattr(event, "message", None))
+        source = (
+            raw_result if raw_result is not None else getattr(event, "message", None)
+        )
+        payload = publish_payload(source)
         if payload is None:
             return False
         print_published_payload(payload, directory)
@@ -136,11 +232,15 @@ def handle_stream_event(event, directory: Path | None = None) -> bool:
     return False
 
 
-async def follow_publish(agent, topic: str, directory: Path | None = None) -> None:
+async def follow_publish(
+    agent, topic: str, directory: Path | None = None, captured: list | None = None
+) -> None:
     """Stream the run and record each successful publish as soon as it arrives."""
+    used: set[int] = set()
     saw_publish = False
     async for event in agent.stream_chat(topic, serialize=False):
-        if handle_stream_event(event, directory):
+        raw = _stashed_result(event, captured, used)
+        if handle_stream_event(event, directory, raw):
             saw_publish = True
     if not saw_publish:
         print("deed.page publish did not succeed; no owner token to show.")
@@ -170,6 +270,7 @@ async def main() -> None:
         return
 
     expiry = f"Pass ttl_seconds={args.ttl}. " if args.ttl else "Omit ttl_seconds. "
+    captured: list[str] = []
     agent = Agentor(
         name="Page publisher",
         model="gpt-5-nano",
@@ -180,9 +281,9 @@ async def main() -> None:
             + "Do not call any other deed_page_ tool. The page is public: never "
             "include secrets or private data. Reply with the page URL."
         ),
-        tools=[create_server()],
+        tools=[create_agent_server(captured)],
     )
-    await follow_publish(agent, args.topic, Path("."))
+    await follow_publish(agent, args.topic, Path("."), captured)
 
 
 if __name__ == "__main__":

@@ -36,7 +36,8 @@ provider separately. The server exposes more tools than publishing, and the
 instructions tell the agent to call only `deed_page_publish_site`. While the
 run streams, each successful `deed_page_publish_site` result prints its site
 URL and owner token and saves the token immediately, before a later model
-request can fail. The model's answer is printed from ordinary message events.
+request can fail. The copy sent back to the model has the owner token removed.
+The model's answer is printed from ordinary message events.
 The token is shown once and written to `deed-page-owner-<slug>.json` in the
 current directory, mode 600, so a later page does not replace an earlier
 token. If the agent did not publish, the script says so.
