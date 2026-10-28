@@ -74,11 +74,11 @@ def owner_token_path(directory: Path, published: dict) -> Path:
 
 
 def _save_owner_token(path: Path, text: str) -> None:
-    """Create a mode-600 file, write the token, then replace the destination."""
+    """Write the token to a private temporary file, then replace the destination."""
+    # mkstemp creates the file as 0600. fchmod is missing on Windows before 3.13.
     fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     opened = False
     try:
-        os.fchmod(fd, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             opened = True
             handle.write(text)
