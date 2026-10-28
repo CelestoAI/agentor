@@ -33,7 +33,11 @@ uv run python examples/deed_page.py "A one-page summary of Agentor's durable run
 
 This mode selects `gpt-5-nano`; model inference is billed by your model
 provider separately. The server exposes more tools than publishing, and the
-instructions tell the agent to call only `deed_page_publish_site`.
+instructions tell the agent to call only `deed_page_publish_site`. After the
+run, the script reads the successful `deed_page_publish_site` tool result and
+prints the site URL and owner token itself. The token is shown once. When one
+is returned, it is also written to `deed-page-owner.json` in the current
+directory. If the agent did not publish, the script says so.
 
 Published pages are public. Do not publish secrets or private data. The
 example sends no authorization header. Free pages carry a small deed.page
