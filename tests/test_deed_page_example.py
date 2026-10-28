@@ -119,6 +119,22 @@ async def test_publish_tool_reaches_agent_and_result_reaches_model(
     assert closed == [True]
 
 
+def _run(slug: str, token: str | None) -> RunResult:
+    payload = {"ok": True, "slug": slug, "url": f"https://{slug}.deed.page/"}
+    if token:
+        payload["token"] = token
+    return RunResult(
+        final_output=slug,
+        events=[
+            Event(
+                type="tool_result",
+                name="deed_page_publish_site",
+                result=json.dumps(payload),
+            )
+        ],
+    )
+
+
 def test_owner_token_is_read_from_the_publish_event(tmp_path, capsys):
     events = [
         Event(
@@ -128,69 +144,56 @@ def test_owner_token_is_read_from_the_publish_event(tmp_path, capsys):
             result="Error: RuntimeError: rate limit",
         ),
         Event(type="tool_result", name="deed_page_publish_site", result=PUBLISHED),
-        Event(type="message", text="Published at https://quiet-river-a1b2.deed.page/"),
     ]
     result = RunResult(
         final_output="Published at https://quiet-river-a1b2.deed.page/",
         events=events,
     )
-    path = tmp_path / "deed-page-owner.json"
-    deed_page.print_published_site(result, path)
+    deed_page.print_published_site(result, tmp_path)
 
     output = capsys.readouterr().out
+    path = tmp_path / "deed-page-owner-quiet-river-a1b2.json"
     assert "Published at https://quiet-river-a1b2.deed.page/" in output
     assert "Site URL: https://quiet-river-a1b2.deed.page/" in output
     assert "Owner token (shown once): deed_tok_example" in output
     assert "shown once" in output.lower()
+    assert [p.name for p in tmp_path.iterdir()] == [path.name]
     saved = json.loads(path.read_text(encoding="utf-8"))
     assert saved["url"] == "https://quiet-river-a1b2.deed.page/"
     assert saved["token"] == "deed_tok_example"
     assert "shown once" in saved["note"].lower()
+    if deed_page.os.name == "posix":
+        assert path.stat().st_mode & 0o777 == 0o600
 
 
-def test_later_publish_of_the_same_url_keeps_the_one_time_token():
-    first = json.dumps(
-        {
-            "ok": True,
-            "url": "https://quiet-river-a1b2.deed.page/",
-            "token": "deed_tok_example",
-            "token_note": "Shown once. Keep it.",
-        }
+def test_each_site_keeps_its_own_token_file(tmp_path, capsys):
+    deed_page.print_published_site(_run("quiet-river-a1b2", "deed_tok_a"), tmp_path)
+    deed_page.print_published_site(_run("bright-harbor-c3d4", "deed_tok_b"), tmp_path)
+    first = json.loads((tmp_path / "deed-page-owner-quiet-river-a1b2.json").read_text())
+    second = json.loads(
+        (tmp_path / "deed-page-owner-bright-harbor-c3d4.json").read_text()
     )
-    second = json.dumps({"ok": True, "url": "https://quiet-river-a1b2.deed.page/"})
-    found = deed_page.successful_publish(
-        [
-            Event(type="tool_result", name="deed_page_publish_site", result=first),
-            Event(type="tool_result", name="deed_page_publish_site", result=second),
-        ]
+    assert first["token"] == "deed_tok_a"
+    assert second["token"] == "deed_tok_b"
+    assert "deed_tok_a" in capsys.readouterr().out
+
+
+def test_failed_save_removes_the_temporary_file(tmp_path, monkeypatch):
+    def fail_replace(src, dst):
+        raise OSError("replace failed")
+
+    monkeypatch.setattr(deed_page.os, "replace", fail_replace)
+    with pytest.raises(OSError, match="replace failed"):
+        deed_page.print_published_site(_run("quiet-river-a1b2", "deed_tok_a"), tmp_path)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_owner_token_filename_stays_in_the_directory(tmp_path):
+    path = deed_page.owner_token_path(
+        tmp_path, {"slug": "../secret", "url": "https://x.deed.page/"}
     )
-    assert found == {
-        "url": "https://quiet-river-a1b2.deed.page/",
-        "token": "deed_tok_example",
-        "note": "Shown once. Keep it.",
-    }
-
-
-def test_token_from_a_different_site_is_not_reused():
-    events = [
-        Event(
-            type="tool_result",
-            name="deed_page_publish_site",
-            result=json.dumps(
-                {"ok": True, "url": "https://a.deed.page/", "token": "deed_tok_a"}
-            ),
-        ),
-        Event(
-            type="tool_result",
-            name="deed_page_publish_site",
-            result=json.dumps({"ok": True, "url": "https://b.deed.page/"}),
-        ),
-    ]
-    assert deed_page.successful_publish(events) == {
-        "url": "https://b.deed.page/",
-        "token": None,
-        "note": None,
-    }
+    assert path.parent == tmp_path
+    assert path.name == "deed-page-owner-secret.json"
 
 
 def test_publish_without_a_token_still_prints_the_url(capsys):
