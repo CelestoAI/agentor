@@ -7,7 +7,7 @@ import pytest
 from examples import deed_page
 
 from agentor import Agentor
-from agentor.engine.events import Event, RunResult
+from agentor.output_text_formatter import AgentOutput, ToolAction
 from tests.test_engine import FakeModel, calls, text
 from tests.test_engine_mcp import FakeSession, remote_tool
 
@@ -119,43 +119,57 @@ async def test_publish_tool_reaches_agent_and_result_reaches_model(
     assert closed == [True]
 
 
-def _run(slug: str, token: str | None) -> RunResult:
+def _tool_output(name: str, result: str) -> AgentOutput:
+    return AgentOutput(
+        type="run_item_stream_event",
+        message=result,
+        tool_action=ToolAction(name=name, type="tool_output"),
+    )
+
+
+def _published(slug: str, token: str | None) -> AgentOutput:
     payload = {"ok": True, "slug": slug, "url": f"https://{slug}.deed.page/"}
     if token:
         payload["token"] = token
-    return RunResult(
-        final_output=slug,
-        events=[
-            Event(
-                type="tool_result",
-                name="deed_page_publish_site",
-                result=json.dumps(payload),
-            )
-        ],
-    )
+    return _tool_output("deed_page_publish_site", json.dumps(payload))
+
+
+class _Scripted:
+    def __init__(self, events):
+        self.events = events
+
+    def stream_chat(self, topic, serialize=False, tracing=None):
+        events = self.events
+
+        async def generate():
+            for event in events:
+                yield event
+
+        return generate()
 
 
 def test_owner_token_is_read_from_the_publish_event(tmp_path, capsys):
-    events = [
-        Event(
-            type="tool_result",
-            name="deed_page_publish_site",
-            error="RuntimeError: rate limit",
-            result="Error: RuntimeError: rate limit",
-        ),
-        Event(type="tool_result", name="deed_page_publish_site", result=PUBLISHED),
-    ]
-    result = RunResult(
-        final_output="Published at https://quiet-river-a1b2.deed.page/",
-        events=events,
+    assert not deed_page.handle_stream_event(
+        _tool_output("deed_page_publish_site", "Error: RuntimeError: rate limit"),
+        tmp_path,
     )
-    deed_page.print_published_site(result, tmp_path)
+    assert deed_page.handle_stream_event(
+        _tool_output("deed_page_publish_site", PUBLISHED), tmp_path
+    )
+    deed_page.handle_stream_event(
+        AgentOutput(
+            type="run_item_stream_event",
+            message="Published at https://quiet-river-a1b2.deed.page/",
+        ),
+        tmp_path,
+    )
 
     output = capsys.readouterr().out
     path = tmp_path / "deed-page-owner-quiet-river-a1b2.json"
-    assert "Published at https://quiet-river-a1b2.deed.page/" in output
+    assert output.index("Owner token (shown once): deed_tok_example") < output.index(
+        "Published at https://quiet-river-a1b2.deed.page/"
+    )
     assert "Site URL: https://quiet-river-a1b2.deed.page/" in output
-    assert "Owner token (shown once): deed_tok_example" in output
     assert "shown once" in output.lower()
     assert [p.name for p in tmp_path.iterdir()] == [path.name]
     saved = json.loads(path.read_text(encoding="utf-8"))
@@ -167,8 +181,12 @@ def test_owner_token_is_read_from_the_publish_event(tmp_path, capsys):
 
 
 def test_each_site_keeps_its_own_token_file(tmp_path, capsys):
-    deed_page.print_published_site(_run("quiet-river-a1b2", "deed_tok_a"), tmp_path)
-    deed_page.print_published_site(_run("bright-harbor-c3d4", "deed_tok_b"), tmp_path)
+    deed_page.handle_stream_event(
+        _published("quiet-river-a1b2", "deed_tok_a"), tmp_path
+    )
+    deed_page.handle_stream_event(
+        _published("bright-harbor-c3d4", "deed_tok_b"), tmp_path
+    )
     first = json.loads((tmp_path / "deed-page-owner-quiet-river-a1b2.json").read_text())
     second = json.loads(
         (tmp_path / "deed-page-owner-bright-harbor-c3d4.json").read_text()
@@ -184,7 +202,9 @@ def test_failed_save_removes_the_temporary_file(tmp_path, monkeypatch):
 
     monkeypatch.setattr(deed_page.os, "replace", fail_replace)
     with pytest.raises(OSError, match="replace failed"):
-        deed_page.print_published_site(_run("quiet-river-a1b2", "deed_tok_a"), tmp_path)
+        deed_page.handle_stream_event(
+            _published("quiet-river-a1b2", "deed_tok_a"), tmp_path
+        )
     assert list(tmp_path.iterdir()) == []
 
 
@@ -197,48 +217,65 @@ def test_owner_token_filename_stays_in_the_directory(tmp_path):
 
 
 def test_publish_without_a_token_still_prints_the_url(capsys):
-    result = RunResult(
-        final_output="done",
-        events=[
-            Event(
-                type="tool_result",
-                name="deed_page_publish_site",
-                result=json.dumps(
-                    {"ok": True, "url": "https://quiet-river-a1b2.deed.page/"}
-                ),
-            )
-        ],
+    deed_page.handle_stream_event(
+        _tool_output(
+            "deed_page_publish_site",
+            json.dumps({"ok": True, "url": "https://quiet-river-a1b2.deed.page/"}),
+        ),
+        None,
     )
-    deed_page.print_published_site(result, None)
     output = capsys.readouterr().out
     assert "Site URL: https://quiet-river-a1b2.deed.page/" in output
     assert "No owner token was returned" in output
     assert "deed_tok" not in output
 
 
-def test_missing_or_failed_publish_does_not_invent_a_token(capsys):
-    result = RunResult(
-        final_output="I could not publish the page.",
-        events=[
-            Event(
-                type="tool_result",
-                name="deed_page_publish_site",
-                result=json.dumps({"ok": False, "error": "too big"}),
+@pytest.mark.asyncio
+async def test_missing_or_failed_publish_does_not_invent_a_token(capsys):
+    agent = _Scripted(
+        [
+            _tool_output(
+                "deed_page_publish_site", json.dumps({"ok": False, "error": "too big"})
             ),
-            Event(
-                type="tool_result",
-                name="other_tool",
-                result=PUBLISHED,
+            _tool_output("other_tool", PUBLISHED),
+            _tool_output("deed_page_publish_site", "not json"),
+            AgentOutput(
+                type="run_item_stream_event", message="I could not publish the page."
             ),
-            Event(
-                type="tool_result",
-                name="deed_page_publish_site",
-                result="not json",
-            ),
-        ],
+        ]
     )
-    deed_page.print_published_site(result, None)
+    await deed_page.follow_publish(agent, "topic", None)
     output = capsys.readouterr().out
     assert "I could not publish the page." in output
     assert "deed.page publish did not succeed; no owner token to show." in output
     assert "deed_tok_example" not in output
+
+
+@pytest.mark.asyncio
+async def test_token_is_saved_before_a_later_model_failure(
+    example_connection, tmp_path
+):
+    server, _session, _closed = example_connection
+    model = FakeModel(
+        calls(
+            (
+                "deed_page_publish_site",
+                json.dumps({"files": {"index.html": "<h1>Report</h1>"}}),
+            )
+        )
+    )
+    real_complete = model.complete
+
+    async def fail_after_publish(messages, tools=None, response_format=None):
+        if model.calls:
+            raise RuntimeError("model down")
+        return await real_complete(messages, tools, response_format)
+
+    model.complete = fail_after_publish
+    agent = Agentor(name="Publisher", model=model, tools=[server])
+    with pytest.raises(RuntimeError, match="model down"):
+        await deed_page.follow_publish(agent, "Publish a report", tmp_path)
+
+    saved = json.loads((tmp_path / "deed-page-owner-quiet-river-a1b2.json").read_text())
+    assert saved["token"] == "deed_tok_example"
+    assert saved["url"] == "https://quiet-river-a1b2.deed.page/"

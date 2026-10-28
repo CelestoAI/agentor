@@ -46,21 +46,17 @@ async def publish_without_model(html: str, ttl_seconds: int) -> dict:
 OWNER_NOTE = "The owner token is shown once. Keep it to update or delete the page."
 
 
-def successful_publish(events) -> dict | None:
-    """Last successful deed_page_publish_site payload, or None."""
-    found = None
-    for event in events:
-        if event.type != "tool_result" or event.name != "deed_page_publish_site":
-            continue
-        if event.error or not isinstance(event.result, str):
-            continue
-        try:
-            payload = json.loads(event.result)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(payload, dict) and payload.get("ok") and payload.get("url"):
-            found = payload
-    return found
+def publish_payload(result: str | None) -> dict | None:
+    """Parse one successful deed_page_publish_site tool output, or return None."""
+    if not isinstance(result, str):
+        return None
+    try:
+        payload = json.loads(result)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict) or not payload.get("ok") or not payload.get("url"):
+        return None
+    return payload
 
 
 def owner_token_path(directory: Path, published: dict) -> Path:
@@ -93,21 +89,8 @@ def _save_owner_token(path: Path, text: str) -> None:
         raise
 
 
-def print_published_site(result, directory: Path | None = None) -> None:
-    """Print the model answer, then the site URL and one-time owner token.
-
-    The token comes from the tool result on ``result.events``. When one is
-    present and ``directory`` is set, it is saved in that directory under a
-    name unique to the site.
-    """
-    if result.final_output:
-        print(result.final_output)
-
-    published = successful_publish(result.events)
-    if published is None:
-        print("deed.page publish did not succeed; no owner token to show.")
-        return
-
+def print_published_payload(published: dict, directory: Path | None = None) -> None:
+    """Print one site URL and owner token, saving the token when it is present."""
     print(f"Site URL: {published['url']}")
     token = published.get("token")
     if not isinstance(token, str) or not token:
@@ -127,6 +110,40 @@ def print_published_site(result, directory: Path | None = None) -> None:
         + "\n",
     )
     print(f"Saved {path}. The owner token is shown once.")
+
+
+def handle_stream_event(event, directory: Path | None = None) -> bool:
+    """Print one stream_chat event. Return True when it published a page.
+
+    ``serialize=False`` yields ``AgentOutput``. A publish is
+    ``tool_action.type == "tool_output"`` for ``deed_page_publish_site``, with
+    the tool text on ``message``. An ordinary message has no tool action and
+    is the model's answer.
+    """
+    action = getattr(event, "tool_action", None)
+    if (
+        action is not None
+        and action.type == "tool_output"
+        and action.name == "deed_page_publish_site"
+    ):
+        payload = publish_payload(getattr(event, "message", None))
+        if payload is None:
+            return False
+        print_published_payload(payload, directory)
+        return True
+    if action is None and getattr(event, "message", None):
+        print(event.message)
+    return False
+
+
+async def follow_publish(agent, topic: str, directory: Path | None = None) -> None:
+    """Stream the run and record each successful publish as soon as it arrives."""
+    saw_publish = False
+    async for event in agent.stream_chat(topic, serialize=False):
+        if handle_stream_event(event, directory):
+            saw_publish = True
+    if not saw_publish:
+        print("deed.page publish did not succeed; no owner token to show.")
 
 
 async def main() -> None:
@@ -165,8 +182,7 @@ async def main() -> None:
         ),
         tools=[create_server()],
     )
-    result = await agent.arun(args.topic)
-    print_published_site(result, Path("."))
+    await follow_publish(agent, args.topic, Path("."))
 
 
 if __name__ == "__main__":
