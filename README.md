@@ -340,3 +340,5 @@ Apache 2.0 License - see [LICENSE](LICENSE) for details.
 <div align="center">
 Built with 🧡 in London by <a href="https://celesto.ai">Celesto AI</a>
 </div>
+
+For local repository code lookup, see the optional [Sem MCP example](examples/sem_lookup.md).
