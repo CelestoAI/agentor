@@ -6,6 +6,9 @@ Setup is in sem_lookup.md.
 import argparse
 import asyncio
 import os
+from functools import partial
+
+import httpx2
 
 from agentor.mcp import MCPServer
 
@@ -20,6 +23,7 @@ async def lookup(query: str) -> None:
         headers={"Authorization": f"Bearer {token}"},
         name="Sem",
         tool_prefix="repo_",
+        http_client_factory=partial(httpx2.AsyncClient, trust_env=False),
     ) as server:
         tools = {tool.name: tool for tool in await server.list_tools()}
         if "repo_sem_find" not in tools:

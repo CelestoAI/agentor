@@ -23,7 +23,8 @@ async def test_missing_tool_closes_connection(monkeypatch):
 
     class Server:
         def __init__(self, **kwargs):
-            pass
+            factory = kwargs["http_client_factory"]
+            assert factory.keywords == {"trust_env": False}
 
         async def __aenter__(self):
             return self

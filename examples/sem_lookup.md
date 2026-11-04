@@ -19,7 +19,7 @@ uv run python examples/sem_lookup.py parse_config
 
 The client and server must share a network namespace: loopback in a separate
 container refers to that container. The fixed local URL avoids accidentally
-sending the token to another host. Stop the Sem process to disconnect.
+sending the token to another host; the client also ignores environment proxy settings. Stop the Sem process to disconnect.
 
 This uses Sem's read-only HTTP discovery surface, not Weave editing or Sem's
 stdio command-running tools. Sem can create local indexes; its local controls
