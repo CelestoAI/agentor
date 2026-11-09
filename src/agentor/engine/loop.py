@@ -93,7 +93,7 @@ class AgentLoop:
     def __init__(
         self,
         name: str = "Agent",
-        model: Any = "gpt-4o-mini",
+        model: Any = "gpt-6-luna",
         instructions: Optional[str] = None,
         tools: Optional[List[Any]] = None,
         context: Any = None,

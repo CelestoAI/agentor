@@ -685,15 +685,17 @@ def test_agentor_surfaces_the_unrunnable_tool_message():
 # ============================================ openai-agents removal review
 
 
-def test_default_model_is_unchanged_by_the_removal():
-    """Changing the default silently alters quality and billing."""
+def test_default_model_uses_supported_replacement():
+    """The default must stay available and support Chat Completions tools."""
     import inspect
 
     from agentor import Agentor
 
     assert inspect.signature(Agentor.__init__).parameters["model"].default == (
-        "gpt-5-nano"
+        "gpt-5.6-luna"
     )
+    agent = Agentor(name="T", api_key="test")
+    assert agent._loop.model.params["reasoning_effort"] == "none"
 
 
 def test_from_md_default_matches_the_constructor_default(tmp_path):
@@ -702,7 +704,8 @@ def test_from_md_default_matches_the_constructor_default(tmp_path):
     md = tmp_path / "a.md"
     md.write_text("---\nname: Bot\n---\nYou are helpful.")
     agent = Agentor.from_md(md, api_key="test")
-    assert agent._loop.model.model == "gpt-5-nano"
+    assert agent._loop.model.model == "gpt-5.6-luna"
+    assert agent._loop.model.params["reasoning_effort"] == "none"
 
 
 @pytest.mark.asyncio

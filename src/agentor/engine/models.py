@@ -305,5 +305,8 @@ def resolve_model(
     if isinstance(model, str):
         if "/" in model and base_url is None:
             return LiteLLMModel(model, api_key=api_key, **params)
+        if model in {"gpt-5.6-luna", "gpt-6-luna"}:
+            # These defaults require effort "none" for Chat Completions tools.
+            params.setdefault("reasoning_effort", "none")
         return ChatCompletionsModel(model, api_key=api_key, base_url=base_url, **params)
     return model

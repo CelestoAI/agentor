@@ -118,7 +118,7 @@ class Agentor:
         self,
         name: str,
         instructions: Optional[str] = None,
-        model: Any = "gpt-5-nano",
+        model: Any = "gpt-5.6-luna",
         tools: Optional[List[Any]] = None,
         output_type: Any = None,
         debug: bool = False,
@@ -206,7 +206,7 @@ class Agentor:
         params = model_settings.to_params() if model_settings else {}
         self._loop = AgentLoop(
             name=name,
-            model=model or "gpt-4o-mini",
+            model=model or "gpt-6-luna",
             instructions=instructions,
             tools=self._tools,
             context=CelestoConfig(),
@@ -381,7 +381,7 @@ class Agentor:
                 resolved_model_settings = ModelSettings(**settings_dict)
 
         metadata_model = metadata.get("model")
-        resolved_model = model or metadata_model or "gpt-5-nano"
+        resolved_model = model or metadata_model or "gpt-5.6-luna"
 
         return cls(
             name=name,
