@@ -125,6 +125,17 @@ class ChatCompletionsModel:
             payload["tools"] = tools
         if response_format:
             payload["response_format"] = response_format
+        if self.model in {"gpt-5.6-luna", "gpt-6-luna"}:
+            # Resolve defaults per request so fallbacks only inherit caller settings.
+            if payload.get("reasoning_effort") in (None, "minimal"):
+                payload["reasoning_effort"] = "none"
+            if payload.get("tools") and payload["reasoning_effort"] != "none":
+                raise ValueError(
+                    f'{self.model} requires reasoning_effort="none" for tools '
+                    "through Chat Completions. Set that effort, choose a compatible "
+                    "model, or supply a custom Model using the Responses API "
+                    "for reasoning with tools."
+                )
         return payload
 
     async def complete(
@@ -305,8 +316,5 @@ def resolve_model(
     if isinstance(model, str):
         if "/" in model and base_url is None:
             return LiteLLMModel(model, api_key=api_key, **params)
-        if model in {"gpt-5.6-luna", "gpt-6-luna"}:
-            # These defaults require effort "none" for Chat Completions tools.
-            params.setdefault("reasoning_effort", "none")
         return ChatCompletionsModel(model, api_key=api_key, base_url=base_url, **params)
     return model

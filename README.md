@@ -92,6 +92,17 @@ agent.serve()
 
 ### Any OpenAI-compatible provider
 
+Agentor uses Chat Completions. For `gpt-5.6-luna` and `gpt-6-luna`, an unset
+reasoning effort or the legacy `minimal` setting becomes `none`. Explicit
+reasoning efforts are preserved for requests without tools. With tools (including
+MCP tools), set `ModelSettings(reasoning_effort="none")`; other efforts raise a
+local error before the request is sent. For reasoning with tools, choose a model
+that supports that combination through Chat Completions or pass a custom
+`Model` adapter using the [Responses API](https://developers.openai.com/api/docs/guides/reasoning).
+`gpt-6-astra` requires Responses for tools and does not support effort `none`.
+Fallbacks carry caller-supplied settings, so choose compatible fallback models;
+the automatic Luna effort is resolved separately for each request.
+
 Point `base_url` at any provider that speaks OpenAI's `/chat/completions` — OpenRouter,
 Groq, Together, Fireworks, DeepSeek, vLLM, Ollama, or Anthropic's and Gemini's compatible
 endpoints — with no extra dependency:
