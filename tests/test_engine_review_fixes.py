@@ -10,7 +10,7 @@ from typing import Optional
 import pytest
 from pydantic import BaseModel
 
-from agentor.engine import AgentLoop
+from agentor.engine import AgentLoop, Tool
 from agentor.engine.events import Event
 from agentor.engine.loop import _strictify
 from agentor.engine.mcp import MCPServer
@@ -685,15 +685,17 @@ def test_agentor_surfaces_the_unrunnable_tool_message():
 # ============================================ openai-agents removal review
 
 
-def test_default_model_is_unchanged_by_the_removal():
-    """Changing the default silently alters quality and billing."""
+def test_default_model_uses_supported_replacement():
+    """The default must stay available and support Chat Completions tools."""
     import inspect
 
     from agentor import Agentor
 
     assert inspect.signature(Agentor.__init__).parameters["model"].default == (
-        "gpt-5-nano"
+        "gpt-5.6-luna"
     )
+    agent = Agentor(name="T", api_key="test")
+    assert agent._loop.model._request([], None)["reasoning_effort"] == "none"
 
 
 def test_from_md_default_matches_the_constructor_default(tmp_path):
@@ -702,7 +704,102 @@ def test_from_md_default_matches_the_constructor_default(tmp_path):
     md = tmp_path / "a.md"
     md.write_text("---\nname: Bot\n---\nYou are helpful.")
     agent = Agentor.from_md(md, api_key="test")
-    assert agent._loop.model.model == "gpt-5-nano"
+    assert agent._loop.model.model == "gpt-5.6-luna"
+    assert agent._loop.model._request([], None)["reasoning_effort"] == "none"
+
+
+@pytest.mark.parametrize("model", ["gpt-5.6-luna", "gpt-6-luna"])
+def test_luna_migrates_legacy_minimal_effort(model):
+    """Legacy settings must still produce a supported tool request."""
+    from agentor import Agentor, ModelSettings
+
+    settings = ModelSettings(reasoning_effort="minimal")
+    agent = Agentor(name="T", model=model, api_key="test", model_settings=settings)
+    payload = agent._loop.model._request([], [Tool.from_function(weather).to_openai()])
+
+    assert payload["reasoning_effort"] == "none"
+    assert settings.reasoning_effort == "minimal"
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+@pytest.mark.parametrize("model", ["gpt-5.6-luna", "gpt-6-luna"])
+@pytest.mark.asyncio
+async def test_luna_rejects_reasoning_with_tools_before_calling_provider(
+    model, streaming
+):
+    """Give both execution paths an actionable error for unsupported tools."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    from agentor.engine.models import ChatCompletionsModel
+
+    client = MagicMock()
+    client.chat.completions.create = AsyncMock()
+    adapter = ChatCompletionsModel(model, client=client, reasoning_effort="medium")
+    assert adapter._request([], None)["reasoning_effort"] == "medium"
+
+    with pytest.raises(ValueError, match='reasoning_effort="none"'):
+        if streaming:
+            async for _ in adapter.stream(
+                [], [Tool.from_function(weather).to_openai()]
+            ):
+                pass
+        else:
+            await adapter.complete([], [Tool.from_function(weather).to_openai()])
+    client.chat.completions.create.assert_not_called()
+
+
+def test_legacy_minimal_is_preserved_for_other_models():
+    """Models that support minimal must keep the caller's setting."""
+    from agentor.engine.models import ChatCompletionsModel
+
+    adapter = ChatCompletionsModel(
+        "gpt-5-nano", api_key="test", reasoning_effort="minimal"
+    )
+    assert (
+        adapter._request([], [Tool.from_function(weather).to_openai()])[
+            "reasoning_effort"
+        ]
+        == "minimal"
+    )
+
+
+@pytest.mark.parametrize("effort", [None, "none", "medium"])
+@pytest.mark.asyncio
+async def test_fallback_only_inherits_the_callers_reasoning_effort(effort):
+    """A Luna request default must not become an explicit Astra setting."""
+    import httpx
+    import openai
+
+    from agentor import Agentor, ModelSettings
+
+    agent = Agentor(
+        name="T", api_key="test", model_settings=ModelSettings(reasoning_effort=effort)
+    )
+    response = httpx.Response(
+        429, request=httpx.Request("POST", "https://api.openai.com/v1/chat")
+    )
+
+    async def boom(*args, **kwargs):
+        raise openai.RateLimitError("rate limited", response=response, body=None)
+
+    agent._loop.model.complete = boom
+    original_with_model = agent._loop.with_model
+    captured = {}
+
+    def spy(model, **kwargs):
+        clone = original_with_model(model, **kwargs)
+        captured.update(clone.model._request([], None))
+        clone.model = FakeModel(text("from fallback"))
+        return clone
+
+    agent._loop.with_model = spy
+    result = await agent.arun("go", fallback_models=["gpt-6-astra"])
+
+    assert result.final_output == "from fallback"
+    if effort is None:
+        assert "reasoning_effort" not in captured
+    else:
+        assert captured["reasoning_effort"] == effort
 
 
 @pytest.mark.asyncio
