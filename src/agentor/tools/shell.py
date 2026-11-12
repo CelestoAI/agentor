@@ -32,6 +32,8 @@ class ShellTool(BaseTool):
 
     @capability
     def run(self, request: ShellCommandRequest):
+        # The agent loop passes the model's arguments as a plain dict.
+        request = ShellCommandRequest.model_validate(request)
         if self.verbose:
             print(
                 f"Running command: {request.command} in working directory: {request.working_directory or os.getcwd()}"
