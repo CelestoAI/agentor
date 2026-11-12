@@ -118,4 +118,5 @@ dev = [
 tools = [
     "e2b-code-interpreter>=2.4.1",
     "smolvm>=0.0.3",
+    "boxd>=0.3.1",
 ]

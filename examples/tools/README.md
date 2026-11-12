@@ -19,6 +19,7 @@ Each file in this folder shows an end-to-end flow:
 - `postgresql.py`
 - `scrapegraphai.py`
 - `shell.py`
+- `shell_boxd.py`
 - `shell_smolvm.py`
 - `slack.py`
 - `timezone.py`
@@ -46,6 +47,13 @@ For secure shell runtime with SmolVM:
 
 ```bash
 pip install smolvm
+```
+
+For shell commands in a cloud microVM with [boxd](https://boxd.sh?ref=agentor):
+
+```bash
+pip install boxd
+export BOXD_API_KEY=your_boxd_key
 ```
 
 ## Run
