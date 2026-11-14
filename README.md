@@ -297,6 +297,14 @@ tools-only mode that runs without model credentials:
 uv run python examples/parallel_search.py --tools-only "Agentor durable agent runs"
 ```
 
+The [Keenable Search example](examples/keenable_search.md) does the same with
+Keenable's keyless MCP endpoint (search and page fetch, optional `KEENABLE_API_KEY`
+for higher limits):
+
+```bash
+uv run python examples/keenable_search.py --tools-only "Agentor durable agent runs"
+```
+
 ## Agent-to-Agent (A2A) Protocol
 
 The A2A Protocol defines standard specifications for agent communication and message formatting, enabling seamless interoperability between different AI agents.
